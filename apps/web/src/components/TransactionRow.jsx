@@ -1,9 +1,11 @@
-import { ArrowDownLeft, ArrowUpRight, Paperclip } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, FileText, Paperclip } from 'lucide-react';
 import { formatDate, formatRupiah } from '../lib/format.js';
+import { api } from '../lib/api.js';
 
 export function TransactionRow({ transaction, compact = false }) {
   const income = transaction.type === 'INCOME';
   const Icon = income ? ArrowDownLeft : ArrowUpRight;
+
   return (
     <article className={`transaction-row ${compact ? 'compact' : ''}`}>
       <div className={`transaction-icon ${income ? 'income' : 'expense'}`}><Icon size={18} /></div>
@@ -18,7 +20,15 @@ export function TransactionRow({ transaction, compact = false }) {
           <span>{transaction.method === 'TRANSFER' ? 'Transfer' : 'Cash'}</span>
           {transaction.evidencePath && <><span>•</span><Paperclip size={13} /></>}
         </div>
+
         {!compact && transaction.description && <p>{transaction.description}</p>}
+
+        {!compact && (transaction.evidencePath || transaction.bankMutationPath) && (
+          <div className="attachment-links">
+            {transaction.evidencePath && <a href={api.attachmentUrl(transaction.id, 'evidence')} target="_blank" rel="noreferrer"><FileText size={14} /> Bukti transaksi</a>}
+            {transaction.bankMutationPath && <a href={api.attachmentUrl(transaction.id, 'mutation')} target="_blank" rel="noreferrer"><FileText size={14} /> Mutasi rekening</a>}
+          </div>
+        )}
       </div>
     </article>
   );

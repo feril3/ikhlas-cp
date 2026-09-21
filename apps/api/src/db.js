@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const defaultDbPath = path.resolve(__dirname, '../data/ikhlas.db');
-const dbPath = process.env.DATABASE_PATH
+export const dbPath = process.env.DATABASE_PATH
   ? path.resolve(process.cwd(), process.env.DATABASE_PATH)
   : defaultDbPath;
 
@@ -14,6 +14,22 @@ fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 export const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
+db.pragma('busy_timeout = 5000');
+
+function ensureColumn(table, column, definition) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all();
+  if (!columns.some((item) => item.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+}
+
+function insertSetting(key, value) {
+  db.prepare(`
+    INSERT INTO settings (key, value)
+    VALUES (?, ?)
+    ON CONFLICT(key) DO NOTHING
+  `).run(key, String(value));
+}
 
 export function initializeDatabase() {
   db.exec(`
@@ -31,6 +47,14 @@ export function initializeDatabase() {
       is_active INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (role_id) REFERENCES roles(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS sessions (
+      token_hash TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      expires_at TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS settings (
@@ -75,6 +99,21 @@ export function initializeDatabase() {
       is_published INTEGER NOT NULL DEFAULT 1
     );
 
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      action TEXT NOT NULL,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT,
+      details_json TEXT,
+      ip_address TEXT,
+      user_agent TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_prayer_unique
+      ON prayer_schedules(prayer_date, prayer_name);
     CREATE INDEX IF NOT EXISTS idx_transactions_date
       ON transactions(transaction_date DESC, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_transactions_type
@@ -83,7 +122,17 @@ export function initializeDatabase() {
       ON prayer_schedules(prayer_date, adhan_time);
     CREATE INDEX IF NOT EXISTS idx_activities_date
       ON activities(activity_date, start_time);
+    CREATE INDEX IF NOT EXISTS idx_sessions_expiry
+      ON sessions(expires_at);
+    CREATE INDEX IF NOT EXISTS idx_audit_created
+      ON audit_logs(created_at DESC);
   `);
+
+  ensureColumn('transactions', 'evidence_path', 'TEXT');
+  ensureColumn('transactions', 'bank_mutation_path', 'TEXT');
+  ensureColumn('transactions', 'created_by', 'INTEGER');
+  ensureColumn('activities', 'live_url', 'TEXT');
+  ensureColumn('activities', 'is_published', 'INTEGER NOT NULL DEFAULT 1');
 
   seedIfEmpty();
 }
@@ -96,11 +145,16 @@ function seedIfEmpty() {
     insertRole.run('TREASURER');
   }
 
-  db.prepare(`
-    INSERT INTO settings (key, value)
-    VALUES ('opening_balance', '12500000')
-    ON CONFLICT(key) DO NOTHING
-  `).run();
+  insertSetting('opening_balance', '12500000');
+  insertSetting('mosque_name', 'Masjid Al-Ikhlas');
+  insertSetting('mosque_tagline', 'Pusat Informasi Jamaah');
+  insertSetting('bank_name', 'Bank Syariah Indonesia');
+  insertSetting('bank_account_number', '71234567890');
+  insertSetting('bank_account_holder', 'Masjid Al-Ikhlas');
+  insertSetting('default_youtube_url', '');
+  insertSetting('active_live_url', '');
+  insertSetting('active_live_title', '');
+  insertSetting('public_finance_period', 'MONTH');
 
   const transactionCount = db.prepare('SELECT COUNT(*) AS count FROM transactions').get().count;
   if (transactionCount === 0) {
@@ -113,27 +167,42 @@ function seedIfEmpty() {
 
     const demo = [
       {
-        type: 'INCOME', amount: 2500000, transactionDate: '2026-09-21',
-        method: 'TRANSFER', category: 'Donasi Jamaah', description: 'Transfer donatur'
+        type: 'INCOME',
+        amount: 2500000,
+        transactionDate: '2026-09-21',
+        method: 'TRANSFER',
+        category: 'Donasi Jamaah',
+        description: 'Transfer donatur'
       },
       {
-        type: 'EXPENSE', amount: 850000, transactionDate: '2026-09-20',
-        method: 'TRANSFER', category: 'Operasional', description: 'Pembayaran listrik dan air'
+        type: 'EXPENSE',
+        amount: 850000,
+        transactionDate: '2026-09-20',
+        method: 'TRANSFER',
+        category: 'Operasional',
+        description: 'Pembayaran listrik dan air'
       },
       {
-        type: 'INCOME', amount: 1350000, transactionDate: '2026-09-19',
-        method: 'CASH', category: 'Kotak Amal', description: 'Rekap kotak amal Jumat'
+        type: 'INCOME',
+        amount: 1350000,
+        transactionDate: '2026-09-19',
+        method: 'CASH',
+        category: 'Kotak Amal',
+        description: 'Rekap kotak amal Jumat'
       },
       {
-        type: 'EXPENSE', amount: 425000, transactionDate: '2026-09-18',
-        method: 'CASH', category: 'Kebersihan', description: 'Perlengkapan kebersihan masjid'
+        type: 'EXPENSE',
+        amount: 425000,
+        transactionDate: '2026-09-18',
+        method: 'CASH',
+        category: 'Kebersihan',
+        description: 'Perlengkapan kebersihan masjid'
       }
     ];
 
-    const transaction = db.transaction((items) => {
+    db.transaction((items) => {
       for (const item of items) insert.run(item);
-    });
-    transaction(demo);
+    })(demo);
   }
 
   const prayerCount = db.prepare('SELECT COUNT(*) AS count FROM prayer_schedules').get().count;
@@ -143,6 +212,7 @@ function seedIfEmpty() {
         (prayer_date, prayer_name, adhan_time, iqamah_time, imam, bilal)
       VALUES (?, ?, ?, ?, ?, ?)
     `);
+
     const prayers = [
       ['2026-09-21', 'Subuh', '04:28', '04:38', 'Ust. Ahmad Fauzi', 'H. Rahmat'],
       ['2026-09-21', 'Dzuhur', '11:51', '12:01', 'Ust. Yusuf Karim', 'H. Fajar'],
@@ -150,10 +220,10 @@ function seedIfEmpty() {
       ['2026-09-21', 'Maghrib', '17:53', '18:03', 'Ust. Yusuf Karim', 'H. Rahmat'],
       ['2026-09-21', 'Isya', '19:01', '19:11', 'Ust. Ahmad Fauzi', 'H. Fajar']
     ];
-    const transaction = db.transaction((items) => {
+
+    db.transaction((items) => {
       for (const item of items) insertPrayer.run(...item);
-    });
-    transaction(prayers);
+    })(prayers);
   }
 
   const activityCount = db.prepare('SELECT COUNT(*) AS count FROM activities').get().count;
@@ -163,12 +233,43 @@ function seedIfEmpty() {
         (title, activity_date, start_time, location, speaker, is_published)
       VALUES (?, ?, ?, ?, ?, 1)
     `);
-    insertActivity.run('Kajian Ba\'da Maghrib', '2026-09-21', '18:15', 'Ruang Utama', 'Ust. Hakim Pratama');
-    insertActivity.run('Pengajian Rutin Ahad', '2026-09-27', '07:00', 'Ruang Utama', 'Ust. Fikri Anwar');
+
+    insertActivity.run(
+      "Kajian Ba'da Maghrib",
+      '2026-09-21',
+      '18:15',
+      'Ruang Utama',
+      'Ust. Hakim Pratama'
+    );
+    insertActivity.run(
+      'Pengajian Rutin Ahad',
+      '2026-09-27',
+      '07:00',
+      'Ruang Utama',
+      'Ust. Fikri Anwar'
+    );
   }
 }
 
 export function getOpeningBalance() {
-  const row = db.prepare("SELECT value FROM settings WHERE key = 'opening_balance'").get();
-  return Number(row?.value ?? 0);
+  return Number(getSetting('opening_balance', '0'));
+}
+
+export function getSetting(key, fallback = '') {
+  const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
+  return row?.value ?? fallback;
+}
+
+export function getSettings(keys) {
+  if (!keys.length) return {};
+
+  const placeholders = keys.map(() => '?').join(',');
+  const rows = db.prepare(`
+    SELECT key, value
+    FROM settings
+    WHERE key IN (${placeholders})
+  `).all(...keys);
+
+  const values = Object.fromEntries(rows.map((row) => [row.key, row.value]));
+  return Object.fromEntries(keys.map((key) => [key, values[key] ?? '']));
 }

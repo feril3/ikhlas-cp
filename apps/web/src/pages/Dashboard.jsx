@@ -10,27 +10,37 @@ import {
   WalletCards
 } from 'lucide-react';
 import { api } from '../lib/api.js';
-import { formatRupiah } from '../lib/format.js';
+import { formatRupiah, toInputDate } from '../lib/format.js';
 import { LoadingState } from '../components/LoadingState.jsx';
 import { TransactionRow } from '../components/TransactionRow.jsx';
+import { useAuth } from '../auth/AuthContext.jsx';
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
+  const today = toInputDate();
 
   useEffect(() => {
-    api.dashboard().then(setData).catch((err) => setError(err.message));
-  }, []);
+    api.dashboard(today).then(setData).catch((err) => setError(err.message));
+  }, [today]);
 
   if (!data && !error) return <LoadingState label="Menyiapkan dashboard..." />;
+
+  const dateLabel = new Intl.DateTimeFormat('id-ID', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  }).format(new Date(`${today}T00:00:00`));
 
   return (
     <div className="page-stack">
       <header className="page-heading dashboard-heading">
         <div>
-          <p className="eyebrow">Senin, 21 September 2026</p>
-          <h1>Assalamu'alaikum, Feril</h1>
-          <p className="page-subtitle">Ringkasan kondisi masjid hari ini.</p>
+          <p className="eyebrow">{dateLabel}</p>
+          <h1>Assalamu'alaikum, {user?.name?.split(' ')[0] ?? 'Pengurus'}</h1>
+          <p className="page-subtitle">Ringkasan kondisi masjid dan keuangan yang tercatat saat ini.</p>
         </div>
         <div className="heading-actions">
           <Link to="/transactions/income" className="button secondary"><ArrowDownToLine size={18} /> Kas Masuk</Link>
@@ -39,7 +49,7 @@ export default function Dashboard() {
       </header>
 
       {error ? (
-        <div className="notice error"><strong>API belum terhubung.</strong><span>{error}. Jalankan `npm run dev` dari root project.</span></div>
+        <div className="notice error"><strong>Dashboard gagal dimuat.</strong><span>{error}</span></div>
       ) : (
         <>
           <section className="financial-summary" aria-label="Ringkasan keuangan">
@@ -48,7 +58,7 @@ export default function Dashboard() {
               <div>
                 <span className="summary-label">Saldo saat ini</span>
                 <strong className="balance-value">{formatRupiah(data.summary.currentBalance)}</strong>
-                <span className="summary-caption">Terhitung dari seluruh transaksi tercatat</span>
+                <span className="summary-caption">Saldo awal + seluruh kas masuk − seluruh kas keluar</span>
               </div>
             </div>
             <div className="summary-grid">
@@ -71,14 +81,21 @@ export default function Dashboard() {
 
             <div className="side-stack">
               <section className="panel prayer-panel">
-                <div className="panel-heading"><div><p className="section-kicker">Hari ini</p><h2>Jadwal salat</h2></div><Clock3 size={19} className="muted-icon" /></div>
+                <div className="panel-heading">
+                  <div>
+                    <p className="section-kicker">Jadwal acuan {data.prayerScheduleDate ?? '-'}</p>
+                    <h2>Jadwal salat</h2>
+                  </div>
+                  <Clock3 size={19} className="muted-icon" />
+                </div>
                 <div className="prayer-list">
                   {data.prayerSchedule.map((item) => (
                     <div className="prayer-row" key={item.prayerName}>
-                      <div><strong>{item.prayerName}</strong><span>{item.imam}</span></div>
+                      <div><strong>{item.prayerName}</strong><span>{item.imam || 'Imam belum diisi'}</span></div>
                       <time>{item.adhanTime}</time>
                     </div>
                   ))}
+                  {data.prayerSchedule.length === 0 && <div className="empty-state">Jadwal salat belum tersedia.</div>}
                 </div>
               </section>
 
@@ -87,10 +104,11 @@ export default function Dashboard() {
                 <div className="activity-list">
                   {data.activities.map((item) => (
                     <article className="activity-row" key={item.id}>
-                      <div className="date-block"><strong>{item.activityDate.slice(-2)}</strong><span>SEP</span></div>
-                      <div><strong>{item.title}</strong><span>{item.startTime} · {item.speaker}</span></div>
+                      <div className="date-block"><strong>{item.activityDate.slice(-2)}</strong><span>{item.activityDate.slice(5, 7)}</span></div>
+                      <div><strong>{item.title}</strong><span>{item.startTime || 'Waktu fleksibel'}{item.speaker ? ` · ${item.speaker}` : ''}</span></div>
                     </article>
                   ))}
+                  {data.activities.length === 0 && <div className="empty-state">Belum ada kegiatan mendatang.</div>}
                 </div>
               </section>
             </div>
@@ -98,8 +116,8 @@ export default function Dashboard() {
 
           <section className="quick-actions" aria-label="Aksi cepat">
             <Link to="/transactions/income" className="quick-action"><span className="quick-icon income"><ArrowDownToLine size={20} /></span><div><strong>Catat Kas Masuk</strong><span>Cash, kotak amal, atau transfer</span></div><ArrowRight size={18} /></Link>
-            <Link to="/transactions/expense" className="quick-action"><span className="quick-icon expense"><ArrowUpFromLine size={20} /></span><div><strong>Catat Kas Keluar</strong><span>Operasional dan pengeluaran lain</span></div><ArrowRight size={18} /></Link>
-            <Link to="/public-display" className="quick-action"><span className="quick-icon neutral"><CircleDollarSign size={20} /></span><div><strong>Buka Public Display</strong><span>Preview tampilan TV masjid</span></div><ArrowRight size={18} /></Link>
+            <Link to="/transactions/expense" className="quick-action"><span className="quick-icon expense"><ArrowUpFromLine size={20} /></span><div><strong>Catat Kas Keluar</strong><span>Dengan bukti transaksi</span></div><ArrowRight size={18} /></Link>
+            <Link to="/public-display" target="_blank" rel="noreferrer" className="quick-action"><span className="quick-icon neutral"><CircleDollarSign size={20} /></span><div><strong>Buka Public Display</strong><span>Preview tampilan TV masjid</span></div><ArrowRight size={18} /></Link>
           </section>
         </>
       )}

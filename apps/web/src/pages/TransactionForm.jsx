@@ -44,16 +44,36 @@ export default function TransactionForm({ type }) {
 
   async function handleSubmit(event) {
     event.preventDefault();
+
     if (!amount) {
       setStatus({ type: 'error', message: 'Nominal transaksi wajib diisi.' });
       return;
     }
 
+    if (!income && !evidence) {
+      setStatus({ type: 'error', message: 'Bukti transaksi wajib dilampirkan untuk kas keluar.' });
+      return;
+    }
+
     setStatus({ type: 'loading', message: 'Menyimpan transaksi...' });
+
     try {
-      await api.createTransaction({ type, amount, ...form });
-      setStatus({ type: 'success', message: `${income ? 'Kas masuk' : 'Kas keluar'} berhasil dicatat.` });
-      setTimeout(() => navigate('/transactions'), 650);
+      const created = await api.createTransaction({ type, amount, ...form });
+
+      if (evidence || mutation) {
+        setStatus({ type: 'loading', message: 'Mengunggah dokumen pendukung...' });
+        await api.uploadTransactionAttachments(created.transaction.id, { evidence, mutation });
+      }
+
+      const telegramNote = created.notification?.status === 'failed'
+        ? ' Transaksi tersimpan, tetapi notifikasi Telegram gagal dikirim.'
+        : '';
+      setStatus({
+        type: created.notification?.status === 'failed' ? 'warning' : 'success',
+        message: `${income ? 'Kas masuk' : 'Kas keluar'} berhasil dicatat.${telegramNote}`
+      });
+
+      setTimeout(() => navigate('/transactions'), 900);
     } catch (error) {
       setStatus({ type: 'error', message: error.message });
     }
@@ -70,7 +90,7 @@ export default function TransactionForm({ type }) {
         <div>
           <p className="eyebrow">Pencatatan transaksi</p>
           <h1>{income ? 'Kas Masuk' : 'Kas Keluar'}</h1>
-          <p className="page-subtitle">Catat transaksi dengan data yang mudah diverifikasi.</p>
+          <p className="page-subtitle">Catat transaksi dengan data yang mudah diverifikasi dan terdokumentasi.</p>
         </div>
       </header>
 
@@ -125,32 +145,42 @@ export default function TransactionForm({ type }) {
         </section>
 
         <section className="form-section">
-          <div className="section-title"><div><p className="section-kicker">Dokumentasi</p><h2>Bukti pendukung</h2></div><span className="optional-badge">Opsional</span></div>
+          <div className="section-title">
+            <div><p className="section-kicker">Dokumentasi</p><h2>Bukti pendukung</h2></div>
+            {income && <span className="optional-badge">Bukti opsional</span>}
+          </div>
+
           <div className="upload-grid">
             <label className="upload-card">
-              <input type="file" accept="image/*,.pdf" capture="environment" onChange={(e) => setEvidence(e.target.files?.[0] ?? null)} />
+              <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" capture="environment" onChange={(e) => setEvidence(e.target.files?.[0] ?? null)} />
               <span className="upload-icon"><Camera size={21} /></span>
-              <span><strong>{evidence ? evidence.name : 'Bukti transaksi'}</strong><small>{evidence ? 'Ketuk untuk mengganti file' : 'Ambil foto atau pilih file'}</small></span>
+              <span>
+                <strong>{evidence ? evidence.name : `Bukti transaksi${income ? '' : ' *'}`}</strong>
+                <small>{evidence ? 'Ketuk untuk mengganti file' : 'JPG, PNG, WEBP, atau PDF · maks. 5 MB'}</small>
+              </span>
               {evidence && <CheckCircle2 size={20} className="success-icon" />}
             </label>
 
             {form.method === 'TRANSFER' && (
               <label className="upload-card">
-                <input type="file" accept="image/*,.pdf" onChange={(e) => setMutation(e.target.files?.[0] ?? null)} />
+                <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(e) => setMutation(e.target.files?.[0] ?? null)} />
                 <span className="upload-icon"><FileImage size={21} /></span>
-                <span><strong>{mutation ? mutation.name : 'Mutasi rekening'}</strong><small>{mutation ? 'Ketuk untuk mengganti file' : 'Lampirkan mutasi bila tersedia'}</small></span>
+                <span>
+                  <strong>{mutation ? mutation.name : 'Mutasi rekening'}</strong>
+                  <small>{mutation ? 'Ketuk untuk mengganti file' : 'Lampirkan mutasi jika tersedia'}</small>
+                </span>
                 {mutation && <CheckCircle2 size={20} className="success-icon" />}
               </label>
             )}
           </div>
-          <p className="field-help upload-note">Baseline UI sudah menyiapkan pemilihan file. Penyimpanan file permanen akan diaktifkan pada milestone upload backend.</p>
+          <p className="field-help upload-note">Dokumen disimpan di storage privat server dan hanya dapat dibuka oleh pengguna yang sudah login.</p>
         </section>
 
-        {status.type !== 'idle' && <div className={`notice ${status.type === 'error' ? 'error' : status.type === 'success' ? 'success' : ''}`}>{status.message}</div>}
+        {status.type !== 'idle' && <div className={`notice ${status.type}`}>{status.message}</div>}
 
         <div className="form-actions">
           <button type="button" className="button secondary" onClick={() => navigate(-1)}>Batal</button>
-          <button type="submit" className="button primary" disabled={status.type === 'loading'}>{status.type === 'loading' ? 'Menyimpan...' : `Simpan ${income ? 'Kas Masuk' : 'Kas Keluar'}`}</button>
+          <button type="submit" className="button primary" disabled={status.type === 'loading'}>{status.type === 'loading' ? 'Memproses...' : `Simpan ${income ? 'Kas Masuk' : 'Kas Keluar'}`}</button>
         </div>
       </form>
     </div>

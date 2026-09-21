@@ -1,6 +1,6 @@
 {
   "name": "ikhlas-cp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Sistem Informasi Manajemen Masjid - Capstone Project Feril",
   "workspaces": [
@@ -12,7 +12,8 @@
     "dev:api": "npm run dev -w @ikhlas/api",
     "build": "npm run build -w @ikhlas/web && npm run check -w @ikhlas/api",
     "start": "npm run start -w @ikhlas/api",
-    "db:init": "npm run db:init -w @ikhlas/api"
+    "db:init": "npm run db:init -w @ikhlas/api",
+    "db:backup": "npm run db:backup -w @ikhlas/api"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
