@@ -1,12 +1,8 @@
 name: Generate npm lockfile
 
 on:
-  push:
+  pull_request:
     branches: [main]
-    paths:
-      - package.json
-      - apps/*/package.json
-      - .github/workflows/generate-lockfile.yml
   workflow_dispatch:
 
 jobs:
