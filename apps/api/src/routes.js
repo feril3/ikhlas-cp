@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import path from 'node:path';
 import { Router } from 'express';
 import { z } from 'zod';
 import { db, getOpeningBalance, getSettings } from './db.js';
@@ -18,8 +17,7 @@ import { logAudit } from './audit.js';
 import { sendTransactionNotification } from './telegram.js';
 import {
   safeAttachmentPath,
-  transactionUpload,
-  uploadDirectory
+  transactionUpload
 } from './uploads.js';
 
 export const apiRouter = Router();
@@ -568,7 +566,7 @@ apiRouter.get('/transactions/:id/attachments/:kind', requireAuth, (req, res) => 
     return res.status(404).json({ message: 'File dokumen tidak ditemukan.' });
   }
 
-  res.sendFile(resolved, { root: path.parse(resolved).root });
+  res.sendFile(resolved);
 });
 
 apiRouter.get('/reports/summary', requireAuth, (req, res) => {
