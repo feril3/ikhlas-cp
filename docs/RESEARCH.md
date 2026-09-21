@@ -55,12 +55,16 @@ OWASP merekomendasikan allow-list tipe file, batas ukuran, nama file buatan apli
 IKHLAS:
 - menerima JPG/JPEG, PNG, WEBP, dan PDF;
 - limit 5 MB per file;
-- nama file diganti dengan random identifier;
-- file berada di `apps/api/data/uploads`;
-- file hanya diberikan melalui endpoint yang memerlukan session.
+- file tidak dipersist permanen di filesystem server;
+- file dikirim ke Google Drive melalui OAuth 2.0 scope `drive.file`;
+- SQLite hanya menyimpan file ID dan metadata referensi;
+- file tetap private dan diberikan ke user melalui endpoint backend yang memerlukan session.
 
 Sumber:
 - https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html
+- https://developers.google.com/workspace/drive/api/guides/create-file
+- https://developers.google.com/workspace/drive/api/guides/manage-uploads
+- https://developers.google.com/workspace/drive/api/guides/folder
 
 ## 5. Audit logging
 

@@ -1,6 +1,6 @@
 {
   "name": "@ikhlas/api",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,13 +8,15 @@
     "start": "node src/server.js",
     "db:init": "node src/init-db.js",
     "db:backup": "node src/backup-db.js",
-    "check": "node --check src/server.js && node --check src/db.js && node --check src/routes.js && node --check src/auth.js && node --check src/uploads.js && node --check src/telegram.js"
+    "drive:auth": "node src/google-drive-auth.js",
+    "check": "node --check src/server.js && node --check src/db.js && node --check src/routes.js && node --check src/auth.js && node --check src/uploads.js && node --check src/driveStorage.js && node --check src/google-drive-auth.js && node --check src/telegram.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.8.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "googleapis": "^181.0.0",
     "multer": "^2.0.2",
     "zod": "^3.24.2"
   }

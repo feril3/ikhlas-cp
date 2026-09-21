@@ -55,15 +55,18 @@ export default function TransactionForm({ type }) {
       return;
     }
 
-    setStatus({ type: 'loading', message: 'Menyimpan transaksi...' });
+    setStatus({
+      type: 'loading',
+      message: evidence || mutation
+        ? 'Menyimpan transaksi dan mengunggah bukti ke Google Drive...'
+        : 'Menyimpan transaksi...'
+    });
 
     try {
-      const created = await api.createTransaction({ type, amount, ...form });
-
-      if (evidence || mutation) {
-        setStatus({ type: 'loading', message: 'Mengunggah dokumen pendukung...' });
-        await api.uploadTransactionAttachments(created.transaction.id, { evidence, mutation });
-      }
+      const created = await api.createTransaction(
+        { type, amount, ...form },
+        { evidence, mutation }
+      );
 
       const telegramNote = created.notification?.status === 'failed'
         ? ' Transaksi tersimpan, tetapi notifikasi Telegram gagal dikirim.'
@@ -173,7 +176,7 @@ export default function TransactionForm({ type }) {
               </label>
             )}
           </div>
-          <p className="field-help upload-note">Dokumen disimpan di storage privat server dan hanya dapat dibuka oleh pengguna yang sudah login.</p>
+          <p className="field-help upload-note">Dokumen disimpan privat di Google Drive. Aplikasi hanya menyimpan referensi file untuk mengaitkannya dengan transaksi.</p>
         </section>
 
         {status.type !== 'idle' && <div className={`notice ${status.type}`}>{status.message}</div>}

@@ -24,23 +24,25 @@ Endpoint internal menggunakan HttpOnly session cookie.
 ## Transactions
 
 - `GET /transactions?type=INCOME|EXPENSE&from=YYYY-MM-DD&to=YYYY-MM-DD`
-- `POST /transactions`
-- `POST /transactions/:id/attachments` — multipart, field `evidence` dan/atau `mutation`
+- `POST /transactions` — multipart/form-data. Field transaksi + file `evidence` dan/atau `mutation` dikirim dalam satu request.
+- `POST /transactions/:id/attachments` — mengganti/menambah dokumen transaksi; multipart, field `evidence` dan/atau `mutation`
 - `GET /transactions/:id/attachments/evidence`
 - `GET /transactions/:id/attachments/mutation`
 
-Payload transaksi:
+Field transaksi:
 
-```json
-{
-  "type": "INCOME",
-  "amount": 500000,
-  "transactionDate": "2026-09-22",
-  "method": "TRANSFER",
-  "category": "Donasi Jamaah",
-  "description": "Transfer donatur"
-}
+```text
+type=INCOME
+amount=500000
+transactionDate=2026-09-22
+method=TRANSFER
+category=Donasi Jamaah
+description=Transfer donatur
+evidence=<file opsional untuk kas masuk, wajib untuk kas keluar>
+mutation=<file opsional>
 ```
+
+File diteruskan ke Google Drive. Database hanya menyimpan Google Drive file ID dan metadata referensi.
 
 ## Reports
 

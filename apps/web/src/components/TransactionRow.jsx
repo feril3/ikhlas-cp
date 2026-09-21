@@ -18,15 +18,15 @@ export function TransactionRow({ transaction, compact = false }) {
           <span>{formatDate(transaction.transactionDate)}</span>
           <span>•</span>
           <span>{transaction.method === 'TRANSFER' ? 'Transfer' : 'Cash'}</span>
-          {transaction.evidencePath && <><span>•</span><Paperclip size={13} /></>}
+          {transaction.evidenceFileId && <><span>•</span><Paperclip size={13} /></>}
         </div>
 
         {!compact && transaction.description && <p>{transaction.description}</p>}
 
-        {!compact && (transaction.evidencePath || transaction.bankMutationPath) && (
+        {!compact && (transaction.evidenceFileId || transaction.bankMutationFileId) && (
           <div className="attachment-links">
-            {transaction.evidencePath && <a href={api.attachmentUrl(transaction.id, 'evidence')} target="_blank" rel="noreferrer"><FileText size={14} /> Bukti transaksi</a>}
-            {transaction.bankMutationPath && <a href={api.attachmentUrl(transaction.id, 'mutation')} target="_blank" rel="noreferrer"><FileText size={14} /> Mutasi rekening</a>}
+            {transaction.evidenceFileId && <a href={api.attachmentUrl(transaction.id, 'evidence')} target="_blank" rel="noreferrer"><FileText size={14} /> Bukti transaksi</a>}
+            {transaction.bankMutationFileId && <a href={api.attachmentUrl(transaction.id, 'mutation')} target="_blank" rel="noreferrer"><FileText size={14} /> Mutasi rekening</a>}
           </div>
         )}
       </div>
