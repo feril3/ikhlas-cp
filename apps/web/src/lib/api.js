@@ -46,10 +46,19 @@ export const api = {
   publicDisplay: (date) => request(`/public/display${queryString({ date })}`),
 
   transactions: (filters = {}) => request(`/transactions${queryString(filters)}`),
-  createTransaction: (input) => request('/transactions', {
-    method: 'POST',
-    body: JSON.stringify(input)
-  }),
+  createTransaction: (input, { evidence, mutation } = {}) => {
+    const formData = new FormData();
+    Object.entries(input).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) formData.append(key, String(value));
+    });
+    if (evidence) formData.append('evidence', evidence);
+    if (mutation) formData.append('mutation', mutation);
+
+    return request('/transactions', {
+      method: 'POST',
+      body: formData
+    });
+  },
   uploadTransactionAttachments: (id, { evidence, mutation }) => {
     const formData = new FormData();
     if (evidence) formData.append('evidence', evidence);
