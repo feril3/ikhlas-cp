@@ -1,2 +1,0 @@
-Temporary trigger for generating package-lock.json.
-Trigger revision 2.
