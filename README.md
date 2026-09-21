@@ -15,7 +15,7 @@ Aplikasi sengaja dibagi menjadi dua surface utama:
 - Pembeda Cash/Kotak Amal dan Transfer.
 - Bukti transaksi dan mutasi rekening.
 - Bukti kas keluar wajib pada UI.
-- File bukti disimpan di storage privat server, bukan public webroot.
+- File bukti disimpan privat di Google Drive. SQLite hanya menyimpan file ID dan metadata referensi.
 - Riwayat transaksi.
 - Laporan berdasarkan periode.
 - Export transaksi ke CSV.
@@ -56,6 +56,7 @@ Aplikasi sengaja dibagi menjadi dua surface utama:
 - SQLite (`better-sqlite3`)
 - Zod
 - Multer
+- Google Drive API
 - Telegram Bot API
 - YouTube Embed
 - Lucide React
@@ -76,6 +77,21 @@ Akses:
 - Public Display: `http://localhost:5173/public-display`
 
 Pada instalasi baru, buka Web. Karena belum ada pengguna, IKHLAS akan meminta membuat **akun Admin pertama**. Tidak ada username/password default yang ditanam di source code.
+
+## Google Drive untuk Bukti Transaksi
+
+Bukti transaksi dan mutasi rekening tidak disimpan sebagai blob di SQLite dan tidak disimpan permanen di filesystem server. File diteruskan ke Google Drive menggunakan OAuth 2.0. SQLite hanya menyimpan `fileId`, nama asli, dan MIME type sebagai referensi.
+
+Setup ringkas:
+
+```bash
+cp .env.example .env
+# isi GOOGLE_DRIVE_CLIENT_ID dan GOOGLE_DRIVE_CLIENT_SECRET
+npm run drive:auth -w @ikhlas/api
+# salin refresh token yang tampil ke GOOGLE_DRIVE_REFRESH_TOKEN
+```
+
+Jika `GOOGLE_DRIVE_FOLDER_ID` kosong, IKHLAS otomatis membuat folder **IKHLAS - Bukti Transaksi** di My Drive akun OAuth. Lihat `docs/GOOGLE_DRIVE.md` untuk langkah lengkap.
 
 ## Telegram
 
@@ -102,7 +118,7 @@ Snapshot disimpan ke `apps/api/data/backups/` dan direktori tersebut di-ignore o
 ikhlas-cp/
 ├── apps/
 │   ├── api/
-│   │   ├── data/              # SQLite, uploads, backups (ignored)
+│   │   ├── data/              # SQLite & backups (ignored)
 │   │   └── src/
 │   └── web/
 │       ├── public/            # manifest, service worker, icon
@@ -110,6 +126,7 @@ ikhlas-cp/
 ├── docs/
 │   ├── API.md
 │   ├── ARCHITECTURE.md
+│   ├── GOOGLE_DRIVE.md
 │   ├── RESEARCH.md
 │   └── SECURITY.md
 ├── .impeccable/design.json
