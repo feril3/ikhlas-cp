@@ -1,4 +1,3 @@
-import fs from 'node:fs';
 import { Router } from 'express';
 import { z } from 'zod';
 import { db, getOpeningBalance, getSettings } from './db.js';
@@ -15,10 +14,13 @@ import {
 } from './auth.js';
 import { logAudit } from './audit.js';
 import { sendTransactionNotification } from './telegram.js';
+import { transactionUpload } from './uploads.js';
 import {
-  safeAttachmentPath,
-  transactionUpload
-} from './uploads.js';
+  deleteTransactionAttachment,
+  getTransactionAttachment,
+  isGoogleDriveConfigured,
+  uploadTransactionAttachment
+} from './driveStorage.js';
 
 export const apiRouter = Router();
 
@@ -240,7 +242,14 @@ function publicSettings() {
 }
 
 apiRouter.get('/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'ikhlas-api' });
+  res.json({
+    status: 'ok',
+    service: 'ikhlas-api',
+    storage: {
+      provider: 'google-drive',
+      configured: isGoogleDriveConfigured()
+    }
+  });
 });
 
 apiRouter.get('/auth/status', (req, res) => {
@@ -386,8 +395,12 @@ apiRouter.get('/dashboard', requireAuth, (req, res) => {
       method,
       category,
       description,
-      evidence_path AS evidencePath,
-      bank_mutation_path AS bankMutationPath,
+      evidence_drive_file_id AS evidenceFileId,
+      evidence_original_name AS evidenceOriginalName,
+      evidence_mime_type AS evidenceMimeType,
+      mutation_drive_file_id AS bankMutationFileId,
+      mutation_original_name AS bankMutationOriginalName,
+      mutation_mime_type AS bankMutationMimeType,
       created_at AS createdAt
     FROM transactions
     ORDER BY transaction_date DESC, created_at DESC
@@ -433,8 +446,12 @@ apiRouter.get('/transactions', requireAuth, (req, res) => {
       method,
       category,
       description,
-      evidence_path AS evidencePath,
-      bank_mutation_path AS bankMutationPath,
+      evidence_drive_file_id AS evidenceFileId,
+      evidence_original_name AS evidenceOriginalName,
+      evidence_mime_type AS evidenceMimeType,
+      mutation_drive_file_id AS bankMutationFileId,
+      mutation_original_name AS bankMutationOriginalName,
+      mutation_mime_type AS bankMutationMimeType,
       created_at AS createdAt
     FROM transactions
     ${where}
@@ -445,128 +462,291 @@ apiRouter.get('/transactions', requireAuth, (req, res) => {
   res.json({ data: rows, summary: getSummary() });
 });
 
-apiRouter.post('/transactions', requireAuth, requireRole('ADMIN', 'TREASURER'), async (req, res) => {
-  const parsed = transactionSchema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(422).json({
-      message: 'Data transaksi belum valid.',
-      errors: parsed.error.flatten().fieldErrors
+apiRouter.post(
+  '/transactions',
+  requireAuth,
+  requireRole('ADMIN', 'TREASURER'),
+  transactionUpload,
+  async (req, res) => {
+    const parsed = transactionSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(422).json({
+        message: 'Data transaksi belum valid.',
+        errors: parsed.error.flatten().fieldErrors
+      });
+    }
+
+    const input = parsed.data;
+    const evidence = req.files?.evidence?.[0] ?? null;
+    const mutation = req.files?.mutation?.[0] ?? null;
+
+    if (input.type === 'EXPENSE' && !evidence) {
+      return res.status(422).json({
+        message: 'Bukti transaksi wajib dilampirkan untuk kas keluar.'
+      });
+    }
+
+    const insert = db.prepare(`
+      INSERT INTO transactions
+        (type, amount, transaction_date, method, category, description, created_by)
+      VALUES
+        (@type, @amount, @transactionDate, @method, @category, @description, @createdBy)
+    `);
+
+    const created = insert.run({ ...input, createdBy: req.user.id });
+    const transactionId = Number(created.lastInsertRowid);
+    const uploaded = {};
+
+    try {
+      if (evidence) {
+        uploaded.evidence = await uploadTransactionAttachment(evidence, {
+          transactionId,
+          transactionDate: input.transactionDate,
+          type: input.type,
+          kind: 'evidence'
+        });
+      }
+
+      if (mutation) {
+        uploaded.mutation = await uploadTransactionAttachment(mutation, {
+          transactionId,
+          transactionDate: input.transactionDate,
+          type: input.type,
+          kind: 'mutation'
+        });
+      }
+
+      db.prepare(`
+        UPDATE transactions
+        SET
+          evidence_drive_file_id = ?,
+          evidence_original_name = ?,
+          evidence_mime_type = ?,
+          mutation_drive_file_id = ?,
+          mutation_original_name = ?,
+          mutation_mime_type = ?
+        WHERE id = ?
+      `).run(
+        uploaded.evidence?.id ?? null,
+        uploaded.evidence?.originalName ?? null,
+        uploaded.evidence?.mimeType ?? null,
+        uploaded.mutation?.id ?? null,
+        uploaded.mutation?.originalName ?? null,
+        uploaded.mutation?.mimeType ?? null,
+        transactionId
+      );
+    } catch (error) {
+      await Promise.allSettled([
+        deleteTransactionAttachment(uploaded.evidence?.id),
+        deleteTransactionAttachment(uploaded.mutation?.id)
+      ]);
+      db.prepare('DELETE FROM transactions WHERE id = ?').run(transactionId);
+
+      console.error('Google Drive upload failed:', error);
+      return res.status(502).json({
+        message: 'Transaksi tidak disimpan karena upload bukti ke Google Drive gagal. Periksa konfigurasi Drive dan coba lagi.'
+      });
+    }
+
+    const transaction = db.prepare(`
+      SELECT
+        id,
+        type,
+        amount,
+        transaction_date AS transactionDate,
+        method,
+        category,
+        description,
+        evidence_drive_file_id AS evidenceFileId,
+        evidence_original_name AS evidenceOriginalName,
+        evidence_mime_type AS evidenceMimeType,
+        mutation_drive_file_id AS bankMutationFileId,
+        mutation_original_name AS bankMutationOriginalName,
+        mutation_mime_type AS bankMutationMimeType,
+        created_at AS createdAt
+      FROM transactions
+      WHERE id = ?
+    `).get(transactionId);
+
+    const summary = getSummary();
+    logAudit(req, {
+      action: 'TRANSACTION_CREATE',
+      entityType: 'TRANSACTION',
+      entityId: transaction.id,
+      details: {
+        type: transaction.type,
+        amount: transaction.amount,
+        category: transaction.category,
+        evidenceOnGoogleDrive: Boolean(transaction.evidenceFileId),
+        mutationOnGoogleDrive: Boolean(transaction.bankMutationFileId)
+      }
+    });
+
+    const notification = await sendTransactionNotification(transaction, summary);
+
+    return res.status(201).json({
+      message: 'Transaksi berhasil disimpan.',
+      transaction,
+      summary,
+      notification
     });
   }
-
-  const input = parsed.data;
-  const insert = db.prepare(`
-    INSERT INTO transactions
-      (type, amount, transaction_date, method, category, description, created_by)
-    VALUES
-      (@type, @amount, @transactionDate, @method, @category, @description, @createdBy)
-  `);
-
-  const created = insert.run({ ...input, createdBy: req.user.id });
-  const transaction = db.prepare(`
-    SELECT
-      id,
-      type,
-      amount,
-      transaction_date AS transactionDate,
-      method,
-      category,
-      description,
-      created_at AS createdAt
-    FROM transactions
-    WHERE id = ?
-  `).get(created.lastInsertRowid);
-
-  const summary = getSummary();
-  logAudit(req, {
-    action: 'TRANSACTION_CREATE',
-    entityType: 'TRANSACTION',
-    entityId: transaction.id,
-    details: { type: transaction.type, amount: transaction.amount, category: transaction.category }
-  });
-
-  const notification = await sendTransactionNotification(transaction, summary);
-
-  return res.status(201).json({
-    message: 'Transaksi berhasil disimpan.',
-    transaction,
-    summary,
-    notification
-  });
-});
+);
 
 apiRouter.post(
   '/transactions/:id/attachments',
   requireAuth,
   requireRole('ADMIN', 'TREASURER'),
   transactionUpload,
-  (req, res) => {
+  async (req, res) => {
     const transaction = db.prepare(`
-      SELECT id, evidence_path AS evidencePath, bank_mutation_path AS bankMutationPath
+      SELECT
+        id,
+        type,
+        transaction_date AS transactionDate,
+        evidence_drive_file_id AS evidenceFileId,
+        mutation_drive_file_id AS bankMutationFileId
       FROM transactions
       WHERE id = ?
     `).get(req.params.id);
 
     if (!transaction) {
-      for (const files of Object.values(req.files ?? {})) {
-        for (const file of files) fs.rmSync(file.path, { force: true });
-      }
       return res.status(404).json({ message: 'Transaksi tidak ditemukan.' });
     }
 
-    const evidence = req.files?.evidence?.[0];
-    const mutation = req.files?.mutation?.[0];
+    const evidence = req.files?.evidence?.[0] ?? null;
+    const mutation = req.files?.mutation?.[0] ?? null;
 
-    const evidencePath = evidence ? evidence.filename : transaction.evidencePath;
-    const mutationPath = mutation ? mutation.filename : transaction.bankMutationPath;
+    if (!evidence && !mutation) {
+      return res.status(422).json({ message: 'Tidak ada dokumen yang dipilih.' });
+    }
 
-    db.prepare(`
-      UPDATE transactions
-      SET evidence_path = ?, bank_mutation_path = ?
-      WHERE id = ?
-    `).run(evidencePath, mutationPath, transaction.id);
+    const uploaded = {};
+
+    try {
+      if (evidence) {
+        uploaded.evidence = await uploadTransactionAttachment(evidence, {
+          transactionId: transaction.id,
+          transactionDate: transaction.transactionDate,
+          type: transaction.type,
+          kind: 'evidence'
+        });
+      }
+
+      if (mutation) {
+        uploaded.mutation = await uploadTransactionAttachment(mutation, {
+          transactionId: transaction.id,
+          transactionDate: transaction.transactionDate,
+          type: transaction.type,
+          kind: 'mutation'
+        });
+      }
+
+      db.prepare(`
+        UPDATE transactions
+        SET
+          evidence_drive_file_id = COALESCE(?, evidence_drive_file_id),
+          evidence_original_name = COALESCE(?, evidence_original_name),
+          evidence_mime_type = COALESCE(?, evidence_mime_type),
+          mutation_drive_file_id = COALESCE(?, mutation_drive_file_id),
+          mutation_original_name = COALESCE(?, mutation_original_name),
+          mutation_mime_type = COALESCE(?, mutation_mime_type)
+        WHERE id = ?
+      `).run(
+        uploaded.evidence?.id ?? null,
+        uploaded.evidence?.originalName ?? null,
+        uploaded.evidence?.mimeType ?? null,
+        uploaded.mutation?.id ?? null,
+        uploaded.mutation?.originalName ?? null,
+        uploaded.mutation?.mimeType ?? null,
+        transaction.id
+      );
+    } catch (error) {
+      await Promise.allSettled([
+        deleteTransactionAttachment(uploaded.evidence?.id),
+        deleteTransactionAttachment(uploaded.mutation?.id)
+      ]);
+      console.error('Google Drive attachment replacement failed:', error);
+      return res.status(502).json({ message: 'Upload dokumen ke Google Drive gagal.' });
+    }
+
+    await Promise.allSettled([
+      evidence ? deleteTransactionAttachment(transaction.evidenceFileId) : Promise.resolve(),
+      mutation ? deleteTransactionAttachment(transaction.bankMutationFileId) : Promise.resolve()
+    ]);
 
     logAudit(req, {
       action: 'TRANSACTION_ATTACHMENTS_UPDATE',
       entityType: 'TRANSACTION',
       entityId: transaction.id,
       details: {
-        evidence: Boolean(evidence),
-        bankMutation: Boolean(mutation)
+        evidenceOnGoogleDrive: Boolean(evidence),
+        bankMutationOnGoogleDrive: Boolean(mutation)
       }
     });
 
-    res.json({
-      message: 'Dokumen transaksi berhasil diperbarui.',
-      evidencePath,
-      bankMutationPath: mutationPath
+    return res.json({
+      message: 'Dokumen transaksi berhasil diperbarui di Google Drive.',
+      evidenceFileId: uploaded.evidence?.id ?? transaction.evidenceFileId,
+      bankMutationFileId: uploaded.mutation?.id ?? transaction.bankMutationFileId
     });
   }
 );
 
-apiRouter.get('/transactions/:id/attachments/:kind', requireAuth, (req, res) => {
+apiRouter.get('/transactions/:id/attachments/:kind', requireAuth, async (req, res) => {
   const transaction = db.prepare(`
-    SELECT evidence_path AS evidencePath, bank_mutation_path AS bankMutationPath
+    SELECT
+      evidence_drive_file_id AS evidenceFileId,
+      evidence_original_name AS evidenceOriginalName,
+      evidence_mime_type AS evidenceMimeType,
+      mutation_drive_file_id AS bankMutationFileId,
+      mutation_original_name AS bankMutationOriginalName,
+      mutation_mime_type AS bankMutationMimeType
     FROM transactions
     WHERE id = ?
   `).get(req.params.id);
 
-  if (!transaction) return res.status(404).json({ message: 'Transaksi tidak ditemukan.' });
-
-  const filename = req.params.kind === 'evidence'
-    ? transaction.evidencePath
-    : req.params.kind === 'mutation'
-      ? transaction.bankMutationPath
-      : null;
-
-  if (!filename) return res.status(404).json({ message: 'Dokumen tidak tersedia.' });
-
-  const resolved = safeAttachmentPath(filename);
-  if (!resolved || !fs.existsSync(resolved)) {
-    return res.status(404).json({ message: 'File dokumen tidak ditemukan.' });
+  if (!transaction) {
+    return res.status(404).json({ message: 'Transaksi tidak ditemukan.' });
   }
 
-  res.sendFile(resolved);
+  const isEvidence = req.params.kind === 'evidence';
+  const isMutation = req.params.kind === 'mutation';
+  if (!isEvidence && !isMutation) {
+    return res.status(404).json({ message: 'Jenis dokumen tidak dikenal.' });
+  }
+
+  const fileId = isEvidence ? transaction.evidenceFileId : transaction.bankMutationFileId;
+  const originalName = isEvidence ? transaction.evidenceOriginalName : transaction.bankMutationOriginalName;
+  const storedMimeType = isEvidence ? transaction.evidenceMimeType : transaction.bankMutationMimeType;
+
+  if (!fileId) {
+    return res.status(404).json({ message: 'Dokumen tidak tersedia.' });
+  }
+
+  try {
+    const file = await getTransactionAttachment(fileId);
+    const mimeType = file.metadata.mimeType || storedMimeType || 'application/octet-stream';
+    const fileName = originalName || file.metadata.name || 'attachment';
+
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(fileName)}`);
+    res.setHeader('Cache-Control', 'private, no-store');
+
+    file.stream.on('error', (error) => {
+      console.error('Google Drive stream failed:', error);
+      if (!res.headersSent) {
+        res.status(502).json({ message: 'File dari Google Drive gagal dibaca.' });
+      } else {
+        res.destroy(error);
+      }
+    });
+
+    file.stream.pipe(res);
+  } catch (error) {
+    console.error('Google Drive download failed:', error);
+    return res.status(502).json({ message: 'Dokumen dari Google Drive gagal diambil.' });
+  }
 });
 
 apiRouter.get('/reports/summary', requireAuth, (req, res) => {
