@@ -1,30 +1,112 @@
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001/api';
 
 async function request(path, options = {}) {
+  const headers = new Headers(options.headers ?? {});
+  if (options.body && !(options.body instanceof FormData) && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+
   const response = await fetch(`${API_URL}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers
-    },
-    ...options
+    credentials: 'include',
+    ...options,
+    headers
   });
 
-  const body = await response.json().catch(() => ({}));
+  const contentType = response.headers.get('content-type') ?? '';
+  const body = contentType.includes('application/json')
+    ? await response.json().catch(() => ({}))
+    : await response.text();
 
   if (!response.ok) {
-    const error = new Error(body.message ?? 'Permintaan gagal diproses.');
-    error.details = body.errors;
+    const error = new Error(body?.message ?? 'Permintaan gagal diproses.');
+    error.status = response.status;
+    error.details = body?.errors;
     throw error;
   }
 
   return body;
 }
 
+function queryString(params = {}) {
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') search.set(key, value);
+  });
+  const value = search.toString();
+  return value ? `?${value}` : '';
+}
+
 export const api = {
-  dashboard: () => request('/dashboard'),
-  transactions: (type) => request(`/transactions${type ? `?type=${type}` : ''}`),
+  authStatus: () => request('/auth/status'),
+  setup: (input) => request('/auth/setup', { method: 'POST', body: JSON.stringify(input) }),
+  login: (input) => request('/auth/login', { method: 'POST', body: JSON.stringify(input) }),
+  logout: () => request('/auth/logout', { method: 'POST' }),
+
+  dashboard: (date) => request(`/dashboard${queryString({ date })}`),
+  publicDisplay: (date) => request(`/public/display${queryString({ date })}`),
+
+  transactions: (filters = {}) => request(`/transactions${queryString(filters)}`),
   createTransaction: (input) => request('/transactions', {
     method: 'POST',
     body: JSON.stringify(input)
-  })
+  }),
+  uploadTransactionAttachments: (id, { evidence, mutation }) => {
+    const formData = new FormData();
+    if (evidence) formData.append('evidence', evidence);
+    if (mutation) formData.append('mutation', mutation);
+    return request(`/transactions/${id}/attachments`, {
+      method: 'POST',
+      body: formData
+    });
+  },
+  attachmentUrl: (id, kind) => `${API_URL}/transactions/${id}/attachments/${kind}`,
+
+  reportSummary: (from, to) => request(`/reports/summary${queryString({ from, to })}`),
+  async downloadTransactionsCsv(from, to) {
+    const response = await fetch(`${API_URL}/reports/transactions.csv${queryString({ from, to })}`, {
+      credentials: 'include'
+    });
+    if (!response.ok) throw new Error('Laporan CSV gagal diunduh.');
+
+    const blob = await response.blob();
+    const disposition = response.headers.get('content-disposition') ?? '';
+    const match = disposition.match(/filename="([^"]+)"/);
+    const filename = match?.[1] ?? `ikhlas-transaksi-${from}-${to}.csv`;
+
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  },
+
+  prayerSchedule: (date) => request(`/prayer-schedules${queryString({ date })}`),
+  updatePrayerSchedule: (date, items) => request(`/prayer-schedules/${date}`, {
+    method: 'PUT',
+    body: JSON.stringify({ items })
+  }),
+
+  activities: (from) => request(`/activities${queryString({ from })}`),
+  createActivity: (input) => request('/activities', {
+    method: 'POST',
+    body: JSON.stringify(input)
+  }),
+  deleteActivity: (id) => request(`/activities/${id}`, { method: 'DELETE' }),
+
+  users: () => request('/users'),
+  createUser: (input) => request('/users', {
+    method: 'POST',
+    body: JSON.stringify(input)
+  }),
+
+  settings: () => request('/settings'),
+  updateSettings: (input) => request('/settings', {
+    method: 'PUT',
+    body: JSON.stringify(input)
+  }),
+
+  auditLogs: (limit = 100) => request(`/audit-logs${queryString({ limit })}`)
 };
