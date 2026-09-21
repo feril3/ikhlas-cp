@@ -73,6 +73,12 @@ export function initializeDatabase() {
       description TEXT,
       evidence_path TEXT,
       bank_mutation_path TEXT,
+      evidence_drive_file_id TEXT,
+      evidence_original_name TEXT,
+      evidence_mime_type TEXT,
+      mutation_drive_file_id TEXT,
+      mutation_original_name TEXT,
+      mutation_mime_type TEXT,
       created_by INTEGER,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (created_by) REFERENCES users(id)
@@ -130,6 +136,12 @@ export function initializeDatabase() {
 
   ensureColumn('transactions', 'evidence_path', 'TEXT');
   ensureColumn('transactions', 'bank_mutation_path', 'TEXT');
+  ensureColumn('transactions', 'evidence_drive_file_id', 'TEXT');
+  ensureColumn('transactions', 'evidence_original_name', 'TEXT');
+  ensureColumn('transactions', 'evidence_mime_type', 'TEXT');
+  ensureColumn('transactions', 'mutation_drive_file_id', 'TEXT');
+  ensureColumn('transactions', 'mutation_original_name', 'TEXT');
+  ensureColumn('transactions', 'mutation_mime_type', 'TEXT');
   ensureColumn('transactions', 'created_by', 'INTEGER');
   ensureColumn('activities', 'live_url', 'TEXT');
   ensureColumn('activities', 'is_published', 'INTEGER NOT NULL DEFAULT 1');
