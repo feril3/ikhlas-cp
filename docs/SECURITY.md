@@ -23,9 +23,10 @@ Dokumen ini menjelaskan baseline keamanan implementasi, bukan klaim bahwa aplika
 
 - Jenis file allow-list: JPEG, PNG, WEBP, PDF.
 - Maksimal 5 MB per file.
-- Nama file pada disk dibuat random.
-- File disimpan di luar webroot frontend.
-- Download membutuhkan authenticated session.
+- File diteruskan dari RAM server ke Google Drive dan tidak disimpan permanen di disk server.
+- File Google Drive tetap private; aplikasi tidak membuat permission `anyone`.
+- SQLite hanya menyimpan Google Drive file ID + metadata referensi.
+- Download tetap membutuhkan authenticated session dan diproxy oleh backend.
 - Production deployment tetap disarankan menambahkan malware scanning bila volume upload meningkat.
 
 ## HTTP
@@ -43,7 +44,6 @@ Jangan commit:
 - Telegram bot token.
 - Telegram chat ID bila dianggap sensitif.
 - Database production.
-- Upload bukti transaksi.
 - Backup database.
 
 Semua sudah diarahkan melalui `.env` dan `.gitignore`.
@@ -57,4 +57,5 @@ Untuk production:
 4. set `CORS_ORIGIN` ke origin frontend yang pasti;
 5. set `TRUST_PROXY=true` hanya jika memang berada di belakang reverse proxy yang dipercaya;
 6. backup database secara terjadwal dan simpan salinan di media terpisah;
-7. batasi akses filesystem server.
+7. jaga OAuth client secret dan refresh token Google Drive sebagai secret deployment;
+8. batasi akses filesystem server.
