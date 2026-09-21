@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-21T23:00:00+07:00",
+  "title": "Design System: Sistem Informasi Manajemen Masjid",
+  "extensions": {
+    "colorMeta": {
+      "amanah-green": {
+        "role": "primary",
+        "displayName": "Amanah Green",
+        "canonical": "#146B5A",
+        "tonalRamp": [
+          "#082D26",
+          "#0D4B3F",
+          "#146B5A",
+          "#2C806F",
+          "#57A191",
+          "#8FC3B7",
+          "#C6E1DA",
+          "#EDF7F4"
+        ]
+      },
+      "warm-paper": {
+        "role": "neutral",
+        "displayName": "Warm Paper",
+        "canonical": "#F7F5EF",
+        "tonalRamp": [
+          "#292822",
+          "#4B4940",
+          "#716E63",
+          "#99968A",
+          "#BEBBB1",
+          "#DDDAD2",
+          "#F0EEE8",
+          "#F7F5EF"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#17211E",
+        "tonalRamp": [
+          "#111815",
+          "#17211E",
+          "#25312D",
+          "#485550",
+          "#73807B",
+          "#A9B2AF",
+          "#D5DAD8",
+          "#F2F4F3"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Public Display focal text and highest-level numeric/time emphasis."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Primary page titles and section anchors."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Cards, dialogs, sheets, and grouped content."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Operational content, lists, tables, and descriptions."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Form labels, metadata, chips, and navigation."
+      }
+    },
+    "shadows": [
+      {
+        "name": "raised-low",
+        "value": "0 1px 3px rgba(23, 33, 30, 0.08), 0 8px 24px rgba(23, 33, 30, 0.06)",
+        "purpose": "Dropdowns, sticky mobile action surfaces, and genuinely elevated cards."
+      },
+      {
+        "name": "overlay",
+        "value": "0 16px 48px rgba(23, 33, 30, 0.18)",
+        "purpose": "Dialogs and large sheets."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-standard",
+        "value": "cubic-bezier(0.2, 0, 0, 1)",
+        "purpose": "Short state transitions for controls and navigation."
+      },
+      {
+        "name": "duration-fast",
+        "value": "150ms",
+        "purpose": "Hover, focus, press, and compact state changes."
+      },
+      {
+        "name": "duration-standard",
+        "value": "220ms",
+        "purpose": "Drawer, sheet, and panel transitions."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Dominant action for save/submit flows.",
+      "html": "<button class=\"ds-btn-primary\">Simpan Transaksi</button>",
+      "css": ".ds-btn-primary{height:48px;padding:12px 16px;border:0;border-radius:8px;background:#146B5A;color:#fff;font:600 15px/1.2 'Plus Jakarta Sans',system-ui,sans-serif;transition:background 150ms cubic-bezier(.2,0,0,1),transform 150ms cubic-bezier(.2,0,0,1)}.ds-btn-primary:hover{background:#0D4B3F}.ds-btn-primary:focus-visible{outline:3px solid rgba(20,107,90,.28);outline-offset:2px}.ds-btn-primary:active{transform:translateY(1px)}"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input-default",
+      "description": "Default operational form field.",
+      "html": "<label class=\"ds-field\"><span>Nominal</span><input inputmode=\"numeric\" placeholder=\"Rp 0\"></label>",
+      "css": ".ds-field{display:grid;gap:8px;color:#17211E;font:600 13px/1.4 'Plus Jakarta Sans',system-ui,sans-serif}.ds-field input{height:48px;padding:0 14px;border:1px solid #DDE5E0;border-radius:8px;background:#fff;color:#17211E;font:400 15px/1.4 'Plus Jakarta Sans',system-ui,sans-serif}.ds-field input:focus{border-color:#146B5A;outline:3px solid rgba(20,107,90,.16);outline-offset:0}"
+    },
+    {
+      "name": "Transaction Row",
+      "kind": "custom",
+      "description": "Mobile-first scan row for transaction history.",
+      "html": "<article class=\"ds-transaction\"><div><strong>Rp 500.000</strong><span>Kas Masuk · Transfer</span></div><time>21 Sep 2026</time></article>",
+      "css": ".ds-transaction{display:flex;justify-content:space-between;gap:16px;padding:16px 0;border-bottom:1px solid #DDE5E0;color:#17211E;font-family:'Plus Jakarta Sans',system-ui,sans-serif}.ds-transaction div{display:grid;gap:4px}.ds-transaction strong{font-size:16px;font-variant-numeric:tabular-nums}.ds-transaction span,.ds-transaction time{font-size:13px;color:#66736E}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Amanah yang Terlihat",
+    "overview": "Calm, trustworthy, mobile-first operational design. The interface makes financial and mosque information easy to scan without decorative noise; Public Display is treated as a separate read-at-a-distance surface.",
+    "keyCharacteristics": [
+      "Mobile-first operational forms",
+      "Restrained green-teal accent",
+      "Warm neutral surfaces",
+      "Strong financial-number hierarchy",
+      "Flat-by-default depth",
+      "Dedicated TV/Public Display composition"
+    ],
+    "rules": [
+      {
+        "name": "The One Accent Rule",
+        "body": "Amanah Green is the primary accent; decorative gradients or arbitrary second accents are not part of the system.",
+        "section": "colors"
+      },
+      {
+        "name": "The Thumb First Rule",
+        "body": "Transaction flows must complete comfortably on small screens without zoom or horizontal scrolling.",
+        "section": "layout"
+      },
+      {
+        "name": "The TV Is Not a Big Laptop Rule",
+        "body": "Public Display must not inherit admin navigation or dashboard density merely because the screen is large.",
+        "section": "layout"
+      },
+      {
+        "name": "The Flat-by-Default Rule",
+        "body": "Use spacing, typography, border, and tonal layering before adding shadows.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do start transaction flows from a single-column mobile layout.",
+      "Do make current balance and transaction amount easy to scan.",
+      "Do design Public Display as a dedicated TV surface."
+    ],
+    "donts": [
+      "Don't use decorative gradients, glassmorphism, or neon SaaS styling.",
+      "Don't force desktop tables into horizontal-scroll mobile experiences.",
+      "Don't expose sensitive transaction evidence on Public Display."
+    ]
+  }
+}

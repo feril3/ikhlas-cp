@@ -1,0 +1,34 @@
+/* Public display */
+.public-display { min-height: 100vh; display: grid; grid-template-rows: auto 1fr auto; color: #f5fbf8; background: #0b1f1a; }
+.display-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 24px clamp(22px, 4vw, 64px); border-bottom: 1px solid rgba(255,255,255,.1); }
+.display-brand { display: flex; align-items: center; gap: 13px; }
+.display-mark { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 12px; color: #0b1f1a; background: #a7d8c8; }
+.display-brand > div { display: grid; gap: 3px; }
+.display-brand strong { font-size: clamp(15px, 2vw, 22px); letter-spacing: .06em; }
+.display-brand span { color: #9db5ad; font-size: clamp(9px, 1vw, 13px); }
+.display-status { display: flex; align-items: center; gap: 7px; color: #9dcbbd; font-size: 11px; }
+.display-grid { display: grid; gap: clamp(14px, 1.7vw, 26px); padding: clamp(18px, 3vw, 42px) clamp(22px, 4vw, 64px); }
+.display-grid > section { border: 1px solid rgba(255,255,255,.11); border-radius: clamp(14px, 1.7vw, 22px); background: #102c25; }
+.display-clock-card { display: flex; flex-direction: column; justify-content: center; padding: clamp(22px, 4vw, 52px); }
+.display-clock-card > p { margin: 0 0 6px; color: #a6bbb4; font-size: clamp(12px, 1.4vw, 18px); }
+.display-clock-card > time { font-size: clamp(54px, 10vw, 128px); font-weight: 720; line-height: 1; letter-spacing: -.055em; font-variant-numeric: tabular-nums; }
+.next-prayer { display: grid; grid-template-columns: auto auto 1fr; gap: 10px; align-items: baseline; margin-top: clamp(18px, 2.2vw, 28px); padding-top: clamp(14px, 2vw, 24px); border-top: 1px solid rgba(255,255,255,.11); }
+.next-prayer span { color: #a6bbb4; font-size: clamp(10px, 1vw, 14px); }
+.next-prayer strong { color: #b9e3d6; font-size: clamp(15px, 1.6vw, 22px); }
+.next-prayer b { justify-self: end; font-size: clamp(20px, 2.6vw, 34px); font-variant-numeric: tabular-nums; }
+.display-prayer-card, .display-activity-card, .display-finance-card { padding: clamp(18px, 2.6vw, 32px); }
+.display-section-title { display: flex; align-items: center; gap: 9px; margin-bottom: clamp(16px, 2vw, 24px); color: #b9e3d6; font-size: clamp(12px, 1.3vw, 17px); font-weight: 700; }
+.display-prayers { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; }
+.display-prayers > div { display: grid; gap: 8px; padding: clamp(11px, 1.3vw, 18px); border-radius: 10px; background: rgba(255,255,255,.045); }
+.display-prayers span { color: #a6bbb4; font-size: clamp(9px, 1vw, 13px); }
+.display-prayers strong { font-size: clamp(18px, 2.4vw, 30px); font-variant-numeric: tabular-nums; }
+.display-activity-copy > span, .display-finance-card > span { color: #93aaa2; font-size: clamp(9px, 1vw, 13px); }
+.display-activity-copy h2 { margin: 6px 0 7px; font-size: clamp(22px, 3vw, 40px); line-height: 1.15; letter-spacing: -.03em; }
+.display-activity-copy p { margin: 0; color: #b4c7c1; font-size: clamp(11px, 1.2vw, 16px); }
+.live-strip { display: flex; align-items: center; gap: 8px; margin-top: clamp(18px, 2vw, 28px); padding-top: 14px; border-top: 1px solid rgba(255,255,255,.1); color: #9db5ad; font-size: clamp(9px, 1vw, 13px); }
+.live-dot { width: 8px; height: 8px; border-radius: 50%; background: #79c7ad; box-shadow: 0 0 0 5px rgba(121,199,173,.1); }
+.display-finance-card > strong { display: block; margin: 6px 0 8px; color: #d7f0e8; font-size: clamp(30px, 5vw, 68px); line-height: 1.1; letter-spacing: -.045em; font-variant-numeric: tabular-nums; }
+.display-finance-card > p { max-width: 560px; margin: 0; color: #9db5ad; font-size: clamp(9px, 1vw, 13px); line-height: 1.5; }
+.display-footer { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 14px clamp(22px, 4vw, 64px); border-top: 1px solid rgba(255,255,255,.1); color: #9db5ad; font-size: clamp(9px, 1vw, 12px); }
+.display-footer a { display: inline-flex; gap: 6px; align-items: center; flex-shrink: 0; color: #b9e3d6; }
+
