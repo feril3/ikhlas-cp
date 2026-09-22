@@ -1,5 +1,4 @@
-.public-display,
-.signage-shell {
+.public-display.media-signage-shell {
   position: fixed;
   inset: 0;
   z-index: 1000;
@@ -9,28 +8,27 @@
   overflow: hidden;
   display: grid;
   grid-template-rows:
-    minmax(54px, 8.5dvh)
+    minmax(54px, 7.5dvh)
     minmax(0, 1fr)
-    minmax(112px, 18dvh)
-    minmax(50px, 7.5dvh);
-  color: #f5fbf8;
-  background: #0b1f1a;
+    minmax(112px, 17dvh)
+    minmax(48px, 6.5dvh);
+  color: #f4eee2;
+  background: #071913;
   font-variant-numeric: tabular-nums;
 }
 
-.signage-shell * {
+.media-signage-shell * {
   box-sizing: border-box;
 }
 
-.signage-header {
+.media-signage-header {
+  position: relative;
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(240px, 1.15fr) minmax(260px, .85fr) auto;
+  grid-template-columns: minmax(250px, 1fr) minmax(260px, .85fr) auto;
   align-items: center;
-  gap: 1.4vw;
-  padding: 0 1.6vw;
-  border-bottom: 1px solid rgba(255, 255, 255, .1);
-  background: #0d251f;
+  gap: 1.2vw;
+  padding: 0 1.4vw;
 }
 
 .signage-brand,
@@ -38,688 +36,553 @@
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: .75vw;
+  gap: .7vw;
 }
 
 .signage-brand-mark {
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  width: clamp(34px, 2.8vw, 48px);
-  height: clamp(34px, 2.8vw, 48px);
-  border-radius: clamp(9px, .7vw, 12px);
-  color: #0b1f1a;
-  background: #a7d8c8;
+  width: clamp(38px, 3vw, 52px);
+  height: clamp(38px, 3vw, 52px);
 }
 
-.signage-brand > div,
+.signage-brand > strong {
+  overflow: hidden;
+  font-size: clamp(15px, 1.45vw, 24px);
+  letter-spacing: .08em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .signage-location > div {
   min-width: 0;
   display: grid;
   gap: 2px;
 }
 
-.signage-brand strong {
-  overflow: hidden;
-  font-size: clamp(14px, 1.35vw, 23px);
-  letter-spacing: .07em;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.signage-brand span,
+.signage-location strong,
 .signage-location span {
   overflow: hidden;
-  color: #93aaa2;
-  font-size: clamp(8px, .72vw, 12px);
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.signage-location {
-  color: #a7d8c8;
 }
 
 .signage-location strong {
-  overflow: hidden;
-  color: #dceee8;
-  font-size: clamp(10px, .95vw, 15px);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: clamp(10px, .9vw, 14px);
 }
 
-.signage-date {
-  color: #aec2bb;
-  font-size: clamp(10px, .95vw, 15px);
-  font-weight: 650;
+.signage-location span {
+  font-size: clamp(8px, .7vw, 11px);
+}
+
+.media-signage-header > time {
+  font-size: clamp(10px, .92vw, 15px);
+  font-weight: 720;
   text-align: right;
   white-space: nowrap;
 }
 
-.signage-main {
-  min-height: 0;
+.media-signage-main {
   min-width: 0;
+  min-height: 0;
   display: grid;
-  grid-template-columns: minmax(320px, .82fr) minmax(0, 1.42fr);
-  gap: 1.15vw;
-  padding: 1.15dvh 1.4vw;
+  grid-template-columns: 21% minmax(0, 1fr) 20%;
+  gap: 1vw;
+  padding: 1.1dvh 1.1vw;
   overflow: hidden;
 }
 
-.signage-primary,
-.signage-carousel {
-  min-height: 0;
+.prayer-focus-panel,
+.youtube-stage,
+.finance-rail {
   min-width: 0;
+  min-height: 0;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, .1);
-  border-radius: clamp(14px, 1.1vw, 20px);
-  background: #102c25;
 }
 
-.signage-primary {
+.prayer-focus-panel {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  padding: clamp(16px, 1.8vw, 30px);
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  align-content: stretch;
+  padding: clamp(16px, 1.35vw, 24px);
 }
 
-.signage-clock {
+.prayer-focus-clock {
   display: grid;
-  gap: .25dvh;
+  justify-items: start;
+  gap: .15dvh;
 }
 
-.signage-clock > span,
-.signage-next-prayer > span,
-.signage-balance > span,
-.signage-finance-flow span,
-.signage-donation > span {
-  color: #8eaaa0;
-  font-size: clamp(9px, .76vw, 12px);
-  font-weight: 700;
-  letter-spacing: .05em;
+.prayer-focus-clock > span,
+.prayer-focus-next > span,
+.prayer-focus-countdown > span,
+.prayer-focus-iqamah > span,
+.finance-rail-heading,
+.finance-balance > span,
+.finance-flow-summary span,
+.finance-slide-title {
+  font-size: clamp(8px, .67vw, 11px);
+  font-weight: 760;
+  letter-spacing: .06em;
   text-transform: uppercase;
 }
 
-.signage-clock time {
-  font-size: clamp(42px, 5.8vw, 90px);
+.prayer-focus-clock time {
+  font-size: clamp(38px, 4.45vw, 70px);
   font-weight: 760;
-  line-height: .96;
+  line-height: .95;
   letter-spacing: -.055em;
 }
 
-.signage-next-prayer {
+.prayer-focus-next {
   align-self: center;
   display: grid;
-  gap: .7dvh;
-  padding: 2dvh 0 1.2dvh;
+  justify-items: start;
+  gap: .55dvh;
 }
 
-.signage-next-prayer h1 {
+.prayer-focus-next h1 {
   margin: 0;
-  color: #e7f5f0;
-  font-size: clamp(32px, 4.3vw, 68px);
+  font-size: clamp(30px, 3.5vw, 56px);
   line-height: .98;
-  letter-spacing: -.04em;
+  letter-spacing: -.035em;
 }
 
-.signage-next-meta {
-  display: grid;
-  grid-template-columns: minmax(0, .72fr) minmax(0, 1.28fr);
-  gap: .8vw;
-  margin-top: .9dvh;
-}
-
-.signage-next-meta > div {
-  min-width: 0;
-  display: grid;
-  gap: .3dvh;
-  padding: 1.15dvh .9vw;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, .05);
-}
-
-.signage-next-meta span {
-  color: #82a397;
-  font-size: clamp(8px, .66vw, 11px);
-  text-transform: uppercase;
-  letter-spacing: .05em;
-}
-
-.signage-next-meta strong {
-  overflow: hidden;
-  color: #bfe8db;
-  font-size: clamp(20px, 2.6vw, 42px);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.signage-prayer-source {
-  display: grid;
-  gap: 2px;
-  padding-top: 1dvh;
-  border-top: 1px solid rgba(255, 255, 255, .08);
-}
-
-.signage-prayer-source span {
-  color: #91afa4;
-  font-size: clamp(8px, .68vw, 11px);
-  font-weight: 700;
-}
-
-.signage-prayer-source small {
-  color: #6f8d83;
-  font-size: clamp(7px, .58vw, 9px);
-}
-
-.signage-carousel {
-  position: relative;
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  padding: clamp(16px, 1.5vw, 26px);
-}
-
-.signage-slide {
-  min-height: 0;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  overflow: hidden;
-}
-
-.signage-slide-header {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: .8vw;
-  padding-bottom: 1.35dvh;
-  border-bottom: 1px solid rgba(255, 255, 255, .08);
-}
-
-.signage-slide-icon {
-  flex: 0 0 auto;
-  display: grid;
-  place-items: center;
-  width: clamp(36px, 2.9vw, 48px);
-  height: clamp(36px, 2.9vw, 48px);
-  border-radius: 11px;
-  color: #bfe8db;
-  background: rgba(167, 216, 200, .1);
-}
-
-.signage-slide-header > div {
-  min-width: 0;
-}
-
-.signage-slide-header span {
-  color: #7fa196;
-  font-size: clamp(8px, .68vw, 11px);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-}
-
-.signage-slide-header h2 {
-  overflow: hidden;
-  margin: .2dvh 0 0;
-  font-size: clamp(20px, 2vw, 32px);
-  line-height: 1.05;
-  letter-spacing: -.025em;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.signage-slide-body {
-  min-height: 0;
-  overflow: hidden;
-  display: grid;
-  align-items: center;
-  padding-top: 1.4dvh;
-}
-
-.signage-live {
-  min-height: 0;
-  height: 100%;
-  display: grid;
-  place-items: center;
-}
-
-.signage-live iframe {
-  width: min(100%, 72vw);
-  height: min(100%, 48dvh);
-  aspect-ratio: 16 / 9;
-  border: 0;
-  border-radius: 12px;
-  background: #071612;
-}
-
-.signage-activity-list {
-  min-height: 0;
-  display: grid;
-  gap: .8dvh;
-}
-
-.signage-activity {
-  min-width: 0;
-  display: grid;
-  grid-template-columns: clamp(52px, 4.2vw, 72px) minmax(0, 1fr);
-  align-items: center;
-  gap: 1vw;
-  padding: 1dvh .9vw;
-  border-radius: 11px;
-  background: rgba(255, 255, 255, .045);
-}
-
-.signage-activity-date {
-  display: grid;
-  place-items: center;
-  align-self: stretch;
-  align-content: center;
-  border-radius: 9px;
-  color: #0b1f1a;
-  background: #a7d8c8;
-}
-
-.signage-activity-date strong {
-  font-size: clamp(18px, 2vw, 30px);
+.prayer-focus-adhan {
+  font-size: clamp(27px, 2.8vw, 44px);
   line-height: 1;
 }
 
-.signage-activity-date span {
-  font-size: clamp(8px, .68vw, 10px);
-  text-transform: uppercase;
+.prayer-focus-countdown {
+  width: 100%;
+  display: grid;
+  gap: .25dvh;
+  margin-top: 1dvh;
+  padding: 1.05dvh .75vw;
 }
 
-.signage-activity > div:last-child {
+.prayer-focus-countdown b {
+  font-size: clamp(24px, 2.55vw, 40px);
+  line-height: 1;
+  letter-spacing: .03em;
+}
+
+.prayer-focus-iqamah {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .7vw;
+  padding: .75dvh .75vw;
+}
+
+.prayer-focus-iqamah strong {
+  font-size: clamp(16px, 1.65vw, 26px);
+}
+
+.prayer-focus-panel > small {
+  align-self: end;
+  font-size: clamp(7px, .58vw, 9px);
+  text-align: center;
+}
+
+.youtube-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: .75dvh .55vw;
+}
+
+.youtube-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+.youtube-frame iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.youtube-empty {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 1.2dvh;
+  text-align: center;
+}
+
+.youtube-empty strong {
+  font-size: clamp(13px, 1.25vw, 20px);
+}
+
+.youtube-caption {
+  position: absolute;
+  left: 1.2vw;
+  bottom: 1.65dvh;
+  max-width: 72%;
+  overflow: hidden;
+  padding: .45dvh .55vw;
+  font-size: clamp(8px, .68vw, 11px);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.finance-rail {
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  padding: clamp(13px, 1.05vw, 19px);
+}
+
+.finance-rail-heading {
+  display: flex;
+  align-items: center;
+  gap: .45vw;
+  padding-bottom: .9dvh;
+}
+
+.finance-balance {
+  display: grid;
+  gap: .4dvh;
+  padding: 1.1dvh 0 1.2dvh;
+}
+
+.finance-balance strong {
+  overflow: hidden;
+  font-size: clamp(22px, 2.45vw, 38px);
+  line-height: 1;
+  letter-spacing: -.035em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.finance-flow-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .55vw;
+}
+
+.finance-flow-summary > div {
   min-width: 0;
   display: grid;
   gap: .25dvh;
+  padding: .7dvh .55vw;
 }
 
-.signage-activity > div:last-child > strong {
+.finance-flow-summary strong {
   overflow: hidden;
-  font-size: clamp(13px, 1.25vw, 20px);
+  font-size: clamp(10px, .95vw, 15px);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.signage-activity > div:last-child > span,
-.signage-activity small {
-  overflow: hidden;
-  color: #93aaa2;
-  font-size: clamp(8px, .74vw, 11px);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.finance-carousel {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  padding-top: 1dvh;
 }
 
-.signage-activity small {
+.finance-carousel-window {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.finance-slide {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.finance-slide-title {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: .4vw;
+  padding-bottom: .65dvh;
 }
 
-.signage-finance {
+.finance-transaction-list {
+  min-height: 0;
   display: grid;
-  gap: 2.1dvh;
+  align-content: start;
 }
 
-.signage-balance {
-  display: grid;
-  gap: .7dvh;
-}
-
-.signage-balance strong {
-  color: #d9f0e8;
-  font-size: clamp(34px, 4.5vw, 70px);
-  line-height: 1;
-  letter-spacing: -.045em;
-}
-
-.signage-finance-flow {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: .9vw;
-}
-
-.signage-finance-flow > div {
-  display: grid;
-  gap: .4dvh;
-  padding: 1.3dvh 1vw;
-  border-radius: 11px;
-  background: rgba(255, 255, 255, .045);
-}
-
-.signage-finance-flow strong {
-  font-size: clamp(18px, 1.9vw, 30px);
-}
-
-.signage-income {
-  color: #a9e4cf !important;
-}
-
-.signage-expense {
-  color: #ffc0b8 !important;
-}
-
-.signage-transaction-list {
-  display: grid;
-  gap: .7dvh;
-}
-
-.signage-transaction {
+.finance-transaction-row {
   min-width: 0;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: .8vw;
-  padding: .9dvh .85vw;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, .04);
+  gap: .45vw;
+  padding: .7dvh 0;
 }
 
-.signage-transaction-icon {
-  display: grid;
-  place-items: center;
-  width: clamp(30px, 2.3vw, 38px);
-  height: clamp(30px, 2.3vw, 38px);
-  border-radius: 9px;
-}
-
-.signage-transaction-icon.income {
-  color: #9de0c9;
-  background: rgba(55, 145, 113, .18);
-}
-
-.signage-transaction-icon.expense {
-  color: #ffc0b8;
-  background: rgba(180, 35, 24, .14);
-}
-
-.signage-transaction > div {
+.finance-transaction-row > div {
   min-width: 0;
   display: grid;
   gap: 1px;
 }
 
-.signage-transaction > div strong {
+.finance-transaction-row > div strong,
+.finance-transaction-row > div span {
   overflow: hidden;
-  font-size: clamp(11px, 1vw, 16px);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.signage-transaction > div span {
-  color: #809a91;
-  font-size: clamp(8px, .66vw, 10px);
-}
-
-.signage-transaction > b {
-  font-size: clamp(12px, 1.15vw, 18px);
-  white-space: nowrap;
-}
-
-.signage-announcement {
-  display: grid;
-  align-content: center;
-  justify-items: start;
-  gap: 1.2dvh;
-  min-height: 0;
-}
-
-.signage-announcement blockquote {
-  display: -webkit-box;
-  overflow: hidden;
-  margin: 0;
-  color: #e3f3ed;
-  font-size: clamp(24px, 3vw, 46px);
-  font-weight: 690;
-  line-height: 1.16;
-  letter-spacing: -.03em;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 4;
-}
-
-.signage-announcement span {
-  color: #8fab9f;
-  font-size: clamp(9px, .82vw, 13px);
-}
-
-.signage-donation {
-  display: grid;
-  align-content: center;
-  justify-items: start;
-  gap: .7dvh;
-}
-
-.signage-donation > strong {
-  color: #e7f5f0;
-  font-size: clamp(34px, 4.1vw, 66px);
-  letter-spacing: .035em;
-}
-
-.signage-donation p {
-  margin: 0;
-  color: #bad5cc;
-  font-size: clamp(13px, 1.25vw, 19px);
-}
-
-.signage-donation small {
-  margin-top: .9dvh;
-  color: #7f9c92;
+.finance-transaction-row > div strong {
   font-size: clamp(9px, .75vw, 12px);
 }
 
-.signage-carousel-dots {
+.finance-transaction-row > div span {
+  font-size: clamp(7px, .57vw, 9px);
+}
+
+.finance-transaction-row > b {
+  grid-column: 2;
+  justify-self: end;
+  font-size: clamp(9px, .78vw, 12px);
+  white-space: nowrap;
+}
+
+.finance-flow-icon {
+  grid-row: 1 / 3;
+  display: grid;
+  place-items: center;
+  width: clamp(27px, 2vw, 32px);
+  height: clamp(27px, 2vw, 32px);
+}
+
+.finance-donation-copy {
+  min-height: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: .5dvh;
+  text-align: center;
+}
+
+.finance-donation-copy > span {
+  font-size: clamp(8px, .68vw, 11px);
+  font-weight: 700;
+}
+
+.finance-donation-copy > strong {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: clamp(20px, 2.15vw, 34px);
+  letter-spacing: .045em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.finance-donation-copy p {
+  margin: 0;
+  font-size: clamp(8px, .68vw, 11px);
+}
+
+.finance-carousel-dots {
   display: flex;
   justify-content: center;
-  align-items: center;
-  gap: .45vw;
-  min-height: 16px;
-  padding-top: .8dvh;
+  gap: .42vw;
+  padding-top: .55dvh;
 }
 
-.signage-carousel-dots span {
-  display: block;
-  width: clamp(5px, .42vw, 7px);
-  height: clamp(5px, .42vw, 7px);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, .22);
+.finance-carousel-dots span {
+  width: 6px;
+  height: 6px;
 }
 
-.signage-carousel-dots span.active {
-  width: clamp(16px, 1.25vw, 22px);
-  background: #a7d8c8;
+.finance-empty {
+  align-self: center;
+  justify-self: center;
+  font-size: clamp(8px, .66vw, 10px);
 }
 
-.signage-prayer-strip {
+.media-prayer-strip {
+  position: relative;
   min-width: 0;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: .7vw;
-  padding: 1dvh 1.4vw;
-  border-top: 1px solid rgba(255, 255, 255, .08);
-  border-bottom: 1px solid rgba(255, 255, 255, .08);
-  background: #0d251f;
+  padding: 1.75dvh 1.1vw .75dvh;
 }
 
-.signage-prayer {
+.media-prayer {
+  position: relative;
   min-width: 0;
   display: grid;
   align-content: center;
   justify-items: center;
-  gap: .15dvh;
-  border: 1px solid rgba(255, 255, 255, .07);
-  border-radius: 11px;
-  background: rgba(255, 255, 255, .025);
+  gap: .2dvh;
+  padding: .45dvh .7vw;
 }
 
-.signage-prayer > span {
-  color: #91aaa1;
-  font-size: clamp(9px, .78vw, 12px);
-  font-weight: 750;
+.media-prayer em {
+  position: absolute;
+  top: .15dvh;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: clamp(7px, .55vw, 9px);
+  font-style: normal;
+  font-weight: 820;
+  letter-spacing: .08em;
   text-transform: uppercase;
-  letter-spacing: .05em;
-}
-
-.signage-prayer > strong {
-  color: #e7f5f0;
-  font-size: clamp(24px, 2.6vw, 40px);
-  line-height: 1.05;
-}
-
-.signage-prayer > small {
-  color: #6f8b82;
-  font-size: clamp(7px, .61vw, 9px);
-}
-
-.signage-prayer.active {
-  border-color: rgba(167, 216, 200, .55);
-  background: #174d40;
-  box-shadow: inset 0 0 0 1px rgba(167, 216, 200, .13);
-}
-
-.signage-prayer.active > span,
-.signage-prayer.active > small {
-  color: #c4e5da;
-}
-
-.signage-footer {
-  min-width: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 1vw;
-  padding: 0 1.4vw;
-  background: #081a16;
-}
-
-.signage-ticker {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: .85vw;
-  overflow: hidden;
-}
-
-.signage-ticker-label {
-  flex: 0 0 auto;
-  padding: .45dvh .55vw;
-  border-radius: 999px;
-  color: #0b1f1a;
-  background: #a7d8c8;
-  font-size: clamp(7px, .58vw, 9px);
-  font-weight: 850;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-}
-
-.signage-ticker > div {
-  min-width: 0;
-  display: flex;
-  align-items: baseline;
-  gap: .6vw;
-  overflow: hidden;
-}
-
-.signage-ticker strong,
-.signage-ticker span,
-.signage-ticker small {
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.signage-ticker strong {
-  color: #dceee8;
-  font-size: clamp(10px, .95vw, 15px);
+.media-prayer > span {
+  font-size: clamp(9px, .76vw, 12px);
+  font-weight: 780;
+  letter-spacing: .055em;
+  text-transform: uppercase;
 }
 
-.signage-ticker span {
-  color: #92aaa1;
-  font-size: clamp(8px, .75vw, 12px);
+.media-prayer > strong {
+  font-size: clamp(25px, 2.65vw, 42px);
+  line-height: 1;
 }
 
-.signage-ticker small {
-  color: #6d887e;
-  font-size: clamp(7px, .62vw, 9px);
+.media-prayer > small {
+  font-size: clamp(7px, .58vw, 9px);
 }
 
-.signage-footer-donation {
+.media-prayer-frieze {
+  position: absolute;
+  top: 0;
+  left: 1.1vw;
+  right: 1.1vw;
+  height: 10px;
+}
+
+.verse-ticker {
+  position: relative;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  overflow: hidden;
+  padding: 0 1.1vw;
+}
+
+.verse-ticker-label {
+  position: relative;
+  z-index: 2;
+  height: 100%;
   display: flex;
   align-items: center;
   gap: .45vw;
-  color: #93aaa2;
-  font-size: clamp(8px, .72vw, 11px);
+  padding-right: .85vw;
+}
+
+.verse-ticker-label svg {
+  width: 16px;
+  height: 16px;
+}
+
+.verse-ticker-label span {
+  font-size: clamp(8px, .66vw, 10px);
+  font-weight: 820;
+  letter-spacing: .08em;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 
+.verse-ticker-viewport {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.verse-ticker-track {
+  display: flex;
+  align-items: center;
+  width: max-content;
+  animation: verse-ticker-scroll var(--ticker-duration, 60s) linear infinite;
+  will-change: transform;
+}
+
+.verse-ticker-item {
+  display: flex;
+  align-items: center;
+  gap: .55vw;
+  padding-right: 2.2vw;
+  white-space: nowrap;
+}
+
+.verse-ticker-item strong {
+  font-size: clamp(10px, .9vw, 14px);
+  font-weight: 650;
+}
+
+.verse-ticker-item span {
+  font-size: clamp(8px, .66vw, 10px);
+  font-weight: 760;
+}
+
+.verse-ticker-item i {
+  font-size: 7px;
+  font-style: normal;
+}
+
+@keyframes verse-ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
 @media (max-width: 1180px) {
-  .signage-header {
-    grid-template-columns: minmax(220px, 1fr) minmax(220px, .8fr) auto;
+  .media-signage-main {
+    grid-template-columns: 22% minmax(0, 1fr) 21%;
+    gap: .7vw;
+    padding-inline: .8vw;
   }
 
-  .signage-main {
-    grid-template-columns: minmax(300px, .9fr) minmax(0, 1.25fr);
-  }
-
-  .signage-next-meta {
+  .finance-flow-summary {
     grid-template-columns: 1fr;
   }
 
-  .signage-next-meta > div {
-    padding: .75dvh .8vw;
+  .finance-flow-summary > div {
+    padding-block: .45dvh;
   }
 
-  .signage-finance-flow {
-    gap: .6vw;
+  .signage-location span {
+    display: none;
   }
 }
 
 @media (max-height: 820px) {
-  .signage-primary {
-    padding: 1.3dvh 1.1vw;
+  .prayer-focus-panel {
+    padding: 1.2dvh .9vw;
   }
 
-  .signage-next-prayer {
-    padding: 1dvh 0 .5dvh;
+  .prayer-focus-clock time {
+    font-size: clamp(34px, 4.1vw, 62px);
   }
 
-  .signage-carousel {
-    padding: 1.2dvh 1.1vw;
+  .prayer-focus-next h1 {
+    font-size: clamp(28px, 3.15vw, 48px);
   }
 
-  .signage-slide-header {
-    padding-bottom: .75dvh;
+  .finance-balance {
+    padding-block: .65dvh;
   }
 
-  .signage-slide-body {
-    padding-top: .8dvh;
+  .finance-carousel {
+    padding-top: .55dvh;
   }
 
-  .signage-activity {
-    padding: .6dvh .7vw;
-  }
-
-  .signage-transaction {
-    padding: .55dvh .7vw;
-  }
-
-  .signage-finance {
-    gap: 1dvh;
+  .finance-transaction-row {
+    padding-block: .45dvh;
   }
 }
 
-@media (max-aspect-ratio: 4 / 3) {
-  .signage-header {
-    grid-template-columns: 1fr auto;
-  }
-
-  .signage-location {
-    display: none;
-  }
-
-  .signage-main {
-    grid-template-columns: 42% minmax(0, 58%);
-  }
-
-  .signage-footer-donation {
-    display: none;
+@media (prefers-reduced-motion: reduce) {
+  .verse-ticker-track {
+    animation: none;
   }
 }
