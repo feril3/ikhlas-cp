@@ -25,6 +25,8 @@ Endpoint internal menggunakan HttpOnly session cookie.
 
 - `GET /transactions?type=INCOME|EXPENSE&from=YYYY-MM-DD&to=YYYY-MM-DD`
 - `POST /transactions` — multipart/form-data. Field transaksi + file `evidence` dan/atau `mutation` dikirim dalam satu request.
+- `PUT /transactions/:id` — Admin/Bendahara; edit nominal, tanggal, metode, kategori, sumber, dan keterangan. Jenis INCOME/EXPENSE tidak diubah. Before/after masuk audit trail.
+- `DELETE /transactions/:id` — Admin/Bendahara; transaksi dihapus dari ledger, snapshot penuh masuk audit trail, file Google Drive dipertahankan untuk audit.
 - `POST /transactions/:id/attachments` — mengganti/menambah dokumen transaksi; multipart, field `evidence` dan/atau `mutation`
 - `GET /transactions/:id/attachments/evidence`
 - `GET /transactions/:id/attachments/mutation`
@@ -58,6 +60,8 @@ File diteruskan ke Google Drive. Database hanya menyimpan Google Drive file ID d
 
 ## Prayer Schedule
 
+- `GET /friday-schedules?date=YYYY-MM-DD` — status hari Jumat + petugas Jumat jika ada
+- `PUT /friday-schedules/:date` — Admin; khusus tanggal Jumat, menyimpan imam, khatib, bilal
 - `GET /prayer-schedules?date=YYYY-MM-DD` — adzan dari AlAdhan API dengan method 20 (Kementerian Agama RI), iqamah/imam/bilal dari SQLite
 - `PUT /prayer-schedules/:date` — Admin menyimpan metadata lokal iqamah/imam/bilal; adzan tetap API-managed
 
@@ -74,6 +78,7 @@ Jadwal provider dicache di tabel `prayer_time_cache`. Jika API gagal, backend me
 
 - `GET /activities?from=YYYY-MM-DD`
 - `POST /activities` — Admin
+- `PUT /activities/:id` — Admin; edit agenda publik yang sudah ada
 - `DELETE /activities/:id` — Admin
 
 ## Users
@@ -104,3 +109,14 @@ Endpoint publik `GET /public/display` mengembalikan transaksi terbaru yang sudah
 ## Audit
 
 - `GET /audit-logs?limit=100` — Admin
+
+
+## Public Display focus mode
+
+Public Display masuk mode takeover pada dua kondisi:
+- 5 menit sebelum adzan: layar hanya menampilkan label adzan tujuan dan countdown `MM:SS`.
+- sesudah adzan sampai iqamah (+5 menit): layar hanya menampilkan label iqamah dan countdown `MM:SS`.
+
+Di luar window tersebut, layout normal tetap menampilkan video, keuangan, jadwal salat, agenda publik, dan running text.
+
+Pada hari Jumat, payload Public Display menambahkan `fridaySchedule` berisi `imam`, `khatib`, dan `bilal` bila jadwal telah diinput Admin.
