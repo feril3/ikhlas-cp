@@ -211,7 +211,7 @@ export default function PublicDisplay() {
     [data?.messages]
   );
   const tickerItems = tickerMessages.length ? [...tickerMessages, ...tickerMessages] : [];
-  const tickerDuration = `${Math.max(48, tickerMessages.length * 17)}s`;
+  const tickerDuration = `${Math.max(60, tickerMessages.length * 20)}s`;
 
   const location = data?.prayerSchedule?.source?.location ?? {
     name: 'RS Elizabeth Situbondo',
@@ -314,11 +314,11 @@ export default function PublicDisplay() {
 
           <div className="finance-flow-summary">
             <div>
-              <span>Kas masuk bulan ini</span>
+              <span>Kas masuk</span>
               <strong className="finance-income">+{formatRupiah(data?.finance?.totalIncome ?? 0)}</strong>
             </div>
             <div>
-              <span>Kas keluar bulan ini</span>
+              <span>Kas keluar</span>
               <strong className="finance-expense">-{formatRupiah(data?.finance?.totalExpense ?? 0)}</strong>
             </div>
           </div>
