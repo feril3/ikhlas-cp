@@ -632,7 +632,7 @@
 }
 
 .verse-ticker-label span {
-  font-size: clamp(8px, .66vw, 10px);
+  font-size: clamp(11px, .88vw, 14px);
   font-weight: 820;
   letter-spacing: .08em;
   text-transform: uppercase;
