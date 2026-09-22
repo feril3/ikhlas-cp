@@ -12,6 +12,11 @@ import {
 } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { formatDate, formatRupiah } from '../lib/format.js';
+import {
+  formatCountdown,
+  getIqamahTime,
+  getPrayerState
+} from '../lib/prayerDisplay.js';
 
 const CAROUSEL_INTERVAL_MS = 9000;
 const MESSAGE_INTERVAL_MS = 12000;
@@ -69,81 +74,6 @@ function toYouTubeEmbed(url) {
   }
 
   return '';
-}
-
-function makePrayerDateTime(date, time) {
-  if (!date || !time) return null;
-  const value = new Date(`${date}T${time}:00+07:00`);
-  return Number.isNaN(value.getTime()) ? null : value;
-}
-
-function getPrayerState(todaySchedule, nextDaySchedule, now) {
-  const todayItems = todaySchedule?.items ?? [];
-  const tomorrowItems = nextDaySchedule?.items ?? [];
-
-  for (const prayer of todayItems) {
-    const iqamah = makePrayerDateTime(todaySchedule?.scheduleDate, prayer.iqamahTime);
-    if (!iqamah) continue;
-    const diff = iqamah - now;
-    if (diff > 0 && diff <= 5 * 60_000) {
-      return {
-        kind: 'iqamah',
-        label: `Menuju iqamah ${prayer.prayerName}`,
-        prayerName: prayer.prayerName,
-        target: iqamah,
-        adhanTime: prayer.adhanTime,
-        iqamahTime: prayer.iqamahTime,
-        date: todaySchedule.scheduleDate,
-        today: true
-      };
-    }
-  }
-
-  const candidates = [
-    ...todayItems.map((prayer) => ({
-      prayer,
-      date: todaySchedule?.scheduleDate,
-      today: true
-    })),
-    ...tomorrowItems.map((prayer) => ({
-      prayer,
-      date: nextDaySchedule?.scheduleDate,
-      today: false
-    }))
-  ]
-    .map((entry) => ({
-      ...entry,
-      target: makePrayerDateTime(entry.date, entry.prayer.adhanTime)
-    }))
-    .filter((entry) => entry.target && entry.target > now)
-    .sort((a, b) => a.target - b.target);
-
-  const next = candidates[0];
-  if (!next) return null;
-
-  return {
-    kind: 'adhan',
-    label: next.today ? 'Salat berikutnya' : 'Salat berikutnya · besok',
-    prayerName: next.prayer.prayerName,
-    target: next.target,
-    adhanTime: next.prayer.adhanTime,
-    iqamahTime: next.prayer.iqamahTime,
-    date: next.date,
-    today: next.today
-  };
-}
-
-function formatCountdown(milliseconds) {
-  const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  return [
-    String(hours).padStart(2, '0'),
-    String(minutes).padStart(2, '0'),
-    String(seconds).padStart(2, '0')
-  ].join(':');
 }
 
 
@@ -217,7 +147,7 @@ function buildSlides({ data, liveEmbed, liveTitle }) {
     slides.push({
       id: 'live',
       kind: 'live',
-      eyebrow: 'Live Masjid',
+      eyebrow: 'Siaran Langsung',
       title: liveTitle,
       icon: Radio,
       liveEmbed
@@ -228,8 +158,8 @@ function buildSlides({ data, liveEmbed, liveTitle }) {
     slides.push({
       id: 'activities',
       kind: 'activities',
-      eyebrow: 'Agenda Jamaah',
-      title: 'Kegiatan Masjid',
+      eyebrow: 'Kegiatan',
+      title: 'Agenda Masjid',
       icon: CalendarDays,
       activities: activities.slice(0, 3)
     });
@@ -238,8 +168,8 @@ function buildSlides({ data, liveEmbed, liveTitle }) {
   slides.push({
     id: 'finance',
     kind: 'finance',
-    eyebrow: 'Amanah yang Terlihat',
-    title: 'Transparansi Keuangan',
+    eyebrow: 'Keuangan',
+    title: 'Kas Masjid',
     icon: WalletCards,
     finance: data.finance
   });
@@ -248,7 +178,7 @@ function buildSlides({ data, liveEmbed, liveTitle }) {
     slides.push({
       id: 'transactions',
       kind: 'transactions',
-      eyebrow: 'Aktivitas Kas',
+      eyebrow: 'Keuangan',
       title: 'Transaksi Terbaru',
       icon: ReceiptText,
       transactions: transactions.slice(0, TRANSACTION_LIMIT)
@@ -259,8 +189,8 @@ function buildSlides({ data, liveEmbed, liveTitle }) {
     slides.push({
       id: 'announcement',
       kind: 'announcement',
-      eyebrow: 'Informasi Jamaah',
-      title: messages[0].title || 'Pengumuman Masjid',
+      eyebrow: 'Pengumuman',
+      title: messages[0].title || 'Pengumuman',
       icon: Megaphone,
       message: messages[0]
     });
@@ -269,8 +199,8 @@ function buildSlides({ data, liveEmbed, liveTitle }) {
   slides.push({
     id: 'donation',
     kind: 'donation',
-    eyebrow: 'Salurkan Infaq & Donasi',
-    title: 'Rekening Masjid',
+    eyebrow: 'Donasi',
+    title: 'Rekening Donasi',
     icon: Landmark,
     settings: data.settings
   });
@@ -434,7 +364,6 @@ export default function PublicDisplay() {
 
   const settings = data?.settings ?? {
     mosqueName: 'Masjid Al-Ikhlas',
-    mosqueTagline: 'Pusat Informasi Jamaah',
     bankName: 'Bank Syariah Indonesia',
     bankAccountNumber: '-',
     bankAccountHolder: '',
@@ -516,7 +445,6 @@ export default function PublicDisplay() {
           <span className="signage-brand-mark"><MosqueSeal /></span>
           <div>
             <strong>{settings.mosqueName.toUpperCase()}</strong>
-            <span>{settings.mosqueTagline}</span>
           </div>
         </div>
 
@@ -556,19 +484,14 @@ export default function PublicDisplay() {
                 <strong>{prayerState?.adhanTime ?? '--:--'}</strong>
               </div>
               <div>
-                <span>{prayerState?.kind === 'iqamah' ? 'Iqamah' : 'Menuju adzan'}</span>
+                <span>{prayerState?.kind === 'iqamah' ? 'Menuju iqamah' : 'Menuju adzan'}</span>
                 <strong>{prayerState ? formatCountdown(prayerState.target - now) : '--:--:--'}</strong>
               </div>
             </div>
           </div>
 
           <div className="signage-prayer-source">
-            <span>{data?.prayerSchedule?.source?.calculationMethodName || 'Kementerian Agama Republik Indonesia'}</span>
-            <small>
-              {data?.prayerSchedule?.source?.status === 'fallback'
-                ? 'Fallback jadwal lokal'
-                : 'Jadwal otomatis · cache aman saat koneksi putus'}
-            </small>
+            <span>Iqamah 5 menit setelah adzan</span>
           </div>
         </section>
 
@@ -603,11 +526,15 @@ export default function PublicDisplay() {
           const isNext = prayerState?.today && prayerState?.prayerName === prayer.prayerName;
           return (
             <article className={isNext ? 'signage-prayer active' : 'signage-prayer'} key={prayer.prayerName}>
-              {isNext && <em className="signage-prayer-next">Berikutnya</em>}
+              {isNext && (
+                <em className="signage-prayer-next">
+                  {prayerState?.kind === 'iqamah' ? 'Iqamah' : 'Berikutnya'}
+                </em>
+              )}
               <IslamicStar className="signage-prayer-star" />
               <span>{prayer.prayerName}</span>
               <strong>{prayer.adhanTime}</strong>
-              <small>Iqamah {prayer.iqamahTime || 'belum diatur'}</small>
+              <small>Iqamah {getIqamahTime(data?.prayerSchedule?.scheduleDate, prayer.adhanTime) || '--:--'}</small>
             </article>
           );
         })}

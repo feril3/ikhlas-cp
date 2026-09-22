@@ -1191,3 +1191,56 @@
     font-size: clamp(34px, 4.4vw, 64px) !important;
   }
 }
+
+
+/* Jamaah-first pass: keep the mihrab clear and remove product-like utility emphasis. */
+.signage-brand > div {
+  align-content: center;
+}
+
+.signage-clock {
+  margin-top: 5.4dvh;
+}
+
+.signage-clock time {
+  font-size: clamp(34px, 4.65vw, 72px);
+}
+
+.signage-clock::after {
+  margin-top: 1.25dvh;
+}
+
+.signage-next-prayer {
+  padding-top: 3.15dvh;
+}
+
+.signage-primary-star {
+  top: 1.35dvh;
+}
+
+.signage-prayer-source {
+  justify-items: center;
+  padding-top: 1dvh;
+}
+
+.signage-prayer-source span {
+  color: #bca772;
+  font-size: clamp(9px, .72vw, 11px);
+  font-weight: 680;
+  letter-spacing: .015em;
+  text-transform: none;
+}
+
+@media (max-height: 820px) {
+  .signage-clock {
+    margin-top: 4.2dvh;
+  }
+
+  .signage-next-prayer {
+    padding-top: 2.25dvh;
+  }
+
+  .signage-primary-star {
+    top: 1dvh;
+  }
+}

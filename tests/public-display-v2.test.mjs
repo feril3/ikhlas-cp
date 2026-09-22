@@ -2,6 +2,10 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { test } from 'node:test';
+import {
+  getIqamahTime,
+  getPrayerState
+} from '../apps/web/src/lib/prayerDisplay.js';
 
 const root = path.resolve(new URL('..', import.meta.url).pathname);
 
@@ -85,4 +89,65 @@ test('public display visual-balance pass keeps donation, carousel, and next-pray
   assert.match(css, /signage-donation-number/);
   assert.match(css, /signage-carousel-progress/);
   assert.match(css, /signage-prayer-next/);
+});
+
+
+test('iqamah countdown is anchored to adhan plus five minutes, not app start time', () => {
+  const today = {
+    scheduleDate: '2026-09-22',
+    items: [
+      { prayerName: 'Subuh', adhanTime: '03:56' },
+      { prayerName: 'Dzuhur', adhanTime: '11:17' },
+      { prayerName: 'Ashar', adhanTime: '14:29' },
+      { prayerName: 'Maghrib', adhanTime: '17:20' },
+      { prayerName: 'Isya', adhanTime: '18:29' }
+    ]
+  };
+
+  const tomorrow = {
+    scheduleDate: '2026-09-23',
+    items: [{ prayerName: 'Subuh', adhanTime: '03:56' }]
+  };
+
+  assert.equal(getIqamahTime('2026-09-22', '11:17'), '11:22');
+
+  const duringIqamah = getPrayerState(
+    today,
+    tomorrow,
+    new Date('2026-09-22T11:19:00+07:00')
+  );
+
+  assert.equal(duringIqamah.kind, 'iqamah');
+  assert.equal(duringIqamah.prayerName, 'Dzuhur');
+  assert.equal(
+    duringIqamah.target.getTime(),
+    new Date('2026-09-22T11:22:00+07:00').getTime()
+  );
+
+  const afterIqamahWindow = getPrayerState(
+    today,
+    tomorrow,
+    new Date('2026-09-22T11:56:25+07:00')
+  );
+
+  assert.equal(afterIqamahWindow.kind, 'adhan');
+  assert.equal(afterIqamahWindow.prayerName, 'Ashar');
+  assert.equal(afterIqamahWindow.adhanTime, '14:29');
+});
+
+test('public display copy stays jamaah-first and hides technical/product branding', async () => {
+  const jsx = await source('apps/web/src/pages/PublicDisplay.jsx');
+
+  assert.doesNotMatch(jsx, /Amanah yang Terlihat/);
+  assert.doesNotMatch(jsx, /Aktivitas Kas/);
+  assert.doesNotMatch(jsx, /Pusat Informasi Jamaah/);
+  assert.doesNotMatch(jsx, /Kementerian Agama Republik Indonesia/);
+  assert.doesNotMatch(jsx, /cache aman/i);
+  assert.doesNotMatch(jsx, /Fallback jadwal lokal/);
+
+  const prayerHelper = await source('apps/web/src/lib/prayerDisplay.js');
+
+  assert.match(jsx, /Iqamah 5 menit setelah adzan/);
+  assert.match(prayerHelper, /Salat berikutnya/);
+  assert.match(jsx, /Transaksi Terbaru/);
 });
