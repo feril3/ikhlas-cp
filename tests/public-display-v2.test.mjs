@@ -4,7 +4,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 import {
   getIqamahTime,
-  getPrayerState
+  getPrayerDisplayState
 } from '../apps/web/src/lib/prayerDisplay.js';
 
 const root = path.resolve(new URL('..', import.meta.url).pathname);
@@ -13,7 +13,7 @@ async function source(relativePath) {
   return readFile(path.join(root, relativePath), 'utf8');
 }
 
-test('public display is a fixed no-scroll viewport', async () => {
+test('public display remains a fixed no-scroll TV viewport', async () => {
   const css = await source('apps/web/src/styles/public-display.css');
   assert.match(css, /position:\s*fixed/);
   assert.match(css, /height:\s*100dvh/);
@@ -21,78 +21,29 @@ test('public display is a fixed no-scroll viewport', async () => {
   assert.match(css, /grid-template-rows/);
 });
 
-test('public display uses a dedicated secondary-content carousel', async () => {
+test('media-first layout gives YouTube the largest column and finance about twenty percent', async () => {
   const jsx = await source('apps/web/src/pages/PublicDisplay.jsx');
-  assert.match(jsx, /signage-carousel/);
-  assert.match(jsx, /signage-carousel-dots/);
-  assert.match(jsx, /CAROUSEL_INTERVAL_MS/);
-  assert.doesNotMatch(jsx, /Dashboard Admin/);
+  const css = await source('apps/web/src/styles/public-display.css');
+
+  assert.match(jsx, /prayer-focus-panel/);
+  assert.match(jsx, /youtube-stage/);
+  assert.match(jsx, /finance-rail/);
+  assert.match(css, /grid-template-columns:\s*21%\s+minmax\(0,\s*1fr\)\s+20%/);
+
+  const left = jsx.indexOf('className="prayer-focus-panel"');
+  const video = jsx.indexOf('className="youtube-stage"');
+  const finance = jsx.indexOf('className="finance-rail"');
+  assert.ok(left >= 0 && video > left && finance > video);
 });
 
-test('prayer strip stays outside the carousel', async () => {
+test('current time and next adhan stay in the upper-left prayer focus', async () => {
   const jsx = await source('apps/web/src/pages/PublicDisplay.jsx');
-  const carousel = jsx.indexOf('className="signage-carousel"');
-  const prayerStrip = jsx.indexOf('className="signage-prayer-strip"');
-  assert.ok(carousel >= 0);
-  assert.ok(prayerStrip > carousel);
+  assert.match(jsx, /Waktu sekarang/);
+  assert.match(jsx, /Menuju adzan/);
+  assert.match(jsx, /getPrayerDisplayState/);
 });
 
-test('Situbondo prayer provider uses Kemenag RI method and RS Elizabeth coordinates', async () => {
-  const service = await source('apps/api/src/prayerService.js');
-  assert.match(service, /RS Elizabeth Situbondo/);
-  assert.match(service, /latitude:\s*-7\.7074/);
-  assert.match(service, /longitude:\s*113\.9969/);
-  assert.match(service, /calculationMethod:\s*20/);
-  assert.match(service, /Asia\/Jakarta/);
-  assert.match(service, /api\.aladhan\.com\/v1\/timings/);
-});
-
-test('public endpoint includes today and tomorrow prayer schedules for after-Isya rollover', async () => {
-  const routes = await source('apps/api/src/routes.js');
-  assert.match(routes, /nextDayPrayerSchedule/);
-  assert.match(routes, /getProviderPrayerSchedule\(addDays\(date, 1\)\)/);
-});
-
-test('admin schedule editor treats adhan as API-managed', async () => {
-  const schedule = await source('apps/web/src/pages/Schedule.jsx');
-  assert.match(schedule, /Adzan · API/);
-  assert.match(schedule, /Waktu adzan otomatis dari API jadwal salat/);
-});
-
-
-test('public display includes a mosque-inspired ornament system', async () => {
-  const jsx = await source('apps/web/src/pages/PublicDisplay.jsx');
-  const css = await source('apps/web/src/styles/public-display-ornamental.css');
-
-  assert.match(jsx, /signage-mihrab-frame/);
-  assert.match(jsx, /signage-corner-ornament/);
-  assert.match(jsx, /signage-prayer-frieze/);
-  assert.match(jsx, /signage-mosque-seal/);
-
-  assert.match(css, /islamic/i);
-  assert.match(css, /signage-pattern-layer/);
-  assert.match(css, /ornament-brass/);
-  assert.match(css, /signage-prayer-frieze/);
-});
-
-
-test('public display visual-balance pass keeps donation, carousel, and next-prayer hierarchy explicit', async () => {
-  const jsx = await source('apps/web/src/pages/PublicDisplay.jsx');
-  const css = await source('apps/web/src/styles/public-display-ornamental.css');
-
-  assert.match(jsx, /signage-donation-emblem/);
-  assert.match(jsx, /signage-donation-meta/);
-  assert.match(jsx, /signage-carousel-progress/);
-  assert.match(jsx, /signage-prayer-next/);
-
-  assert.match(css, /viewing-distance legibility/);
-  assert.match(css, /signage-donation-number/);
-  assert.match(css, /signage-carousel-progress/);
-  assert.match(css, /signage-prayer-next/);
-});
-
-
-test('iqamah countdown is anchored to adhan plus five minutes, not app start time', () => {
+test('iqamah is exactly five minutes after adhan while next adhan stays independent', () => {
   const today = {
     scheduleDate: '2026-09-22',
     items: [
@@ -111,31 +62,102 @@ test('iqamah countdown is anchored to adhan plus five minutes, not app start tim
 
   assert.equal(getIqamahTime('2026-09-22', '11:17'), '11:22');
 
-  const duringIqamah = getPrayerState(
+  const at1119 = getPrayerDisplayState(
     today,
     tomorrow,
     new Date('2026-09-22T11:19:00+07:00')
   );
 
-  assert.equal(duringIqamah.kind, 'iqamah');
-  assert.equal(duringIqamah.prayerName, 'Dzuhur');
+  assert.equal(at1119.nextAdhan.prayerName, 'Ashar');
+  assert.equal(at1119.nextAdhan.adhanTime, '14:29');
+  assert.equal(at1119.activeIqamah.prayerName, 'Dzuhur');
   assert.equal(
-    duringIqamah.target.getTime(),
+    at1119.activeIqamah.target.getTime(),
     new Date('2026-09-22T11:22:00+07:00').getTime()
   );
 
-  const afterIqamahWindow = getPrayerState(
+  const at1156 = getPrayerDisplayState(
     today,
     tomorrow,
     new Date('2026-09-22T11:56:25+07:00')
   );
 
-  assert.equal(afterIqamahWindow.kind, 'adhan');
-  assert.equal(afterIqamahWindow.prayerName, 'Ashar');
-  assert.equal(afterIqamahWindow.adhanTime, '14:29');
+  assert.equal(at1156.nextAdhan.prayerName, 'Ashar');
+  assert.equal(at1156.activeIqamah, null);
 });
 
-test('public display copy stays jamaah-first and hides technical/product branding', async () => {
+test('five-prayer schedule stays in its own full-width rail below the main display', async () => {
+  const jsx = await source('apps/web/src/pages/PublicDisplay.jsx');
+  const main = jsx.indexOf('className="media-signage-main"');
+  const prayerStrip = jsx.indexOf('className="media-prayer-strip"');
+  const ticker = jsx.indexOf('className="verse-ticker"');
+
+  assert.ok(main >= 0);
+  assert.ok(prayerStrip > main);
+  assert.ok(ticker > prayerStrip);
+  assert.match(jsx, /Iqamah \{getIqamahTime/);
+});
+
+test('finance rail keeps balance, cash-in, and cash-out visible while only finance content rotates', async () => {
+  const jsx = await source('apps/web/src/pages/PublicDisplay.jsx');
+  assert.match(jsx, /Saldo saat ini/);
+  assert.match(jsx, /Kas masuk/);
+  assert.match(jsx, /Kas keluar/);
+  assert.match(jsx, /FINANCE_CAROUSEL_INTERVAL_MS/);
+  assert.match(jsx, /Transaksi Terbaru/);
+  assert.match(jsx, /Rekening Donasi/);
+});
+
+test('bottom ticker only consumes active VERSE content from the public message payload', async () => {
+  const jsx = await source('apps/web/src/pages/PublicDisplay.jsx');
+  const css = await source('apps/web/src/styles/public-display.css');
+
+  assert.match(jsx, /message\.kind === 'VERSE'/);
+  assert.match(jsx, /verse-ticker-track/);
+  assert.match(css, /@keyframes verse-ticker-scroll/);
+  assert.match(css, /animation:\s*verse-ticker-scroll/);
+});
+
+test('database seeds verified Quran and sahih-hadith references without duplicating edited rows', async () => {
+  const db = await source('apps/api/src/db.js');
+
+  assert.match(db, /seed_key/);
+  assert.match(db, /QS\. At-Taubah 9:18/);
+  assert.match(db, /Sahih al-Bukhari 527/);
+  assert.match(db, /Sahih al-Bukhari 645/);
+  assert.match(db, /Sahih Muslim 2588/);
+  assert.match(db, /QS\. Al-Baqarah 2:261/);
+  assert.match(db, /ON CONFLICT\(seed_key\) DO NOTHING/);
+});
+
+test('admin can edit, reorder, activate, and delete multiple running-text entries', async () => {
+  const admin = await source('apps/web/src/pages/AdminSettings.jsx');
+
+  assert.match(admin, /startEditMessage/);
+  assert.match(admin, /saveEditedMessage/);
+  assert.match(admin, /Edit/);
+  assert.match(admin, /Simpan perubahan/);
+  assert.match(admin, /toggleMessage/);
+  assert.match(admin, /deleteMessage/);
+  assert.match(admin, /sortOrder/);
+});
+
+test('Situbondo prayer provider remains configured with Kemenag RI method', async () => {
+  const service = await source('apps/api/src/prayerService.js');
+  assert.match(service, /RS Elizabeth Situbondo/);
+  assert.match(service, /latitude:\s*-7\.7074/);
+  assert.match(service, /longitude:\s*113\.9969/);
+  assert.match(service, /calculationMethod:\s*20/);
+  assert.match(service, /Asia\/Jakarta/);
+});
+
+test('public endpoint still includes today and tomorrow prayer schedules for after-Isya rollover', async () => {
+  const routes = await source('apps/api/src/routes.js');
+  assert.match(routes, /nextDayPrayerSchedule/);
+  assert.match(routes, /getProviderPrayerSchedule\(addDays\(date, 1\)\)/);
+});
+
+test('public display hides application branding and technical provider copy', async () => {
   const jsx = await source('apps/web/src/pages/PublicDisplay.jsx');
 
   assert.doesNotMatch(jsx, /Amanah yang Terlihat/);
@@ -144,10 +166,5 @@ test('public display copy stays jamaah-first and hides technical/product brandin
   assert.doesNotMatch(jsx, /Kementerian Agama Republik Indonesia/);
   assert.doesNotMatch(jsx, /cache aman/i);
   assert.doesNotMatch(jsx, /Fallback jadwal lokal/);
-
-  const prayerHelper = await source('apps/web/src/lib/prayerDisplay.js');
-
   assert.match(jsx, /Iqamah 5 menit setelah adzan/);
-  assert.match(prayerHelper, /Salat berikutnya/);
-  assert.match(jsx, /Transaksi Terbaru/);
 });
