@@ -8,10 +8,10 @@
   overflow: hidden;
   display: grid;
   grid-template-rows:
-    minmax(54px, 7.5dvh)
+    minmax(54px, 7.2dvh)
     minmax(0, 1fr)
-    minmax(112px, 17dvh)
-    minmax(48px, 6.5dvh);
+    minmax(104px, 15dvh)
+    minmax(54px, 7.4dvh);
   color: #f4eee2;
   background: #071913;
   font-variant-numeric: tabular-nums;
@@ -87,9 +87,9 @@
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-columns: 21% minmax(0, 1fr) 20%;
-  gap: 1vw;
-  padding: 1.1dvh 1.1vw;
+  grid-template-columns: 19% minmax(0, 1fr) 20%;
+  gap: .85vw;
+  padding: .9dvh .9vw;
   overflow: hidden;
 }
 
@@ -103,9 +103,9 @@
 
 .prayer-focus-panel {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   align-content: stretch;
-  padding: clamp(16px, 1.35vw, 24px);
+  padding: clamp(15px, 1.15vw, 21px);
 }
 
 .prayer-focus-clock {
@@ -129,7 +129,7 @@
 }
 
 .prayer-focus-clock time {
-  font-size: clamp(38px, 4.45vw, 70px);
+  font-size: clamp(36px, 4.05vw, 64px);
   font-weight: 760;
   line-height: .95;
   letter-spacing: -.055em;
@@ -144,13 +144,13 @@
 
 .prayer-focus-next h1 {
   margin: 0;
-  font-size: clamp(30px, 3.5vw, 56px);
+  font-size: clamp(29px, 3.25vw, 52px);
   line-height: .98;
   letter-spacing: -.035em;
 }
 
 .prayer-focus-adhan {
-  font-size: clamp(27px, 2.8vw, 44px);
+  font-size: clamp(25px, 2.55vw, 40px);
   line-height: 1;
 }
 
@@ -163,7 +163,7 @@
 }
 
 .prayer-focus-countdown b {
-  font-size: clamp(24px, 2.55vw, 40px);
+  font-size: clamp(22px, 2.3vw, 36px);
   line-height: 1;
   letter-spacing: .03em;
 }
@@ -180,17 +180,12 @@
   font-size: clamp(16px, 1.65vw, 26px);
 }
 
-.prayer-focus-panel > small {
-  align-self: end;
-  font-size: clamp(7px, .58vw, 9px);
-  text-align: center;
-}
 
 .youtube-stage {
   position: relative;
   display: grid;
   place-items: center;
-  padding: .75dvh .55vw;
+  padding: .3dvh .25vw;
 }
 
 .youtube-frame {
@@ -222,30 +217,26 @@
   font-size: clamp(13px, 1.25vw, 20px);
 }
 
-.youtube-caption {
-  position: absolute;
-  left: 1.2vw;
-  bottom: 1.65dvh;
-  max-width: 72%;
-  overflow: hidden;
-  padding: .45dvh .55vw;
-  font-size: clamp(8px, .68vw, 11px);
-  font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 .finance-rail {
   display: grid;
   grid-template-rows: auto auto auto minmax(0, 1fr);
-  padding: clamp(13px, 1.05vw, 19px);
+  padding: clamp(12px, .9vw, 17px);
 }
 
 .finance-rail-heading {
   display: flex;
   align-items: center;
-  gap: .45vw;
-  padding-bottom: .9dvh;
+  gap: .42vw;
+  padding-bottom: .8dvh;
+}
+
+.finance-rail-heading > small {
+  margin-left: auto;
+  font-size: clamp(7px, .58vw, 9px);
+  font-weight: 720;
+  letter-spacing: .05em;
+  text-transform: uppercase;
 }
 
 .finance-balance {
@@ -256,7 +247,7 @@
 
 .finance-balance strong {
   overflow: hidden;
-  font-size: clamp(22px, 2.45vw, 38px);
+  font-size: clamp(21px, 2.25vw, 35px);
   line-height: 1;
   letter-spacing: -.035em;
   text-overflow: ellipsis;
@@ -287,7 +278,7 @@
   min-height: 0;
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
-  padding-top: 1dvh;
+  padding-top: .75dvh;
 }
 
 .finance-carousel-window {
@@ -363,15 +354,31 @@
 .finance-donation-copy {
   min-height: 0;
   display: grid;
-  align-content: center;
-  justify-items: center;
-  gap: .5dvh;
-  text-align: center;
+  align-content: start;
+  justify-items: start;
+  gap: .35dvh;
+  padding: 1.4dvh .15vw 0;
+  text-align: left;
 }
 
 .finance-donation-copy > span {
   font-size: clamp(8px, .68vw, 11px);
+  font-weight: 760;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.finance-donation-copy > b {
+  margin-top: .35dvh;
+  font-size: clamp(10px, .82vw, 13px);
+}
+
+.finance-donation-copy > small {
+  margin-top: 1.2dvh;
+  font-size: clamp(7px, .58vw, 9px);
   font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
 }
 
 .finance-donation-copy > strong {
@@ -403,7 +410,7 @@
 .finance-empty {
   align-self: center;
   justify-self: center;
-  font-size: clamp(8px, .66vw, 10px);
+  font-size: clamp(9px, .72vw, 11px);
 }
 
 .media-prayer-strip {
@@ -411,7 +418,7 @@
   min-width: 0;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  padding: 1.75dvh 1.1vw .75dvh;
+  padding: 1.35dvh 1vw .55dvh;
 }
 
 .media-prayer {
@@ -420,13 +427,13 @@
   display: grid;
   align-content: center;
   justify-items: center;
-  gap: .2dvh;
-  padding: .45dvh .7vw;
+  gap: .14dvh;
+  padding: .9dvh .6vw .3dvh;
 }
 
 .media-prayer em {
   position: absolute;
-  top: .15dvh;
+  top: .55dvh;
   left: 50%;
   transform: translateX(-50%);
   font-size: clamp(7px, .55vw, 9px);
@@ -468,7 +475,7 @@
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   overflow: hidden;
-  padding: 0 1.1vw;
+  padding: 0 1vw;
 }
 
 .verse-ticker-label {
@@ -497,6 +504,8 @@
 .verse-ticker-viewport {
   min-width: 0;
   overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
 }
 
 .verse-ticker-track {
@@ -516,12 +525,12 @@
 }
 
 .verse-ticker-item strong {
-  font-size: clamp(10px, .9vw, 14px);
+  font-size: clamp(11px, .96vw, 15px);
   font-weight: 650;
 }
 
 .verse-ticker-item span {
-  font-size: clamp(8px, .66vw, 10px);
+  font-size: clamp(9px, .72vw, 11px);
   font-weight: 760;
 }
 
@@ -537,7 +546,7 @@
 
 @media (max-width: 1180px) {
   .media-signage-main {
-    grid-template-columns: 22% minmax(0, 1fr) 21%;
+    grid-template-columns: 20% minmax(0, 1fr) 21%;
     gap: .7vw;
     padding-inline: .8vw;
   }
