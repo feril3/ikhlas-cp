@@ -10,7 +10,7 @@ Endpoint internal menggunakan HttpOnly session cookie.
 - `GET /auth/status`
 - `POST /auth/setup` — hanya saat belum ada user
 - `POST /auth/login`
-- `GET /public/display?date=YYYY-MM-DD`
+- `GET /public/display?date=YYYY-MM-DD` — termasuk jadwal salat hari ini + besok, lokasi Situbondo, transaksi publik aman, carousel content, dan messages
 
 ## Authentication
 
@@ -58,8 +58,17 @@ File diteruskan ke Google Drive. Database hanya menyimpan Google Drive file ID d
 
 ## Prayer Schedule
 
-- `GET /prayer-schedules?date=YYYY-MM-DD`
-- `PUT /prayer-schedules/:date` — Admin
+- `GET /prayer-schedules?date=YYYY-MM-DD` — adzan dari AlAdhan API dengan method 20 (Kementerian Agama RI), iqamah/imam/bilal dari SQLite
+- `PUT /prayer-schedules/:date` — Admin menyimpan metadata lokal iqamah/imam/bilal; adzan tetap API-managed
+
+Provider location:
+- RS Elizabeth Situbondo
+- Jl. WR. Supratman No.2, Mulyautama, Patokan, Kec. Situbondo, Kabupaten Situbondo, Jawa Timur 68312
+- latitude `-7.7074`
+- longitude `113.9969`
+- timezone `Asia/Jakarta`
+
+Jadwal provider dicache di tabel `prayer_time_cache`. Jika API gagal, backend memakai cache terakhir; jika cache belum tersedia, backend jatuh ke jadwal lokal sebagai fallback.
 
 ## Activities
 
@@ -90,7 +99,7 @@ Endpoint publik `GET /public/display` mengembalikan transaksi terbaru yang sudah
 
 - Admin/Pengurus: pencatatan kas masuk/keluar, monitoring transaksi & laporan, jadwal/kegiatan, kategori, settings, user, audit, konten Public Display.
 - Bendahara: pencatatan kas masuk/keluar, bukti/mutasi, riwayat transaksi, laporan.
-- `POST /transactions` dan penggantian attachment hanya untuk Bendahara.
+- `POST /transactions` dan penggantian attachment dapat dilakukan Admin/Pengurus maupun Bendahara sesuai baseline produksi terbaru.
 
 ## Audit
 
