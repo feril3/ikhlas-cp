@@ -3,7 +3,6 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   CalendarDays,
-  CircleDollarSign,
   Landmark,
   MapPin,
   Megaphone,
@@ -147,6 +146,65 @@ function formatCountdown(milliseconds) {
   ].join(':');
 }
 
+
+function IslamicStar({ className = '' }) {
+  return (
+    <svg className={className} viewBox="0 0 100 100" aria-hidden="true">
+      <path d="M50 8 92 50 50 92 8 50Z" />
+      <path d="M20 20H80V80H20Z" />
+      <circle cx="50" cy="50" r="8" />
+    </svg>
+  );
+}
+
+function MosqueSeal() {
+  return (
+    <svg className="signage-mosque-seal" viewBox="0 0 120 120" aria-hidden="true">
+      <path className="seal-ring" d="M60 7a53 53 0 1 1 0 106A53 53 0 0 1 60 7Z" />
+      <path className="seal-dome" d="M31 72h58v15H31zM38 70v-7c0-15 8-26 22-33 14 7 22 18 22 33v7" />
+      <path className="seal-finial" d="M60 20v10m-5-7h10" />
+      <path className="seal-door" d="M52 87V72h16v15" />
+      <path className="seal-minaret" d="M25 81V48h10v33m50 0V48h10v33M23 48h14l-7-9-7 9Zm60 0h14l-7-9-7 9Z" />
+    </svg>
+  );
+}
+
+function MihrabFrame() {
+  return (
+    <svg className="signage-mihrab-frame" viewBox="0 0 500 650" preserveAspectRatio="none" aria-hidden="true">
+      <path className="mihrab-line mihrab-line-outer" d="M38 625V255Q38 112 250 24Q462 112 462 255V625" />
+      <path className="mihrab-line mihrab-line-middle" d="M58 625V266Q58 132 250 48Q442 132 442 266V625" />
+      <path className="mihrab-line mihrab-line-inner" d="M78 625V278Q78 153 250 76Q422 153 422 278V625" />
+      <path className="mihrab-base" d="M28 625H472M52 606H448" />
+      <path className="mihrab-column" d="M64 328V605M436 328V605" />
+      <path className="mihrab-capital" d="M52 328H77M423 328H448" />
+      <path className="mihrab-diamond" d="m250 16 11 20-11 20-11-20 11-20Z" />
+    </svg>
+  );
+}
+
+function CornerOrnament({ position }) {
+  return (
+    <svg className={`signage-corner-ornament ${position}`} viewBox="0 0 140 140" aria-hidden="true">
+      <path d="M9 129V69C9 36 36 9 69 9h60" />
+      <path d="M20 129V73c0-29 24-53 53-53h56" />
+      <path d="M35 129V79c0-24 20-44 44-44h50" />
+      <path d="M10 93c20 0 36-16 36-36M10 111c30 0 55-25 55-55" />
+      <path d="m76 18 7 15 16 2-12 11 3 16-14-8-14 8 3-16-12-11 16-2 7-15Z" />
+    </svg>
+  );
+}
+
+function GeometricDivider() {
+  return (
+    <div className="signage-geometric-divider" aria-hidden="true">
+      <span />
+      <IslamicStar />
+      <span />
+    </div>
+  );
+}
+
 function buildSlides({ data, liveEmbed, liveTitle }) {
   if (!data) return [];
 
@@ -226,12 +284,15 @@ function CarouselSlide({ slide }) {
   return (
     <article className={`signage-slide signage-slide-${slide.kind}`}>
       <header className="signage-slide-header">
-        <span className="signage-slide-icon"><Icon size={22} /></span>
+        <span className="signage-slide-icon"><Icon size={21} strokeWidth={1.7} /></span>
         <div>
           <span>{slide.eyebrow}</span>
           <h2>{slide.title}</h2>
         </div>
+        <IslamicStar className="signage-slide-star" />
       </header>
+
+      <GeometricDivider />
 
       <div className="signage-slide-body">
         {slide.kind === 'live' && (
@@ -310,6 +371,7 @@ function CarouselSlide({ slide }) {
 
         {slide.kind === 'announcement' && (
           <div className="signage-announcement">
+            <IslamicStar className="signage-announcement-star" />
             <blockquote>{slide.message.content}</blockquote>
             {slide.message.source && <span>{slide.message.source}</span>}
           </div>
@@ -427,13 +489,22 @@ export default function PublicDisplay() {
 
   return (
     <div className="public-display signage-shell">
+      <div className="signage-pattern-layer" aria-hidden="true" />
+      <div className="signage-light-layer" aria-hidden="true" />
+
       <header className="signage-header">
         <div className="signage-brand">
-          <span className="signage-brand-mark"><CircleDollarSign size={25} /></span>
+          <span className="signage-brand-mark"><MosqueSeal /></span>
           <div>
             <strong>{settings.mosqueName.toUpperCase()}</strong>
             <span>{settings.mosqueTagline}</span>
           </div>
+        </div>
+
+        <div className="signage-header-center" aria-hidden="true">
+          <span />
+          <IslamicStar />
+          <span />
         </div>
 
         <div className="signage-location">
@@ -449,6 +520,9 @@ export default function PublicDisplay() {
 
       <main className="signage-main">
         <section className="signage-primary" aria-label="Waktu dan salat berikutnya">
+          <div className="signage-primary-ornament" aria-hidden="true"><MihrabFrame /></div>
+          <IslamicStar className="signage-primary-star" />
+
           <div className="signage-clock">
             <span>Waktu sekarang</span>
             <time>{time}</time>
@@ -480,7 +554,14 @@ export default function PublicDisplay() {
         </section>
 
         <section className="signage-carousel" aria-label="Informasi masjid bergantian">
-          {activeSlide && <CarouselSlide slide={activeSlide} />}
+          <CornerOrnament position="top-left" />
+          <CornerOrnament position="top-right" />
+          <CornerOrnament position="bottom-left" />
+          <CornerOrnament position="bottom-right" />
+
+          <div className="signage-carousel-inner">
+            {activeSlide && <CarouselSlide key={activeSlide.id} slide={activeSlide} />}
+          </div>
 
           <div className="signage-carousel-dots" aria-hidden="true">
             {slides.map((slide, index) => (
@@ -494,10 +575,12 @@ export default function PublicDisplay() {
       </main>
 
       <section className="signage-prayer-strip" aria-label="Lima waktu salat">
+        <div className="signage-prayer-frieze" aria-hidden="true" />
         {prayers.map((prayer) => {
           const isNext = prayerState?.today && prayerState?.prayerName === prayer.prayerName;
           return (
             <article className={isNext ? 'signage-prayer active' : 'signage-prayer'} key={prayer.prayerName}>
+              <IslamicStar className="signage-prayer-star" />
               <span>{prayer.prayerName}</span>
               <strong>{prayer.adhanTime}</strong>
               <small>Iqamah {prayer.iqamahTime || 'belum diatur'}</small>
@@ -507,6 +590,7 @@ export default function PublicDisplay() {
       </section>
 
       <footer className="signage-footer">
+        <div className="signage-footer-ornament" aria-hidden="true"><IslamicStar /></div>
         <div className="signage-ticker">
           <span className="signage-ticker-label">
             {activeMessage

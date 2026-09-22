@@ -1,0 +1,743 @@
+/* Mosque-inspired Islamic geometric ornament layer for Public Display V3. */
+.public-display.signage-shell {
+  --ornament-bg: #061712;
+  --ornament-emerald: #0a2a22;
+  --ornament-emerald-2: #0d352b;
+  --ornament-brass: #c6a66a;
+  --ornament-brass-soft: #e2cc97;
+  --ornament-ivory: #f2ecdf;
+  --ornament-muted: #9fb3ab;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 76% 12%, rgba(210, 178, 111, .10), transparent 24%),
+    radial-gradient(circle at 20% 92%, rgba(32, 103, 82, .18), transparent 26%),
+    linear-gradient(155deg, #071a15 0%, #0b251f 48%, #071813 100%);
+}
+
+.signage-pattern-layer,
+.signage-light-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.signage-pattern-layer {
+  z-index: -2;
+  opacity: .16;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='112' height='112' viewBox='0 0 112 112'%3E%3Cg fill='none' stroke='%23c6a66a' stroke-opacity='.38' stroke-width='.8'%3E%3Cpath d='M56 7 75 37 105 56 75 75 56 105 37 75 7 56 37 37 56 7Z'/%3E%3Cpath d='M56 23 67 45 89 56 67 67 56 89 45 67 23 56 45 45 56 23Z'/%3E%3Cpath d='M7 7 37 7 56 37 75 7 105 7M7 105h30l19-30 19 30h30M7 7v30l30 19L7 75v30M105 7v30L75 56l30 19v30'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 112px 112px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, .88), rgba(0, 0, 0, .28) 42%, rgba(0, 0, 0, .82));
+}
+
+.signage-light-layer {
+  z-index: -1;
+  background:
+    linear-gradient(90deg, rgba(5, 18, 14, .7) 0%, transparent 16%, transparent 84%, rgba(5, 18, 14, .7) 100%),
+    radial-gradient(ellipse at center, transparent 42%, rgba(2, 12, 9, .55) 100%);
+}
+
+.signage-header {
+  grid-template-columns: minmax(270px, 1.12fr) minmax(120px, .42fr) minmax(300px, .92fr) auto;
+  padding: .8dvh 1.65vw .95dvh;
+  border-bottom-color: rgba(224, 198, 143, .42);
+  background:
+    linear-gradient(180deg, rgba(16, 54, 43, .96), rgba(8, 30, 24, .96));
+  box-shadow: 0 8px 26px rgba(0, 0, 0, .14);
+}
+
+.signage-header::before,
+.signage-header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+
+.signage-header::before {
+  top: 0;
+  height: 4px;
+  opacity: .62;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0 14px,
+    rgba(218, 190, 130, .72) 14px 16px,
+    transparent 16px 28px
+  );
+}
+
+.signage-header::after {
+  bottom: -4px;
+  height: 7px;
+  opacity: .52;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(207, 176, 111, .9) 12%,
+    rgba(207, 176, 111, .9) 88%,
+    transparent
+  );
+  clip-path: polygon(
+    0 35%, 44% 35%, 45% 0, 46% 35%, 54% 35%, 55% 0, 56% 35%,
+    100% 35%, 100% 65%, 56% 65%, 55% 100%, 54% 65%, 46% 65%,
+    45% 100%, 44% 65%, 0 65%
+  );
+}
+
+.signage-brand-mark {
+  width: clamp(42px, 3.4vw, 58px);
+  height: clamp(42px, 3.4vw, 58px);
+  color: var(--ornament-brass-soft);
+  background: transparent;
+}
+
+.signage-mosque-seal {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 5px 8px rgba(0, 0, 0, .2));
+}
+
+.signage-mosque-seal path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.signage-mosque-seal .seal-ring {
+  stroke-width: 3;
+  opacity: .82;
+}
+
+.signage-brand strong {
+  color: #f4eee2;
+  font-size: clamp(15px, 1.42vw, 24px);
+  letter-spacing: .09em;
+}
+
+.signage-brand span,
+.signage-location span {
+  color: #9eb2aa;
+}
+
+.signage-header-center {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: .55vw;
+  color: var(--ornament-brass);
+  opacity: .78;
+}
+
+.signage-header-center > span {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, currentColor);
+}
+
+.signage-header-center > span:last-child {
+  background: linear-gradient(90deg, currentColor, transparent);
+}
+
+.signage-header-center svg {
+  width: clamp(18px, 1.5vw, 26px);
+  height: clamp(18px, 1.5vw, 26px);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+}
+
+.signage-location {
+  color: var(--ornament-brass-soft);
+}
+
+.signage-location strong {
+  color: #e5eee9;
+}
+
+.signage-date {
+  color: #d9c79f;
+}
+
+.signage-main {
+  gap: 1.25vw;
+  padding: 1.45dvh 1.55vw 1.1dvh;
+}
+
+.signage-main::before {
+  content: "";
+  position: absolute;
+  top: 2dvh;
+  bottom: 1.7dvh;
+  left: calc(36.7% + .55vw);
+  width: 1px;
+  opacity: .55;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(211, 181, 119, .6) 18%,
+    rgba(211, 181, 119, .6) 82%,
+    transparent
+  );
+}
+
+.signage-primary,
+.signage-carousel {
+  border-color: rgba(218, 188, 127, .34);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, .025),
+    0 14px 32px rgba(0, 0, 0, .16);
+}
+
+.signage-primary {
+  position: relative;
+  padding: clamp(16px, 1.55vw, 28px) clamp(18px, 1.7vw, 30px) clamp(14px, 1.35vw, 24px);
+  border-radius: 18px 18px 26px 26px;
+  background:
+    radial-gradient(circle at 50% 36%, rgba(198, 166, 106, .085), transparent 29%),
+    linear-gradient(180deg, rgba(14, 55, 44, .95), rgba(7, 27, 22, .97));
+}
+
+.signage-primary::after {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border: 1px solid rgba(225, 198, 141, .14);
+  border-radius: 14px 14px 22px 22px;
+  pointer-events: none;
+}
+
+.signage-primary-ornament {
+  position: absolute;
+  inset: 5px 6px 0;
+  pointer-events: none;
+  opacity: .88;
+}
+
+.signage-mihrab-frame {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.mihrab-line,
+.mihrab-base,
+.mihrab-column,
+.mihrab-capital,
+.mihrab-diamond {
+  fill: none;
+  stroke: var(--ornament-brass);
+  vector-effect: non-scaling-stroke;
+}
+
+.mihrab-line-outer { stroke-width: 1.5; opacity: .72; }
+.mihrab-line-middle { stroke-width: .9; opacity: .4; stroke-dasharray: 2 5; }
+.mihrab-line-inner { stroke-width: .75; opacity: .24; }
+.mihrab-base,
+.mihrab-column,
+.mihrab-capital { stroke-width: .8; opacity: .34; }
+.mihrab-diamond { stroke-width: 1.2; opacity: .72; }
+
+.signage-primary-star {
+  position: absolute;
+  top: 4.4dvh;
+  left: 50%;
+  width: clamp(22px, 1.85vw, 30px);
+  height: clamp(22px, 1.85vw, 30px);
+  transform: translateX(-50%);
+  fill: none;
+  stroke: var(--ornament-brass);
+  stroke-width: 2.1;
+  opacity: .7;
+}
+
+.signage-clock,
+.signage-next-prayer,
+.signage-prayer-source {
+  position: relative;
+  z-index: 1;
+}
+
+.signage-clock {
+  justify-items: center;
+  margin-top: 1.6dvh;
+  text-align: center;
+}
+
+.signage-clock time {
+  color: #f5efe4;
+  font-weight: 720;
+  text-shadow: 0 7px 20px rgba(0, 0, 0, .28);
+}
+
+.signage-next-prayer {
+  justify-items: center;
+  padding: 3dvh 0 1.1dvh;
+  text-align: center;
+}
+
+.signage-next-prayer > span {
+  color: #d3bd8d;
+}
+
+.signage-next-prayer h1 {
+  color: var(--ornament-ivory);
+  text-shadow: 0 8px 22px rgba(0, 0, 0, .24);
+}
+
+.signage-next-meta {
+  width: min(94%, 430px);
+  grid-template-columns: .82fr 1.18fr;
+}
+
+.signage-next-meta > div {
+  border-radius: 0;
+  border-top: 1px solid rgba(218, 188, 127, .4);
+  border-bottom: 1px solid rgba(218, 188, 127, .18);
+  background: linear-gradient(180deg, rgba(205, 173, 107, .06), transparent);
+}
+
+.signage-next-meta strong {
+  color: #e3cf9e;
+}
+
+.signage-prayer-source {
+  justify-items: center;
+  border-top-color: rgba(209, 177, 113, .2);
+  text-align: center;
+}
+
+.signage-carousel {
+  position: relative;
+  padding: clamp(19px, 1.7vw, 30px) clamp(22px, 1.95vw, 34px) clamp(12px, 1vw, 18px);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(198, 166, 106, .08), transparent 26%),
+    linear-gradient(135deg, rgba(13, 51, 41, .96), rgba(7, 27, 22, .97));
+}
+
+.signage-carousel::before {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border: 1px solid rgba(224, 195, 132, .12);
+  pointer-events: none;
+}
+
+.signage-carousel::after {
+  content: "";
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  bottom: 14px;
+  width: 16%;
+  opacity: .36;
+  pointer-events: none;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='none' stroke='%23c6a66a' stroke-opacity='.24' stroke-width='.8'%3E%3Cpath d='M40 6 50 30 74 40 50 50 40 74 30 50 6 40 30 30 40 6Z'/%3E%3Cpath d='M40 20 46 34 60 40 46 46 40 60 34 46 20 40 34 34 40 20Z'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 80px 80px;
+  mask-image: linear-gradient(90deg, transparent, black 34%);
+}
+
+.signage-corner-ornament {
+  position: absolute;
+  z-index: 2;
+  width: clamp(62px, 5.2vw, 90px);
+  height: clamp(62px, 5.2vw, 90px);
+  fill: none;
+  stroke: var(--ornament-brass);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: .5;
+  pointer-events: none;
+}
+
+.signage-corner-ornament.top-left { top: 7px; left: 7px; }
+.signage-corner-ornament.top-right { top: 7px; right: 7px; transform: scaleX(-1); }
+.signage-corner-ornament.bottom-left { bottom: 7px; left: 7px; transform: scaleY(-1); }
+.signage-corner-ornament.bottom-right { right: 7px; bottom: 7px; transform: scale(-1); }
+
+.signage-carousel-inner {
+  position: relative;
+  z-index: 3;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.signage-slide {
+  height: 100%;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  animation: signage-slide-enter 520ms cubic-bezier(.2, .7, .2, 1) both;
+}
+
+@keyframes signage-slide-enter {
+  from { opacity: 0; transform: translateY(9px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.signage-slide-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: .35dvh .2vw .7dvh;
+  border-bottom: 0;
+}
+
+.signage-slide-icon {
+  border: 1px solid rgba(215, 184, 122, .42);
+  border-radius: 50%;
+  color: #d9c18b;
+  background: radial-gradient(circle, rgba(205, 172, 105, .11), transparent 70%);
+}
+
+.signage-slide-header h2 {
+  color: #f0eadf;
+}
+
+.signage-slide-star {
+  width: clamp(22px, 1.75vw, 29px);
+  height: clamp(22px, 1.75vw, 29px);
+  fill: none;
+  stroke: #c6a66a;
+  stroke-width: 2.2;
+  opacity: .58;
+}
+
+.signage-geometric-divider {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: .65vw;
+  color: #a88a53;
+  opacity: .52;
+}
+
+.signage-geometric-divider > span {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, currentColor);
+}
+
+.signage-geometric-divider > span:last-child {
+  background: linear-gradient(90deg, currentColor, transparent);
+}
+
+.signage-geometric-divider svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.7;
+}
+
+.signage-slide-body {
+  padding-top: 1.25dvh;
+}
+
+.signage-live iframe {
+  border: 1px solid rgba(215, 184, 122, .42);
+  border-radius: 4px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .28);
+}
+
+.signage-activity {
+  border-radius: 0;
+  border-bottom: 1px solid rgba(205, 173, 108, .18);
+  background: linear-gradient(90deg, rgba(201, 168, 103, .035), transparent 64%);
+}
+
+.signage-activity:last-child {
+  border-bottom: 0;
+}
+
+.signage-activity-date {
+  color: #e5d09d;
+  border: 1px solid rgba(215, 184, 122, .45);
+  border-radius: 0;
+  clip-path: polygon(50% 0, 100% 18%, 100% 100%, 0 100%, 0 18%);
+  background: rgba(190, 154, 86, .08);
+}
+
+.signage-balance strong {
+  color: #efe7d6;
+  text-shadow: 0 8px 24px rgba(0, 0, 0, .2);
+}
+
+.signage-finance-flow {
+  gap: 1.25vw;
+}
+
+.signage-finance-flow > div {
+  position: relative;
+  border-radius: 0;
+  border-top: 1px solid rgba(214, 182, 121, .34);
+  border-bottom: 1px solid rgba(214, 182, 121, .12);
+  background: linear-gradient(180deg, rgba(201, 168, 103, .045), transparent);
+}
+
+.signage-finance-flow > div::before {
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  transform: translateX(-50%) rotate(45deg);
+  border: 1px solid rgba(214, 182, 121, .5);
+  background: #0b2c24;
+}
+
+.signage-income { color: #a8dbc8 !important; }
+.signage-expense { color: #e7b0a2 !important; }
+
+.signage-transaction {
+  border-radius: 0;
+  border-bottom: 1px solid rgba(208, 176, 113, .16);
+  background: linear-gradient(90deg, rgba(210, 176, 109, .035), transparent 70%);
+}
+
+.signage-transaction:last-child {
+  border-bottom: 0;
+}
+
+.signage-transaction-icon {
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: transparent !important;
+  opacity: .88;
+}
+
+.signage-transaction-icon.income { color: #87c9b2; }
+.signage-transaction-icon.expense { color: #d79b8d; }
+
+.signage-announcement {
+  justify-items: center;
+  text-align: center;
+}
+
+.signage-announcement-star {
+  width: clamp(28px, 2.45vw, 42px);
+  height: clamp(28px, 2.45vw, 42px);
+  fill: none;
+  stroke: #cfb16f;
+  stroke-width: 2;
+  opacity: .55;
+}
+
+.signage-announcement blockquote {
+  max-width: 92%;
+  color: #eee8dd;
+}
+
+.signage-announcement span {
+  color: #a78e59;
+}
+
+.signage-donation {
+  justify-items: center;
+  text-align: center;
+}
+
+.signage-donation > strong {
+  color: #efe4cb;
+  text-shadow: 0 9px 24px rgba(0, 0, 0, .23);
+}
+
+.signage-carousel-dots span {
+  transform: rotate(45deg);
+  border: 1px solid rgba(214, 183, 121, .52);
+  border-radius: 0;
+  background: transparent;
+}
+
+.signage-carousel-dots span.active {
+  width: clamp(5px, .42vw, 7px);
+  border-color: #ddc487;
+  background: #c8a765;
+  box-shadow: 0 0 0 3px rgba(199, 165, 101, .08);
+}
+
+.signage-prayer-strip {
+  padding: 1.65dvh 1.55vw .9dvh;
+  gap: 0;
+  border-top-color: rgba(218, 188, 127, .34);
+  border-bottom-color: rgba(218, 188, 127, .3);
+  background: linear-gradient(180deg, rgba(18, 61, 49, .97), rgba(9, 31, 25, .98));
+  box-shadow: inset 0 12px 30px rgba(0, 0, 0, .08);
+}
+
+.signage-prayer-frieze {
+  position: absolute;
+  top: 0;
+  left: 1.55vw;
+  right: 1.55vw;
+  height: 11px;
+  opacity: .68;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='12' viewBox='0 0 56 12'%3E%3Cg fill='none' stroke='%23c6a66a' stroke-width='.9'%3E%3Cpath d='M0 6h12l4-4 4 4h16l4-4 4 4h12M0 10h12l4-4 4 4h16l4-4 4 4h12'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-size: 56px 12px;
+}
+
+.signage-prayer {
+  position: relative;
+  border: 0;
+  border-right: 1px solid rgba(207, 175, 110, .18);
+  border-radius: 0;
+  background: transparent;
+}
+
+.signage-prayer:last-child {
+  border-right: 0;
+}
+
+.signage-prayer::before {
+  content: "";
+  position: absolute;
+  top: 10%;
+  bottom: 8%;
+  left: 12%;
+  right: 12%;
+  border-top: 1px solid transparent;
+  border-radius: 50% 50% 0 0 / 35% 35% 0 0;
+  pointer-events: none;
+}
+
+.signage-prayer-star {
+  width: clamp(13px, 1vw, 17px);
+  height: clamp(13px, 1vw, 17px);
+  margin-bottom: .1dvh;
+  fill: none;
+  stroke: #8f7748;
+  stroke-width: 2.6;
+  opacity: .52;
+}
+
+.signage-prayer > strong {
+  color: #eee7d9;
+  text-shadow: 0 6px 16px rgba(0, 0, 0, .18);
+}
+
+.signage-prayer.active {
+  border-color: rgba(207, 175, 110, .18);
+  background: transparent;
+  box-shadow: none;
+}
+
+.signage-prayer.active::before {
+  border-color: rgba(222, 193, 134, .6);
+  background: radial-gradient(ellipse at 50% 35%, rgba(205, 170, 99, .11), transparent 65%);
+}
+
+.signage-prayer.active .signage-prayer-star {
+  stroke: #e2c985;
+  opacity: .9;
+}
+
+.signage-prayer.active > span,
+.signage-prayer.active > small {
+  color: #d4c094;
+}
+
+.signage-prayer.active > strong {
+  color: #f7edd6;
+}
+
+.signage-footer {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 0 1.55vw;
+  background: linear-gradient(180deg, rgba(6, 23, 18, .99), rgba(4, 18, 14, .99));
+}
+
+.signage-footer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(219, 188, 127, .58) 15%,
+    rgba(219, 188, 127, .58) 85%,
+    transparent
+  );
+}
+
+.signage-footer-ornament {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: #a68850;
+}
+
+.signage-footer-ornament svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.8;
+}
+
+.signage-ticker-label {
+  color: #e0c786;
+  border: 1px solid rgba(215, 183, 119, .42);
+  border-radius: 3px;
+  background: rgba(190, 153, 82, .07);
+}
+
+.signage-footer-donation {
+  color: #c3ad78;
+}
+
+@media (max-width: 1180px) {
+  .signage-header {
+    grid-template-columns: minmax(235px, 1fr) minmax(80px, .3fr) minmax(220px, .75fr) auto;
+  }
+
+  .signage-main::before {
+    display: none;
+  }
+
+  .signage-next-meta {
+    width: min(96%, 390px);
+  }
+}
+
+@media (max-height: 820px) {
+  .signage-clock {
+    margin-top: 1.1dvh;
+  }
+
+  .signage-next-prayer {
+    padding-top: 1.9dvh;
+  }
+
+  .signage-primary-star {
+    top: 3.5dvh;
+  }
+
+  .signage-slide-body {
+    padding-top: .75dvh;
+  }
+}
+
+@media (max-aspect-ratio: 4 / 3) {
+  .signage-header-center {
+    display: none;
+  }
+
+  .signage-footer {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .signage-slide {
+    animation: none;
+  }
+}
