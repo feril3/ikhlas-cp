@@ -353,12 +353,39 @@ test('transactions support audited edit and delete while preserving Drive eviden
   assert.match(admin, /Lihat snapshot transaksi terhapus/);
 });
 
-test('header includes explicit Gregorian date and running text is sized for TV readability', async () => {
+test('header includes Gregorian and Hijri dates while running text stays TV-readable', async () => {
   const jsx = await source('apps/web/src/pages/PublicDisplay.jsx');
   const css = await source('apps/web/src/styles/public-display.css');
+  const prayerService = await source('apps/api/src/prayerService.js');
 
   assert.match(jsx, /\{masehiDate\} Masehi/);
   assert.match(jsx, /\{weekday\}/);
+  assert.match(jsx, /prayerSchedule\?\.hijriDate\?\.formatted/);
+  assert.match(jsx, /signage-hijri-date/);
+  assert.match(prayerService, /body\.data\.date\?\.hijri/);
+  assert.match(prayerService, /islamic-umalqura/);
+  assert.match(prayerService, /Rabiul Akhir/);
+  assert.match(css, /\.signage-date-block \.signage-hijri-date/);
   assert.match(css, /\.verse-ticker-item strong \{[\s\S]*font-size:\s*clamp\(14px, 1\.18vw, 19px\)/);
   assert.match(css, /\.verse-ticker-label span \{[\s\S]*font-size:\s*clamp\(11px, \.88vw, 14px\)/);
+});
+
+
+test('Friday dashboard starts from today and emits only current-or-future Fridays', async () => {
+  const routes = await source('apps/api/src/routes.js');
+
+  assert.match(routes, /const daysUntilFriday = \(5 - weekday \+ 7\) % 7/);
+  assert.match(routes, /const firstFriday = addCalendarDays\(from, daysUntilFriday\)/);
+  assert.match(routes, /Array\.from\(\{ length: safeCount \}/);
+  assert.match(routes, /getUpcomingFridaySchedules\(from, limit\)/);
+});
+
+test('adhan phase lasts two minutes and iqamah stays eight minutes after adhan', async () => {
+  const helper = await source('apps/web/src/lib/prayerDisplay.js');
+  const display = await source('apps/web/src/pages/PublicDisplay.jsx');
+
+  assert.match(helper, /IQAMAH_DELAY_MINUTES = 8/);
+  assert.match(helper, /announcementEnds = new Date\(adhan\.getTime\(\) \+ 2 \* 60_000\)/);
+  assert.match(helper, /kind: 'ADHAN_NOW'/);
+  assert.match(display, /Waktunya Adzan \{countdownFocus\.prayerName\}/);
 });
