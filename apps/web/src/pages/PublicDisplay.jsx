@@ -2,11 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowDownLeft,
   ArrowUpRight,
-  CalendarDays,
   Landmark,
   MapPin,
-  Megaphone,
-  Radio,
+  PlayCircle,
   ReceiptText,
   WalletCards
 } from 'lucide-react';
@@ -15,13 +13,12 @@ import { formatDate, formatRupiah } from '../lib/format.js';
 import {
   formatCountdown,
   getIqamahTime,
-  getPrayerState
+  getPrayerDisplayState
 } from '../lib/prayerDisplay.js';
 
-const CAROUSEL_INTERVAL_MS = 9000;
-const MESSAGE_INTERVAL_MS = 12000;
-const TRANSACTION_LIMIT = 4;
+const FINANCE_CAROUSEL_INTERVAL_MS = 8500;
 const DISPLAY_TIMEZONE = 'Asia/Jakarta';
+const RECENT_TRANSACTION_LIMIT = 3;
 
 function displayDateIso(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -46,36 +43,30 @@ function toYouTubeEmbed(url) {
   try {
     const parsed = new URL(url);
     const host = parsed.hostname.replace(/^www\./, '');
+    let id = '';
 
     if (host === 'youtu.be') {
-      const id = parsed.pathname.split('/').filter(Boolean)[0];
-      return id ? `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1` : '';
-    }
-
-    if (host.endsWith('youtube.com')) {
+      id = parsed.pathname.split('/').filter(Boolean)[0] ?? '';
+    } else if (host.endsWith('youtube.com')) {
       if (parsed.pathname === '/watch') {
-        const id = parsed.searchParams.get('v');
-        return id ? `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1` : '';
+        id = parsed.searchParams.get('v') ?? '';
+      } else {
+        const parts = parsed.pathname.split('/').filter(Boolean);
+        if (parts[0] === 'live' || parts[0] === 'embed') id = parts[1] ?? '';
       }
 
-      const parts = parsed.pathname.split('/').filter(Boolean);
-      if (parts[0] === 'live' && parts[1]) {
-        return `https://www.youtube-nocookie.com/embed/${parts[1]}?autoplay=1&mute=1`;
-      }
-      if (parts[0] === 'embed' && parts[1]) {
-        return `https://www.youtube-nocookie.com/embed/${parts[1]}?autoplay=1&mute=1`;
-      }
-      if (parsed.pathname === '/embed/live_stream' && parsed.searchParams.get('channel')) {
-        return `https://www.youtube-nocookie.com/embed/live_stream?channel=${encodeURIComponent(parsed.searchParams.get('channel'))}&autoplay=1&mute=1`;
+      if (!id && parsed.pathname === '/embed/live_stream' && parsed.searchParams.get('channel')) {
+        return `https://www.youtube-nocookie.com/embed/live_stream?channel=${encodeURIComponent(parsed.searchParams.get('channel'))}&autoplay=1&mute=1&controls=1&rel=0`;
       }
     }
+
+    return id
+      ? `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&controls=1&rel=0`
+      : '';
   } catch {
     return '';
   }
-
-  return '';
 }
-
 
 function IslamicStar({ className = '' }) {
   return (
@@ -99,256 +90,77 @@ function MosqueSeal() {
   );
 }
 
-function MihrabFrame() {
-  return (
-    <svg className="signage-mihrab-frame" viewBox="0 0 500 650" preserveAspectRatio="none" aria-hidden="true">
-      <path className="mihrab-line mihrab-line-outer" d="M38 625V255Q38 112 250 24Q462 112 462 255V625" />
-      <path className="mihrab-line mihrab-line-middle" d="M58 625V266Q58 132 250 48Q442 132 442 266V625" />
-      <path className="mihrab-line mihrab-line-inner" d="M78 625V278Q78 153 250 76Q422 153 422 278V625" />
-      <path className="mihrab-base" d="M28 625H472M52 606H448" />
-      <path className="mihrab-column" d="M64 328V605M436 328V605" />
-      <path className="mihrab-capital" d="M52 328H77M423 328H448" />
-      <path className="mihrab-diamond" d="m250 16 11 20-11 20-11-20 11-20Z" />
-    </svg>
-  );
-}
-
-function CornerOrnament({ position }) {
-  return (
-    <svg className={`signage-corner-ornament ${position}`} viewBox="0 0 140 140" aria-hidden="true">
-      <path d="M9 129V69C9 36 36 9 69 9h60" />
-      <path d="M20 129V73c0-29 24-53 53-53h56" />
-      <path d="M35 129V79c0-24 20-44 44-44h50" />
-      <path d="M10 93c20 0 36-16 36-36M10 111c30 0 55-25 55-55" />
-      <path d="m76 18 7 15 16 2-12 11 3 16-14-8-14 8 3-16-12-11 16-2 7-15Z" />
-    </svg>
-  );
-}
-
-function GeometricDivider() {
-  return (
-    <div className="signage-geometric-divider" aria-hidden="true">
-      <span />
-      <IslamicStar />
-      <span />
-    </div>
-  );
-}
-
-function buildSlides({ data, liveEmbed, liveTitle }) {
-  if (!data) return [];
-
-  const slides = [];
-  const activities = data.activities ?? [];
-  const transactions = data.recentTransactions ?? [];
-  const messages = data.messages ?? [];
-
-  if (liveEmbed) {
-    slides.push({
-      id: 'live',
-      kind: 'live',
-      eyebrow: 'Siaran Langsung',
-      title: liveTitle,
-      icon: Radio,
-      liveEmbed
-    });
-  }
-
-  if (activities.length) {
-    slides.push({
-      id: 'activities',
-      kind: 'activities',
-      eyebrow: 'Kegiatan',
-      title: 'Agenda Masjid',
-      icon: CalendarDays,
-      activities: activities.slice(0, 3)
-    });
-  }
-
-  slides.push({
-    id: 'finance',
-    kind: 'finance',
-    eyebrow: 'Keuangan',
-    title: 'Kas Masjid',
-    icon: WalletCards,
-    finance: data.finance
-  });
-
-  if (transactions.length) {
-    slides.push({
+function FinanceCarousel({ data, index }) {
+  const transactions = data?.recentTransactions?.slice(0, RECENT_TRANSACTION_LIMIT) ?? [];
+  const settings = data?.settings ?? {};
+  const slides = [
+    {
       id: 'transactions',
-      kind: 'transactions',
-      eyebrow: 'Keuangan',
-      title: 'Transaksi Terbaru',
-      icon: ReceiptText,
-      transactions: transactions.slice(0, TRANSACTION_LIMIT)
-    });
-  }
-
-  if (messages.length) {
-    slides.push({
-      id: 'announcement',
-      kind: 'announcement',
-      eyebrow: 'Pengumuman',
-      title: messages[0].title || 'Pengumuman',
-      icon: Megaphone,
-      message: messages[0]
-    });
-  }
-
-  slides.push({
-    id: 'donation',
-    kind: 'donation',
-    eyebrow: 'Donasi',
-    title: 'Rekening Donasi',
-    icon: Landmark,
-    settings: data.settings
-  });
-
-  return slides;
-}
-
-function CarouselSlide({ slide }) {
-  const Icon = slide.icon;
-
-  return (
-    <article className={`signage-slide signage-slide-${slide.kind}`}>
-      <header className="signage-slide-header">
-        <span className="signage-slide-icon"><Icon size={21} strokeWidth={1.7} /></span>
-        <div>
-          <span>{slide.eyebrow}</span>
-          <h2>{slide.title}</h2>
-        </div>
-        <IslamicStar className="signage-slide-star" />
-      </header>
-
-      <GeometricDivider />
-
-      <div className="signage-slide-body">
-        {slide.kind === 'live' && (
-          <div className="signage-live">
-            <iframe
-              src={slide.liveEmbed}
-              title={slide.title}
-              allow="autoplay; encrypted-media; picture-in-picture"
-              allowFullScreen
-            />
-          </div>
-        )}
-
-        {slide.kind === 'activities' && (
-          <div className="signage-activity-list">
-            {slide.activities.map((activity) => (
-              <div className="signage-activity" key={activity.id}>
-                <div className="signage-activity-date">
-                  <strong>{activity.activityDate.slice(-2)}</strong>
-                  <span>{new Intl.DateTimeFormat('id-ID', { month: 'short' }).format(new Date(`${activity.activityDate}T00:00:00`))}</span>
-                </div>
-                <div>
-                  <strong>{activity.title}</strong>
-                  <span>
-                    {activity.startTime || 'Waktu fleksibel'}
-                    {activity.speaker ? ` · ${activity.speaker}` : ''}
-                  </span>
-                  {activity.location && <small><MapPin size={13} /> {activity.location}</small>}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {slide.kind === 'finance' && (
-          <div className="signage-finance">
-            <div className="signage-balance">
-              <span>Saldo kas saat ini</span>
-              <strong>{formatRupiah(slide.finance?.currentBalance ?? 0)}</strong>
-            </div>
-            <div className="signage-finance-flow">
-              <div>
-                <span>Kas masuk bulan ini</span>
-                <strong className="signage-income">+{formatRupiah(slide.finance?.totalIncome ?? 0)}</strong>
-              </div>
-              <div>
-                <span>Kas keluar bulan ini</span>
-                <strong className="signage-expense">-{formatRupiah(slide.finance?.totalExpense ?? 0)}</strong>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {slide.kind === 'transactions' && (
-          <div className="signage-transaction-list">
-            {slide.transactions.map((transaction) => {
+      content: (
+        <div className="finance-slide finance-transactions">
+          <div className="finance-slide-title"><ReceiptText size={18} /><span>Transaksi Terbaru</span></div>
+          <div className="finance-transaction-list">
+            {transactions.map((transaction) => {
               const income = transaction.type === 'INCOME';
-              const IconTransaction = income ? ArrowDownLeft : ArrowUpRight;
+              const Icon = income ? ArrowDownLeft : ArrowUpRight;
               return (
-                <div className="signage-transaction" key={transaction.id}>
-                  <span className={`signage-transaction-icon ${income ? 'income' : 'expense'}`}>
-                    <IconTransaction size={18} />
+                <div className="finance-transaction-row" key={transaction.id}>
+                  <span className={income ? 'finance-flow-icon income' : 'finance-flow-icon expense'}>
+                    <Icon size={15} />
                   </span>
                   <div>
                     <strong>{transaction.category}</strong>
                     <span>{formatDate(transaction.transactionDate)}</span>
                   </div>
-                  <b className={income ? 'signage-income' : 'signage-expense'}>
+                  <b className={income ? 'finance-income' : 'finance-expense'}>
                     {income ? '+' : '-'}{formatRupiah(transaction.amount)}
                   </b>
                 </div>
               );
             })}
+            {transactions.length === 0 && <span className="finance-empty">Belum ada transaksi.</span>}
           </div>
-        )}
-
-        {slide.kind === 'announcement' && (
-          <div className="signage-announcement">
-            <IslamicStar className="signage-announcement-star" />
-            <blockquote>{slide.message.content}</blockquote>
-            {slide.message.source && <span>{slide.message.source}</span>}
+        </div>
+      )
+    },
+    {
+      id: 'donation',
+      content: (
+        <div className="finance-slide finance-donation">
+          <div className="finance-slide-title"><Landmark size={18} /><span>Rekening Donasi</span></div>
+          <div className="finance-donation-copy">
+            <span>{settings.bankName || 'Bank'}</span>
+            <strong>{settings.bankAccountNumber || '-'}</strong>
+            <p>{settings.bankAccountHolder ? `a.n. ${settings.bankAccountHolder}` : ''}</p>
           </div>
-        )}
+        </div>
+      )
+    }
+  ];
 
-        {slide.kind === 'donation' && (
-          <div className="signage-donation">
-            <div className="signage-donation-emblem" aria-hidden="true">
-              <IslamicStar className="signage-donation-star" />
-              <Landmark size={52} strokeWidth={1.25} />
-            </div>
-
-            <div className="signage-donation-content">
-              <span className="signage-donation-lead">Rekening resmi masjid</span>
-              <strong className="signage-donation-number">{slide.settings.bankAccountNumber || '-'}</strong>
-
-              <div className="signage-donation-meta">
-                <div>
-                  <span>Bank</span>
-                  <b>{slide.settings.bankName || 'Belum diatur'}</b>
-                </div>
-                <div>
-                  <span>Atas nama</span>
-                  <b>{slide.settings.bankAccountHolder || '-'}</b>
-                </div>
-              </div>
-
-              <p>Salurkan infaq dan donasi melalui rekening resmi masjid.</p>
-            </div>
-          </div>
-        )}
+  const active = slides[index % slides.length];
+  return (
+    <>
+      <div className="finance-carousel-window" key={active.id}>{active.content}</div>
+      <div className="finance-carousel-dots" aria-hidden="true">
+        {slides.map((slide, slideIndex) => (
+          <span className={slideIndex === index % slides.length ? 'active' : ''} key={slide.id} />
+        ))}
       </div>
-    </article>
+    </>
   );
 }
 
 export default function PublicDisplay() {
   const [now, setNow] = useState(new Date());
   const [data, setData] = useState(null);
-  const [slideIndex, setSlideIndex] = useState(0);
-  const [messageIndex, setMessageIndex] = useState(0);
+  const [financeSlideIndex, setFinanceSlideIndex] = useState(0);
 
   async function load() {
     try {
       setData(await api.publicDisplay(displayDateIso()));
     } catch {
-      // Pertahankan last-known-good payload di TV ketika jaringan sementara putus.
+      // Pertahankan payload terakhir agar TV tidak kosong saat jaringan putus sementara.
     }
   }
 
@@ -360,6 +172,13 @@ export default function PublicDisplay() {
       clearInterval(clockTimer);
       clearInterval(refreshTimer);
     };
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setFinanceSlideIndex((current) => (current + 1) % 2);
+    }, FINANCE_CAROUSEL_INTERVAL_MS);
+    return () => clearInterval(timer);
   }, []);
 
   const settings = data?.settings ?? {
@@ -375,49 +194,27 @@ export default function PublicDisplay() {
   const activityWithLive = data?.activities?.find((item) => item.liveUrl);
   const liveSource = settings.activeLiveUrl || activityWithLive?.liveUrl || settings.defaultYoutubeUrl;
   const liveEmbed = toYouTubeEmbed(liveSource);
-  const liveTitle = settings.activeLiveTitle || activityWithLive?.title || 'Live Masjid';
+  const liveTitle = settings.activeLiveTitle || activityWithLive?.title || 'Siaran Masjid';
 
-  const slides = useMemo(
-    () => buildSlides({ data, liveEmbed, liveTitle }),
-    [data, liveEmbed, liveTitle]
-  );
-
-  useEffect(() => {
-    setSlideIndex(0);
-    if (slides.length <= 1) return undefined;
-
-    const timer = setInterval(() => {
-      setSlideIndex((current) => (current + 1) % slides.length);
-    }, CAROUSEL_INTERVAL_MS);
-
-    return () => clearInterval(timer);
-  }, [slides.length]);
-
-  const messages = data?.messages ?? [];
-  useEffect(() => {
-    setMessageIndex(0);
-    if (messages.length <= 1) return undefined;
-
-    const timer = setInterval(() => {
-      setMessageIndex((current) => (current + 1) % messages.length);
-    }, MESSAGE_INTERVAL_MS);
-
-    return () => clearInterval(timer);
-  }, [messages.length]);
-
-  const prayers = data?.prayerSchedule?.items ?? [];
-  const prayerState = useMemo(
-    () => getPrayerState(data?.prayerSchedule, data?.nextDayPrayerSchedule, now),
+  const prayerDisplay = useMemo(
+    () => getPrayerDisplayState(data?.prayerSchedule, data?.nextDayPrayerSchedule, now),
     [data?.prayerSchedule, data?.nextDayPrayerSchedule, now]
   );
+  const nextAdhan = prayerDisplay.nextAdhan;
+  const activeIqamah = prayerDisplay.activeIqamah;
+  const prayers = data?.prayerSchedule?.items ?? [];
 
-  const activeSlide = slides[slideIndex] ?? slides[0];
-  const activeMessage = messages[messageIndex] ?? null;
+  const tickerMessages = useMemo(
+    () => (data?.messages ?? []).filter((message) => message.kind === 'VERSE'),
+    [data?.messages]
+  );
+  const tickerItems = tickerMessages.length ? [...tickerMessages, ...tickerMessages] : [];
+  const tickerDuration = `${Math.max(48, tickerMessages.length * 17)}s`;
+
   const location = data?.prayerSchedule?.source?.location ?? {
     name: 'RS Elizabeth Situbondo',
-    address: 'Jl. WR. Supratman No.2, Situbondo, Jawa Timur'
+    address: 'Patokan · Situbondo · Jawa Timur'
   };
-  const locationSummary = 'Patokan · Situbondo · Jawa Timur';
 
   const time = new Intl.DateTimeFormat('id-ID', {
     hour: '2-digit',
@@ -436,102 +233,108 @@ export default function PublicDisplay() {
   }).format(now);
 
   return (
-    <div className="public-display signage-shell">
+    <div className="public-display media-signage-shell">
       <div className="signage-pattern-layer" aria-hidden="true" />
-      <div className="signage-light-layer" aria-hidden="true" />
 
-      <header className="signage-header">
+      <header className="media-signage-header">
         <div className="signage-brand">
           <span className="signage-brand-mark"><MosqueSeal /></span>
-          <div>
-            <strong>{settings.mosqueName.toUpperCase()}</strong>
-          </div>
-        </div>
-
-        <div className="signage-header-center" aria-hidden="true">
-          <span />
-          <IslamicStar />
-          <span />
+          <strong>{settings.mosqueName.toUpperCase()}</strong>
         </div>
 
         <div className="signage-location">
-          <MapPin size={17} />
+          <MapPin size={16} />
           <div>
             <strong>{location.name}</strong>
-            <span title={location.address}>{locationSummary}</span>
+            <span>Patokan · Situbondo · Jawa Timur</span>
           </div>
         </div>
 
-        <div className="signage-date">{date}</div>
+        <time>{date}</time>
       </header>
 
-      <main className="signage-main">
-        <section className="signage-primary" aria-label="Waktu dan salat berikutnya">
-          <div className="signage-primary-ornament" aria-hidden="true"><MihrabFrame /></div>
-          <IslamicStar className="signage-primary-star" />
-
-          <div className="signage-clock">
+      <main className="media-signage-main">
+        <section className="prayer-focus-panel" aria-label="Waktu dan adzan berikutnya">
+          <IslamicStar className="prayer-focus-star" />
+          <div className="prayer-focus-clock">
             <span>Waktu sekarang</span>
             <time>{time}</time>
           </div>
 
-          <div className="signage-next-prayer">
-            <span>{prayerState?.label ?? 'Jadwal salat'}</span>
-            <h1>{prayerState?.prayerName ?? 'Memuat...'}</h1>
-            <div className="signage-next-meta">
-              <div>
-                <span>Adzan</span>
-                <strong>{prayerState?.adhanTime ?? '--:--'}</strong>
-              </div>
-              <div>
-                <span>{prayerState?.kind === 'iqamah' ? 'Menuju iqamah' : 'Menuju adzan'}</span>
-                <strong>{prayerState ? formatCountdown(prayerState.target - now) : '--:--:--'}</strong>
-              </div>
+          <div className="prayer-focus-next">
+            <span>{nextAdhan?.label ?? 'Adzan berikutnya'}</span>
+            <h1>{nextAdhan?.prayerName ?? '--'}</h1>
+            <strong className="prayer-focus-adhan">{nextAdhan?.adhanTime ?? '--:--'}</strong>
+            <div className="prayer-focus-countdown">
+              <span>Menuju adzan</span>
+              <b>{nextAdhan ? formatCountdown(nextAdhan.target - now) : '--:--:--'}</b>
             </div>
           </div>
 
-          <div className="signage-prayer-source">
-            <span>Iqamah 5 menit setelah adzan</span>
-          </div>
-        </section>
-
-        <section className="signage-carousel" aria-label="Informasi masjid bergantian">
-          <CornerOrnament position="top-left" />
-          <CornerOrnament position="top-right" />
-          <CornerOrnament position="bottom-left" />
-          <CornerOrnament position="bottom-right" />
-
-          <div className="signage-carousel-inner">
-            {activeSlide && <CarouselSlide key={activeSlide.id} slide={activeSlide} />}
-          </div>
-
-          <div className="signage-carousel-progress" aria-hidden="true">
-            <b>{String(slideIndex + 1).padStart(2, '0')}</b>
-            <div className="signage-carousel-dots">
-              {slides.map((slide, index) => (
-                <span
-                  key={slide.id}
-                  className={index === slideIndex ? 'active' : ''}
-                />
-              ))}
+          {activeIqamah && (
+            <div className="prayer-focus-iqamah">
+              <span>Iqamah {activeIqamah.prayerName}</span>
+              <strong>{formatCountdown(activeIqamah.target - now)}</strong>
             </div>
-            <b>{String(slides.length).padStart(2, '0')}</b>
-          </div>
+          )}
+
+          <small>Iqamah 5 menit setelah adzan</small>
         </section>
+
+        <section className="youtube-stage" aria-label="Siaran video masjid">
+          <div className="youtube-frame">
+            {liveEmbed ? (
+              <iframe
+                src={liveEmbed}
+                title={liveTitle}
+                allow="autoplay; encrypted-media; picture-in-picture"
+                allowFullScreen
+              />
+            ) : (
+              <div className="youtube-empty">
+                <PlayCircle size={68} strokeWidth={1.2} />
+                <strong>Siaran video belum tersedia</strong>
+              </div>
+            )}
+          </div>
+          {liveEmbed && <div className="youtube-caption">{liveTitle}</div>}
+        </section>
+
+        <aside className="finance-rail" aria-label="Keuangan masjid">
+          <div className="finance-rail-heading">
+            <WalletCards size={18} />
+            <span>Keuangan Masjid</span>
+          </div>
+
+          <div className="finance-balance">
+            <span>Saldo saat ini</span>
+            <strong>{formatRupiah(data?.finance?.currentBalance ?? 0)}</strong>
+          </div>
+
+          <div className="finance-flow-summary">
+            <div>
+              <span>Kas masuk</span>
+              <strong className="finance-income">+{formatRupiah(data?.finance?.totalIncome ?? 0)}</strong>
+            </div>
+            <div>
+              <span>Kas keluar</span>
+              <strong className="finance-expense">-{formatRupiah(data?.finance?.totalExpense ?? 0)}</strong>
+            </div>
+          </div>
+
+          <div className="finance-carousel">
+            <FinanceCarousel data={data} index={financeSlideIndex} />
+          </div>
+        </aside>
       </main>
 
-      <section className="signage-prayer-strip" aria-label="Lima waktu salat">
-        <div className="signage-prayer-frieze" aria-hidden="true" />
+      <section className="media-prayer-strip" aria-label="Jadwal salat hari ini">
+        <div className="media-prayer-frieze" aria-hidden="true" />
         {prayers.map((prayer) => {
-          const isNext = prayerState?.today && prayerState?.prayerName === prayer.prayerName;
+          const isNext = nextAdhan?.today && nextAdhan?.prayerName === prayer.prayerName;
           return (
-            <article className={isNext ? 'signage-prayer active' : 'signage-prayer'} key={prayer.prayerName}>
-              {isNext && (
-                <em className="signage-prayer-next">
-                  {prayerState?.kind === 'iqamah' ? 'Iqamah' : 'Berikutnya'}
-                </em>
-              )}
-              <IslamicStar className="signage-prayer-star" />
+            <article className={isNext ? 'media-prayer active' : 'media-prayer'} key={prayer.prayerName}>
+              {isNext && <em>Berikutnya</em>}
               <span>{prayer.prayerName}</span>
               <strong>{prayer.adhanTime}</strong>
               <small>Iqamah {getIqamahTime(data?.prayerSchedule?.scheduleDate, prayer.adhanTime) || '--:--'}</small>
@@ -540,28 +343,25 @@ export default function PublicDisplay() {
         })}
       </section>
 
-      <footer className="signage-footer">
-        <div className="signage-footer-ornament" aria-hidden="true"><IslamicStar /></div>
-        <div className="signage-ticker">
-          <span className="signage-ticker-label">
-            {activeMessage
-              ? activeMessage.kind === 'VERSE'
-                ? 'Ayat / Hadits'
-                : activeMessage.kind === 'ANNOUNCEMENT'
-                  ? 'Pengumuman'
-                  : 'Pesan Masjid'
-              : 'Informasi'}
-          </span>
-          <div>
-            <strong>{activeMessage?.title || activeMessage?.content || 'Selamat datang di masjid.'}</strong>
-            {activeMessage?.title && <span>{activeMessage.content}</span>}
-            {activeMessage?.source && <small>{activeMessage.source}</small>}
-          </div>
+      <footer className="verse-ticker" aria-label="Ayat dan hadits">
+        <div className="verse-ticker-label">
+          <IslamicStar />
+          <span>Ayat & Hadits</span>
         </div>
-
-        <div className="signage-footer-donation">
-          <Landmark size={15} />
-          <span>{settings.bankName || 'Donasi'} · {settings.bankAccountNumber || '-'}</span>
+        <div className="verse-ticker-viewport">
+          <div className="verse-ticker-track" style={{ '--ticker-duration': tickerDuration }}>
+            {tickerItems.length ? tickerItems.map((message, index) => (
+              <div className="verse-ticker-item" key={`${message.id}-${index}`}>
+                <strong>{message.content}</strong>
+                {message.source && <span>{message.source}</span>}
+                <i aria-hidden="true">◆</i>
+              </div>
+            )) : (
+              <div className="verse-ticker-item verse-ticker-empty">
+                <strong>Selamat datang di masjid.</strong>
+              </div>
+            )}
+          </div>
         </div>
       </footer>
     </div>
