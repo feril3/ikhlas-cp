@@ -1,0 +1,47 @@
+name: UI Phase 3 Primitives
+
+on:
+  push:
+    branches:
+      - redesign/phase-3-transactions
+
+permissions:
+  contents: write
+
+jobs:
+  primitives:
+    if: "!contains(github.event.head_commit.message, '[ui-phase3-bootstrap]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: redesign/phase-3-transactions
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Inspect official shadcn component docs
+        working-directory: apps/web
+        run: npx shadcn@latest docs alert-dialog select textarea toggle-group checkbox field input-group empty spinner
+
+      - name: Add transaction-form primitives
+        working-directory: apps/web
+        run: npx shadcn@latest add -y alert-dialog select textarea toggle-group checkbox field input-group empty spinner
+
+      - name: Commit generated primitives
+        run: |
+          git config user.name "IKHLAS UI Bootstrap"
+          git config user.email "actions@users.noreply.github.com"
+          touch .phase3-shadcn-ready
+          git add .
+          if git diff --cached --quiet; then
+            echo "No generated changes"
+            exit 0
+          fi
+          git commit -m "chore: add phase-three shadcn primitives [ui-phase3-bootstrap]"
+          git push origin HEAD:redesign/phase-3-transactions
