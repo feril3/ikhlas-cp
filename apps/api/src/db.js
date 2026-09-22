@@ -106,6 +106,7 @@ export function initializeDatabase() {
       mutation_mime_type TEXT,
       created_by INTEGER,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (category_id) REFERENCES transaction_categories(id),
       FOREIGN KEY (created_by) REFERENCES users(id)
     );
@@ -118,6 +119,15 @@ export function initializeDatabase() {
       iqamah_time TEXT,
       imam TEXT,
       bilal TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS friday_schedules (
+      schedule_date TEXT PRIMARY KEY,
+      imam TEXT,
+      khatib TEXT,
+      bilal TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
     CREATE TABLE IF NOT EXISTS prayer_time_cache (
@@ -169,6 +179,8 @@ export function initializeDatabase() {
       ON public_messages(is_active, sort_order);
     CREATE INDEX IF NOT EXISTS idx_prayer_schedule_date
       ON prayer_schedules(prayer_date, adhan_time);
+    CREATE INDEX IF NOT EXISTS idx_friday_schedule_date
+      ON friday_schedules(schedule_date);
     CREATE INDEX IF NOT EXISTS idx_prayer_cache_fetched
       ON prayer_time_cache(fetched_at DESC);
     CREATE INDEX IF NOT EXISTS idx_activities_date
@@ -190,6 +202,12 @@ export function initializeDatabase() {
   ensureColumn('transactions', 'mutation_original_name', 'TEXT');
   ensureColumn('transactions', 'mutation_mime_type', 'TEXT');
   ensureColumn('transactions', 'created_by', 'INTEGER');
+  ensureColumn('transactions', 'updated_at', 'TEXT');
+  db.prepare(`
+    UPDATE transactions
+    SET updated_at = COALESCE(updated_at, created_at, CURRENT_TIMESTAMP)
+    WHERE updated_at IS NULL
+  `).run();
   ensureColumn('activities', 'live_url', 'TEXT');
   ensureColumn('public_messages', 'seed_key', 'TEXT');
   db.exec(`
