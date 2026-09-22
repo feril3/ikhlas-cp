@@ -25,11 +25,13 @@ function TransactionEditPanel({ transaction, onClose, onSaved }) {
     api.transactionCategories(transaction.type)
       .then((result) => {
         if (cancelled) return;
-        const active = result.data.filter((item) => item.isActive);
-        setCategories(active);
+        const available = result.data.filter(
+          (item) => item.isActive || Number(item.id) === Number(transaction.categoryId)
+        );
+        setCategories(available);
         setForm((current) => ({
           ...current,
-          categoryId: current.categoryId || String(active.find((item) => item.name === transaction.category)?.id ?? '')
+          categoryId: current.categoryId || String(available.find((item) => item.name === transaction.category)?.id ?? '')
         }));
         setStatus({ type: 'idle', message: '' });
       })
