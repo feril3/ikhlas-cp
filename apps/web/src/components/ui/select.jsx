@@ -1,6 +1,6 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
-import { Select as SelectPrimitive } from "radix-ui"
+import * as SelectPrimitive from "@radix-ui/react-select"
 import { IconSelector, IconCheck, IconChevronUp, IconChevronDown } from "@tabler/icons-react"
 
 function Select({
