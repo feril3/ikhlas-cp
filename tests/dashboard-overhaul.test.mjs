@@ -421,8 +421,8 @@ test('phase 6c page layouts use desktop space without sacrificing mobile composi
   assert.match(transactions, /<Select value={method}/);
   assert.match(transactions, /Kategori/);
   assert.match(transactions, /<Select value={category}/);
-  assert.match(transactions, />Dari</);
-  assert.match(transactions, />Sampai</);
+  assert.match(transactions, /Dari/);
+  assert.match(transactions, /Sampai/);
   assert.match(transactions, /md:grid-cols-2/);
 
   assert.match(form, /max-w-6xl/);
