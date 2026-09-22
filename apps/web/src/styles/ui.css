@@ -37,7 +37,7 @@
 }
 
 :root {
-  --ui-background: #f7f6f2;
+  --ui-background: #f4f4f0;
   --ui-foreground: #17211e;
   --ui-card: #ffffff;
   --ui-card-foreground: #17211e;
@@ -45,25 +45,30 @@
   --ui-popover-foreground: #17211e;
   --ui-primary: #146b5a;
   --ui-primary-foreground: #ffffff;
-  --ui-secondary: #edf3f0;
+  --ui-secondary: #e8f0ec;
   --ui-secondary-foreground: #25483f;
-  --ui-muted: #f1f3f1;
-  --ui-muted-foreground: #67736f;
-  --ui-accent: #e6f0ec;
+  --ui-muted: #ecefeb;
+  --ui-muted-foreground: #56625d;
+  --ui-accent: #dcebe5;
   --ui-accent-foreground: #0d4b3f;
   --ui-destructive: #b42318;
-  --ui-border: #dce3df;
-  --ui-input: #d5ded9;
-  --ui-ring: #2b7a69;
+  --ui-border: #b9c4be;
+  --ui-input: #87978f;
+  --ui-ring: #1f6d5d;
   --ui-sidebar: #0b3f35;
   --ui-sidebar-foreground: #edf6f3;
   --ui-sidebar-primary: #d2b878;
   --ui-sidebar-accent: #15594a;
   --ui-sidebar-accent-foreground: #ffffff;
-  --ui-sidebar-border: rgba(255,255,255,.12);
+  --ui-sidebar-border: rgba(255,255,255,.18);
   --ui-chart-1: #146b5a;
   --ui-chart-2: #c05b4e;
   --ui-chart-3: #b58a42;
+  --ui-success: #0f5a41;
+  --ui-success-soft: #e3f2eb;
+  --ui-success-border: #9bcbb7;
+  --ui-danger-soft: #fbe9e7;
+  --ui-danger-border: #efb5ae;
   --ui-radius: .625rem;
 }
 
