@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { Slot } from '@radix-ui/react-slot';
 import { IconLayoutSidebarLeftCollapse, IconMenu2 } from '@tabler/icons-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -84,9 +85,10 @@ function SidebarGroupLabel({ className, ...props }) {
 function SidebarMenu({ className, ...props }) {
   return <div className={cn('flex flex-col gap-1', className)} {...props} />;
 }
-function SidebarMenuButton({ className, active = false, ...props }) {
+function SidebarMenuButton({ className, active = false, asChild = false, ...props }) {
+  const Comp = asChild ? Slot : 'button';
   return (
-    <button
+    <Comp
       className={cn(
         'flex min-h-10 w-full items-center gap-3 rounded-md px-3 text-left text-[13px] font-medium text-sidebar-foreground/78 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
         active && 'bg-sidebar-accent text-sidebar-accent-foreground',
