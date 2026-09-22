@@ -34,12 +34,16 @@ test('dashboard shell uses shadcn-style sidebar composition and removes legacy S
   assert.match(shell, /SidebarProvider/);
   assert.match(shell, /AppHeader/);
   assert.match(shell, /Toaster/);
+  assert.match(shell, /max-w-\[1600px\]/);
+  assert.doesNotMatch(shell, /page-container/);
   assert.match(sidebar, /Jadwal Jumat & Agenda/);
   assert.match(sidebar, /Tampilan Publik/);
   assert.doesNotMatch(sidebar, /Kas Masuk/);
   assert.doesNotMatch(sidebar, /Kas Keluar/);
   assert.doesNotMatch(sidebar, /CircleDollarSign/);
   assert.match(sidebar, /@tabler\/icons-react/);
+  assert.match(sidebar, /forceVisible=\{mobile\}/);
+  assert.match(sidebar, /UserMenu compact=\{!expanded\} sidebar/);
 });
 
 test('public display styles remain separate from the Tailwind dashboard foundation', async () => {
@@ -83,4 +87,23 @@ test('phase 2 reports combines Recharts analysis with verifiable numeric tables'
   assert.match(reports, /TableHeader/);
   assert.match(reports, /Unduh CSV/);
   assert.doesNotMatch(reports, /section-kicker/);
+});
+
+
+test('phase 1 shell finalization keeps semantic brand, header action and mobile-safe sidebar primitives', async () => {
+  const brand = await source('apps/web/src/components/app/AppBrand.jsx');
+  const header = await source('apps/web/src/components/app/AppHeader.jsx');
+  const userMenu = await source('apps/web/src/components/app/UserMenu.jsx');
+  const sidebarUi = await source('apps/web/src/components/ui/sidebar.jsx');
+  const uiCss = await source('apps/web/src/styles/ui.css');
+
+  assert.match(brand, /text-sidebar-primary/);
+  assert.doesNotMatch(brand, /text-\[#/);
+  assert.match(header, /Tampilan Publik/);
+  assert.match(header, /IconDeviceTv/);
+  assert.match(userMenu, /sidebar = false/);
+  assert.match(sidebarUi, /forceVisible = false/);
+  assert.match(sidebarUi, /\[&_svg\]:size-\[18px\]/);
+  assert.match(uiCss, /--ui-sidebar-primary: #d2b878/);
+  assert.doesNotMatch(uiCss, /\.dashboard-shell \.page-container/);
 });
