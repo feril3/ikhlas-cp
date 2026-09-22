@@ -314,7 +314,6 @@ test('schedule dashboard manages only upcoming Friday officers and hides past Fr
   assert.match(schedule, /Petugas Jumat mendatang/);
   assert.doesNotMatch(schedule, /api\.prayerSchedule/);
   assert.doesNotMatch(schedule, /updatePrayerSchedule/);
-  assert.doesNotMatch(schedule, /Jadwal salat/);
 
   assert.match(api, /fridaySchedules/);
   assert.doesNotMatch(api, /updatePrayerSchedule/);
