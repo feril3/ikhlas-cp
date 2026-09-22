@@ -6,10 +6,7 @@ import App from './App.jsx';
 import { AuthProvider } from './auth/AuthContext.jsx';
 import './styles/ui.css';
 import './styles/base.css';
-import './styles/operations.css';
-import './styles/auth-admin.css';
 import './styles/public-display.css';
-import './styles/responsive.css';
 import './styles/public-display-ornamental.css';
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
