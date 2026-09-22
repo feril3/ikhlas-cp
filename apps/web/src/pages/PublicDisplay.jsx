@@ -440,7 +440,7 @@ export default function PublicDisplay() {
           <MapPin size={17} />
           <div>
             <strong>{location.name}</strong>
-            <span>Situbondo · Jawa Timur</span>
+            <span>{location.address}</span>
           </div>
         </div>
 
