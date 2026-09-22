@@ -68,7 +68,7 @@ function NavigationPanel({ mobile = false }) {
             if (!items.length) return null;
             return (
               <SidebarGroup key={group.label}>
-                {expanded && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
+                {expanded && <SidebarGroupLabel forceVisible={mobile}>{group.label}</SidebarGroupLabel>}
                 <SidebarMenu>
                   {items.map(({ to, label, icon: Icon }) => {
                     const active = to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);
@@ -96,7 +96,7 @@ function NavigationPanel({ mobile = false }) {
           })}
 
           <SidebarGroup className="mt-auto">
-            {expanded && <SidebarGroupLabel>Lainnya</SidebarGroupLabel>}
+            {expanded && <SidebarGroupLabel forceVisible={mobile}>Lainnya</SidebarGroupLabel>}
             <SidebarMenu>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -121,7 +121,7 @@ function NavigationPanel({ mobile = false }) {
 
       <SidebarFooter>
         <div className={expanded ? 'rounded-md bg-sidebar-accent/35' : 'flex justify-center'}>
-          <UserMenu compact={!expanded} />
+          <UserMenu compact={!expanded} sidebar />
         </div>
       </SidebarFooter>
     </>
