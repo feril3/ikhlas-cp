@@ -18,7 +18,7 @@ import {
 
 const FINANCE_CAROUSEL_INTERVAL_MS = 8500;
 const DISPLAY_TIMEZONE = 'Asia/Jakarta';
-const RECENT_TRANSACTION_LIMIT = 3;
+const RECENT_TRANSACTION_LIMIT = 4;
 
 function displayDateIso(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -129,7 +129,9 @@ function FinanceCarousel({ data, index }) {
         <div className="finance-slide finance-donation">
           <div className="finance-slide-title"><Landmark size={18} /><span>Rekening Donasi</span></div>
           <div className="finance-donation-copy">
-            <span>{settings.bankName || 'Bank'}</span>
+            <span>Infaq & Donasi</span>
+            <b>{settings.bankName || 'Bank'}</b>
+            <small>Nomor rekening</small>
             <strong>{settings.bankAccountNumber || '-'}</strong>
             <p>{settings.bankAccountHolder ? `a.n. ${settings.bankAccountHolder}` : ''}</p>
           </div>
@@ -278,7 +280,6 @@ export default function PublicDisplay() {
             </div>
           )}
 
-          <small>Iqamah 5 menit setelah adzan</small>
         </section>
 
         <section className="youtube-stage" aria-label="Siaran video masjid">
@@ -297,13 +298,13 @@ export default function PublicDisplay() {
               </div>
             )}
           </div>
-          {liveEmbed && <div className="youtube-caption">{liveTitle}</div>}
         </section>
 
         <aside className="finance-rail" aria-label="Keuangan masjid">
           <div className="finance-rail-heading">
             <WalletCards size={18} />
             <span>Keuangan Masjid</span>
+            <small>Bulan ini</small>
           </div>
 
           <div className="finance-balance">
@@ -313,11 +314,11 @@ export default function PublicDisplay() {
 
           <div className="finance-flow-summary">
             <div>
-              <span>Kas masuk</span>
+              <span>Kas masuk bulan ini</span>
               <strong className="finance-income">+{formatRupiah(data?.finance?.totalIncome ?? 0)}</strong>
             </div>
             <div>
-              <span>Kas keluar</span>
+              <span>Kas keluar bulan ini</span>
               <strong className="finance-expense">-{formatRupiah(data?.finance?.totalExpense ?? 0)}</strong>
             </div>
           </div>
