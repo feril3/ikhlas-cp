@@ -38,12 +38,13 @@ function shiftDate(date, days) {
   return toInputDate(value);
 }
 
-function compactRupiah(value) {
+function formatAxisAmount(value) {
   const number = Number(value ?? 0);
-  if (Math.abs(number) >= 1_000_000_000) return `Rp ${(number / 1_000_000_000).toFixed(1)} M`;
-  if (Math.abs(number) >= 1_000_000) return `Rp ${(number / 1_000_000).toFixed(1)} jt`;
-  if (Math.abs(number) >= 1_000) return `Rp ${Math.round(number / 1_000)} rb`;
-  return `Rp ${number}`;
+  const compact = (amount) => new Intl.NumberFormat('id-ID', { maximumFractionDigits: 1 }).format(amount);
+  if (Math.abs(number) >= 1_000_000_000) return `${compact(number / 1_000_000_000)} M`;
+  if (Math.abs(number) >= 1_000_000) return `${compact(number / 1_000_000)} jt`;
+  if (Math.abs(number) >= 1_000) return `${compact(number / 1_000)} rb`;
+  return new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(number);
 }
 
 function Metric({ icon: Icon, label, value, tone = 'default', caption }) {
@@ -188,15 +189,15 @@ export default function Reports() {
                       tickMargin={10}
                       tickFormatter={(value) => new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(`${value}T00:00:00`))}
                     />
-                    <YAxis width={58} axisLine={false} tickLine={false} tickFormatter={compactRupiah} />
+                    <YAxis width={54} axisLine={false} tickLine={false} tickMargin={8} tick={{ fontSize: 11 }} tickFormatter={formatAxisAmount} />
                     <ChartTooltip
                       content={<ChartTooltipContent
                         labelFormatter={(value) => formatDate(value)}
                         formatter={(value) => formatRupiah(value)}
                       />}
                     />
-                    <Bar dataKey="income" fill="var(--color-income)" radius={[4, 4, 0, 0]} maxBarSize={18} />
-                    <Bar dataKey="expense" fill="var(--color-expense)" radius={[4, 4, 0, 0]} maxBarSize={18} />
+                    <Bar dataKey="income" fill="var(--color-income)" radius={[4, 4, 0, 0]} maxBarSize={22} isAnimationActive={false} />
+                    <Bar dataKey="expense" fill="var(--color-expense)" radius={[4, 4, 0, 0]} maxBarSize={22} isAnimationActive={false} />
                   </BarChart>
                 </ChartContainer>
               </CardContent>
@@ -212,7 +213,7 @@ export default function Reports() {
                   <ChartContainer config={categoryConfig} className="h-[310px] min-h-[280px]">
                     <BarChart data={categoryData} layout="vertical" margin={{ left: 8, right: 24, top: 8, bottom: 0 }}>
                       <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="var(--ui-border)" />
-                      <XAxis type="number" axisLine={false} tickLine={false} tickFormatter={compactRupiah} />
+                      <XAxis type="number" axisLine={false} tickLine={false} tickMargin={8} tick={{ fontSize: 11 }} tickFormatter={formatAxisAmount} />
                       <YAxis type="category" dataKey="category" axisLine={false} tickLine={false} width={110} tick={{ fontSize: 11 }} />
                       <ChartTooltip
                         content={<ChartTooltipContent
@@ -220,7 +221,7 @@ export default function Reports() {
                           formatter={(value) => formatRupiah(value)}
                         />}
                       />
-                      <Bar dataKey="total" radius={[0, 4, 4, 0]} maxBarSize={20}>
+                      <Bar dataKey="total" radius={[0, 4, 4, 0]} maxBarSize={22} isAnimationActive={false}>
                         {categoryData.map((item) => (
                           <Cell key={`${item.type}-${item.category}`} fill={item.type === 'INCOME' ? 'var(--ui-chart-1)' : 'var(--ui-chart-2)'} />
                         ))}
