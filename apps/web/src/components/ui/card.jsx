@@ -2,7 +2,7 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 function Card({ className, ...props }) {
-  return <section className={cn('rounded-lg border bg-card text-card-foreground', className)} {...props} />;
+  return <section className={cn('rounded-xl border bg-card text-card-foreground shadow-[0_1px_2px_rgba(23,33,30,0.04)]', className)} {...props} />;
 }
 function CardHeader({ className, ...props }) {
   return <div className={cn('flex flex-col gap-1.5 p-5 pb-3', className)} {...props} />;
