@@ -21,6 +21,11 @@ import {
   isGoogleDriveConfigured,
   uploadTransactionAttachment
 } from './driveStorage.js';
+import {
+  PRAYER_LOCATION,
+  addDays,
+  getPrayerSchedule as getProviderPrayerSchedule
+} from './prayerService.js';
 
 export const apiRouter = Router();
 
@@ -216,8 +221,21 @@ function getUpcomingActivities(date, limit = 6) {
   `).all(date, limit).map((row) => ({ ...row, isPublished: Boolean(row.isPublished) }));
 }
 
-function todayIso() {
-  return new Date().toISOString().slice(0, 10);
+function todayIso(timeZone = PRAYER_LOCATION.timezone) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(new Date());
+
+  const values = Object.fromEntries(
+    parts
+      .filter((part) => part.type !== 'literal')
+      .map((part) => [part.type, part.value])
+  );
+
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
 function firstDayOfMonth(date) {
@@ -299,6 +317,12 @@ apiRouter.get('/health', (_req, res) => {
     storage: {
       provider: 'google-drive',
       configured: isGoogleDriveConfigured()
+    },
+    prayerTimes: {
+      provider: 'aladhan',
+      calculationMethod: PRAYER_LOCATION.calculationMethod,
+      calculationMethodName: PRAYER_LOCATION.calculationMethodName,
+      location: PRAYER_LOCATION
     }
   });
 });
@@ -418,7 +442,7 @@ apiRouter.get('/auth/me', requireAuth, (req, res) => {
   res.json({ user: req.user });
 });
 
-apiRouter.get('/public/display', (req, res) => {
+apiRouter.get('/public/display', async (req, res) => {
   const date = datePattern.test(String(req.query.date ?? '')) ? String(req.query.date) : todayIso();
   const period = getPeriodSummary(firstDayOfMonth(date), date);
 
@@ -434,6 +458,11 @@ apiRouter.get('/public/display', (req, res) => {
     LIMIT 12
   `).all();
 
+  const [prayerSchedule, nextDayPrayerSchedule] = await Promise.all([
+    getProviderPrayerSchedule(date),
+    getProviderPrayerSchedule(addDays(date, 1))
+  ]);
+
   res.json({
     settings: publicSettings(),
     finance: {
@@ -443,14 +472,15 @@ apiRouter.get('/public/display', (req, res) => {
       from: period.from,
       to: period.to
     },
-    prayerSchedule: getPrayerSchedule(date),
+    prayerSchedule,
+    nextDayPrayerSchedule,
     activities: getUpcomingActivities(date, 4).filter((item) => item.isPublished),
     recentTransactions,
     messages: getActivePublicMessages()
   });
 });
 
-apiRouter.get('/dashboard', requireAuth, (req, res) => {
+apiRouter.get('/dashboard', requireAuth, async (req, res) => {
   const recentTransactions = db.prepare(`
     SELECT
       id,
@@ -474,8 +504,11 @@ apiRouter.get('/dashboard', requireAuth, (req, res) => {
     LIMIT 6
   `).all();
 
-  const schedule = getPrayerSchedule(String(req.query.date ?? todayIso()));
-  const activities = getUpcomingActivities(String(req.query.date ?? todayIso()), 4);
+  const dashboardDate = datePattern.test(String(req.query.date ?? ''))
+    ? String(req.query.date)
+    : todayIso();
+  const schedule = await getProviderPrayerSchedule(dashboardDate);
+  const activities = getUpcomingActivities(dashboardDate, 4);
 
   res.json({
     summary: getSummary(),
@@ -903,12 +936,12 @@ apiRouter.get('/reports/transactions.csv', requireAuth, (req, res) => {
   res.send('\uFEFF' + lines.join('\n'));
 });
 
-apiRouter.get('/prayer-schedules', requireAuth, (req, res) => {
+apiRouter.get('/prayer-schedules', requireAuth, async (req, res) => {
   const date = datePattern.test(String(req.query.date ?? '')) ? String(req.query.date) : todayIso();
-  res.json(getPrayerSchedule(date));
+  res.json(await getProviderPrayerSchedule(date));
 });
 
-apiRouter.put('/prayer-schedules/:date', requireAuth, requireRole('ADMIN'), (req, res) => {
+apiRouter.put('/prayer-schedules/:date', requireAuth, requireRole('ADMIN'), async (req, res) => {
   if (!datePattern.test(req.params.date)) {
     return res.status(422).json({ message: 'Tanggal jadwal tidak valid.' });
   }
@@ -946,7 +979,7 @@ apiRouter.put('/prayer-schedules/:date', requireAuth, requireRole('ADMIN'), (req
     details: { itemCount: parsed.data.items.length }
   });
 
-  res.json(getPrayerSchedule(req.params.date));
+  res.json(await getProviderPrayerSchedule(req.params.date));
 });
 
 apiRouter.get('/activities', requireAuth, (req, res) => {
