@@ -1,129 +1,73 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowDownToLine, ArrowUpFromLine, Filter, Save, Search, X } from 'lucide-react';
-import { api } from '../lib/api.js';
-import { formatRupiah } from '../lib/format.js';
-import { LoadingState } from '../components/LoadingState.jsx';
-import { TransactionRow } from '../components/TransactionRow.jsx';
-import { useAuth } from '../auth/AuthContext.jsx';
+import {
+  IconArrowDown,
+  IconArrowUp,
+  IconSearch,
+  IconTrash
+} from '@tabler/icons-react';
+import { toast } from 'sonner';
+import { api } from '@/lib/api.js';
+import { formatRupiah } from '@/lib/format.js';
+import { useAuth } from '@/auth/AuthContext.jsx';
+import { PageHeader } from '@/components/app/PageHeader.jsx';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput
+} from '@/components/ui/input-group';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { TransactionEditSheet } from '@/features/transactions/TransactionEditSheet.jsx';
+import { TransactionTable } from '@/features/transactions/TransactionTable.jsx';
 
-function TransactionEditPanel({ transaction, onClose, onSaved }) {
-  const income = transaction.type === 'INCOME';
-  const [categories, setCategories] = useState([]);
-  const [form, setForm] = useState({
-    amount: transaction.amount,
-    transactionDate: transaction.transactionDate,
-    method: transaction.method,
-    categoryId: String(transaction.categoryId ?? ''),
-    sourceDetail: transaction.sourceDetail ?? '',
-    description: transaction.description ?? ''
-  });
-  const [status, setStatus] = useState({ type: 'loading', message: 'Memuat kategori...' });
-
-  useEffect(() => {
-    let cancelled = false;
-    api.transactionCategories(transaction.type)
-      .then((result) => {
-        if (cancelled) return;
-        const available = result.data.filter(
-          (item) => item.isActive || Number(item.id) === Number(transaction.categoryId)
-        );
-        setCategories(available);
-        setForm((current) => ({
-          ...current,
-          categoryId: current.categoryId || String(available.find((item) => item.name === transaction.category)?.id ?? '')
-        }));
-        setStatus({ type: 'idle', message: '' });
-      })
-      .catch((error) => {
-        if (!cancelled) setStatus({ type: 'error', message: error.message });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [transaction]);
-
-  function update(name, value) {
-    setForm((current) => ({ ...current, [name]: value }));
-  }
-
-  async function submit(event) {
-    event.preventDefault();
-    setStatus({ type: 'loading', message: 'Menyimpan perubahan...' });
-    try {
-      await api.updateTransaction(transaction.id, {
-        amount: Number(form.amount),
-        transactionDate: form.transactionDate,
-        method: form.method,
-        categoryId: Number(form.categoryId),
-        sourceDetail: income ? form.sourceDetail : '',
-        description: form.description
-      });
-      setStatus({ type: 'success', message: 'Transaksi berhasil diperbarui.' });
-      await onSaved();
-      onClose();
-    } catch (error) {
-      setStatus({ type: 'error', message: error.message });
-    }
-  }
+function Metric({ label, value, tone = 'default', caption }) {
+  const valueClass = tone === 'income'
+    ? 'text-primary'
+    : tone === 'expense'
+      ? 'text-destructive'
+      : 'text-foreground';
 
   return (
-    <div className="modal-backdrop" role="presentation" onMouseDown={(event) => {
-      if (event.target === event.currentTarget) onClose();
-    }}>
-      <section className="transaction-edit-modal" role="dialog" aria-modal="true" aria-labelledby="edit-transaction-title">
-        <header className="modal-heading">
-          <div>
-            <p className="section-kicker">Audit perubahan aktif</p>
-            <h2 id="edit-transaction-title">Edit {income ? 'Kas Masuk' : 'Kas Keluar'}</h2>
-          </div>
-          <button type="button" className="icon-button" onClick={onClose} aria-label="Tutup"><X size={18} /></button>
-        </header>
+    <div className="min-w-0 px-4 py-4 sm:px-5">
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      <strong className={'mt-1.5 block truncate text-xl font-semibold tracking-[-0.025em] sm:text-2xl ' + valueClass}>
+        {value}
+      </strong>
+      {caption && <span className="mt-1 block text-[11px] text-muted-foreground">{caption}</span>}
+    </div>
+  );
+}
 
-        <form className="transaction-edit-form" onSubmit={submit}>
-          <label className="field">
-            <span>Nominal</span>
-            <input type="number" min="1" max="9999999999" inputMode="numeric" value={form.amount} onChange={(event) => update('amount', event.target.value)} required />
-          </label>
-          <label className="field">
-            <span>Tanggal transaksi</span>
-            <input type="date" value={form.transactionDate} onChange={(event) => update('transactionDate', event.target.value)} required />
-          </label>
-          <label className="field">
-            <span>Metode</span>
-            <select value={form.method} onChange={(event) => update('method', event.target.value)}>
-              <option value="CASH">Cash / Tunai</option>
-              <option value="TRANSFER">Transfer Bank</option>
-            </select>
-          </label>
-          <label className="field">
-            <span>Kategori</span>
-            <select value={form.categoryId} onChange={(event) => update('categoryId', event.target.value)} required>
-              {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
-            </select>
-          </label>
-          {income && (
-            <label className="field full-field">
-              <span>Detail sumber dana</span>
-              <input maxLength="120" value={form.sourceDetail} onChange={(event) => update('sourceDetail', event.target.value)} />
-            </label>
-          )}
-          <label className="field full-field">
-            <span>Keterangan</span>
-            <textarea rows="4" maxLength="300" value={form.description} onChange={(event) => update('description', event.target.value)} />
-          </label>
-
-          {status.message && <div className={`notice ${status.type} full-field`}>{status.message}</div>}
-          <p className="audit-edit-note full-field">Nilai sebelum dan sesudah perubahan dicatat ke audit trail. Jenis kas masuk/keluar tidak dapat diubah.</p>
-
-          <div className="inline-actions full-field">
-            <button type="button" className="button secondary" onClick={onClose}>Batal</button>
-            <button className="button primary" disabled={status.type === 'loading' || !form.categoryId}>
-              <Save size={16} /> Simpan perubahan
-            </button>
-          </div>
-        </form>
-      </section>
+function TransactionsSkeleton() {
+  return (
+    <div className="flex flex-col gap-4">
+      <Skeleton className="h-24 w-full" />
+      <Skeleton className="h-28 w-full" />
+      <Skeleton className="h-20 w-full" />
+      <Skeleton className="h-[420px] w-full" />
     </div>
   );
 }
@@ -131,17 +75,24 @@ function TransactionEditPanel({ transaction, onClose, onSaved }) {
 export default function Transactions() {
   const { user } = useAuth();
   const canManageTransactions = ['ADMIN', 'TREASURER'].includes(user?.role);
-  const [type, setType] = useState('');
-  const [query, setQuery] = useState('');
+
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [editing, setEditing] = useState(null);
+  const [deleting, setDeleting] = useState(null);
   const [busyId, setBusyId] = useState(null);
+
+  const [query, setQuery] = useState('');
+  const [type, setType] = useState('ALL');
+  const [method, setMethod] = useState('ALL');
+  const [category, setCategory] = useState('ALL');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
 
   async function loadTransactions() {
     setError('');
     try {
-      const result = await api.transactions({ type: type || undefined });
+      const result = await api.transactions();
       setData(result);
     } catch (err) {
       setError(err.message);
@@ -149,75 +100,265 @@ export default function Transactions() {
   }
 
   useEffect(() => {
-    setData(null);
     loadTransactions();
-  }, [type]);
+  }, []);
 
-  async function deleteTransaction(transaction) {
-    const attachmentNote = transaction.evidenceFileId || transaction.bankMutationFileId
-      ? '\n\nFile bukti di Google Drive akan dipertahankan untuk audit.'
-      : '';
-    if (!window.confirm(`Hapus transaksi ${transaction.category} sebesar ${formatRupiah(transaction.amount)}?${attachmentNote}`)) return;
+  const categories = useMemo(() => {
+    const values = new Set((data?.data ?? []).map((item) => item.category).filter(Boolean));
+    return [...values].sort((a, b) => a.localeCompare(b, 'id-ID'));
+  }, [data]);
 
-    setBusyId(transaction.id);
+  const filtered = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+
+    return (data?.data ?? []).filter((item) => {
+      if (type !== 'ALL' && item.type !== type) return false;
+      if (method !== 'ALL' && item.method !== method) return false;
+      if (category !== 'ALL' && item.category !== category) return false;
+      if (from && item.transactionDate < from) return false;
+      if (to && item.transactionDate > to) return false;
+
+      if (normalized) {
+        const haystack = [
+          item.category,
+          item.sourceDetail,
+          item.description,
+          item.method === 'TRANSFER' ? 'transfer' : 'tunai',
+          item.type === 'INCOME' ? 'masuk' : 'keluar'
+        ].filter(Boolean).join(' ').toLowerCase();
+
+        if (!haystack.includes(normalized)) return false;
+      }
+
+      return true;
+    });
+  }, [category, data, from, method, query, to, type]);
+
+  const hasFilters = Boolean(query || type !== 'ALL' || method !== 'ALL' || category !== 'ALL' || from || to);
+
+  function resetFilters() {
+    setQuery('');
+    setType('ALL');
+    setMethod('ALL');
+    setCategory('ALL');
+    setFrom('');
+    setTo('');
+  }
+
+  async function handleSaved() {
+    await loadTransactions();
+    toast.success('Transaksi berhasil diperbarui.');
+  }
+
+  async function confirmDelete() {
+    if (!deleting) return;
+
+    setBusyId(deleting.id);
     try {
-      await api.deleteTransaction(transaction.id);
+      await api.deleteTransaction(deleting.id);
       await loadTransactions();
+      toast.success('Transaksi berhasil dihapus.', {
+        description: deleting.evidenceFileId || deleting.bankMutationFileId
+          ? 'Dokumen Google Drive dipertahankan untuk audit.'
+          : undefined
+      });
+      setDeleting(null);
     } catch (err) {
       setError(err.message);
+      toast.error('Transaksi gagal dihapus.', { description: err.message });
     } finally {
       setBusyId(null);
     }
   }
 
-  const filtered = data?.data.filter((item) => `${item.category} ${item.sourceDetail ?? ''} ${item.description ?? ''}`.toLowerCase().includes(query.toLowerCase())) ?? [];
+  if (!data && !error) return <TransactionsSkeleton />;
 
   return (
-    <div className="page-stack">
-      <header className="page-heading">
-        <div><p className="eyebrow">Keuangan</p><h1>Riwayat Transaksi</h1><p className="page-subtitle">Pantau, koreksi, dan audit kas masuk maupun keluar dalam satu tempat.</p></div>
-        {canManageTransactions && (
-          <div className="heading-actions"><Link to="/transactions/income" className="button secondary"><ArrowDownToLine size={18} /> Kas Masuk</Link><Link to="/transactions/expense" className="button primary"><ArrowUpFromLine size={18} /> Kas Keluar</Link></div>
-        )}
-      </header>
+    <div className="flex flex-col gap-5">
+      <PageHeader
+        title="Riwayat Transaksi"
+        description="Pantau, cari, koreksi, dan audit kas masuk maupun kas keluar dari satu tempat."
+        actions={canManageTransactions ? (
+          <>
+            <Button variant="outline" asChild>
+              <Link to="/transactions/income">
+                <IconArrowDown data-icon="inline-start" aria-hidden="true" />
+                Kas Masuk
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link to="/transactions/expense">
+                <IconArrowUp data-icon="inline-start" aria-hidden="true" />
+                Kas Keluar
+              </Link>
+            </Button>
+          </>
+        ) : null}
+      />
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
       {data && (
-        <section className="mini-summary">
-          <div><span>Saldo saat ini</span><strong>{formatRupiah(data.summary.currentBalance)}</strong></div>
-          <div><span>Total masuk</span><strong className="amount-income">+{formatRupiah(data.summary.totalIncome)}</strong></div>
-          <div><span>Total keluar</span><strong className="amount-expense">-{formatRupiah(data.summary.totalExpense)}</strong></div>
-        </section>
-      )}
-
-      <section className="panel history-panel">
-        <div className="toolbar">
-          <div className="search-box"><Search size={18} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cari transaksi..." /></div>
-          <div className="filter-group"><Filter size={17} /><button className={!type ? 'active' : ''} onClick={() => setType('')}>Semua</button><button className={type === 'INCOME' ? 'active' : ''} onClick={() => setType('INCOME')}>Masuk</button><button className={type === 'EXPENSE' ? 'active' : ''} onClick={() => setType('EXPENSE')}>Keluar</button></div>
-        </div>
-        {error && <div className="notice error">{error}</div>}
-        {!data && !error && <LoadingState />}
-        {data && (
-          <div className="transaction-list full-list">
-            {filtered.length ? filtered.map((item) => (
-              <TransactionRow
-                key={item.id}
-                transaction={item}
-                busy={busyId === item.id}
-                onEdit={canManageTransactions ? setEditing : undefined}
-                onDelete={canManageTransactions ? deleteTransaction : undefined}
+        <>
+          <Card className="overflow-hidden">
+            <div className="grid divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0 xl:grid-cols-4">
+              <Metric
+                label="Saldo saat ini"
+                value={formatRupiah(data.summary.currentBalance)}
+                caption="Saldo berjalan seluruh periode"
               />
-            )) : <div className="empty-state">Tidak ada transaksi yang cocok.</div>}
-          </div>
-        )}
-      </section>
+              <Metric
+                label="Total kas masuk"
+                value={'+' + formatRupiah(data.summary.totalIncome)}
+                tone="income"
+                caption="Akumulasi seluruh transaksi masuk"
+              />
+              <Metric
+                label="Total kas keluar"
+                value={'-' + formatRupiah(data.summary.totalExpense)}
+                tone="expense"
+                caption="Akumulasi seluruh transaksi keluar"
+              />
+              <Metric
+                label="Transaksi tampil"
+                value={String(filtered.length)}
+                caption={hasFilters ? 'Hasil filter aktif' : 'Maks. 500 transaksi terbaru'}
+              />
+            </div>
+          </Card>
 
-      {editing && (
-        <TransactionEditPanel
-          transaction={editing}
-          onClose={() => setEditing(null)}
-          onSaved={loadTransactions}
-        />
+          <Card>
+            <CardContent className="p-4 sm:p-5">
+              <div className="grid gap-3 lg:grid-cols-[minmax(220px,1.4fr)_repeat(4,minmax(135px,.7fr))]">
+                <InputGroup className="h-10">
+                  <InputGroupAddon>
+                    <IconSearch aria-hidden="true" />
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Cari kategori, sumber, atau keterangan..."
+                    aria-label="Cari transaksi"
+                  />
+                </InputGroup>
+
+                <Select value={method} onValueChange={setMethod}>
+                  <SelectTrigger className="h-10 w-full">
+                    <SelectValue placeholder="Metode" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">Semua metode</SelectItem>
+                    <SelectItem value="CASH">Tunai</SelectItem>
+                    <SelectItem value="TRANSFER">Transfer</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={category} onValueChange={setCategory}>
+                  <SelectTrigger className="h-10 w-full">
+                    <SelectValue placeholder="Kategori" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">Semua kategori</SelectItem>
+                    {categories.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+
+                <Input
+                  type="date"
+                  value={from}
+                  onChange={(event) => setFrom(event.target.value)}
+                  className="h-10"
+                  aria-label="Tanggal mulai"
+                />
+                <Input
+                  type="date"
+                  value={to}
+                  onChange={(event) => setTo(event.target.value)}
+                  className="h-10"
+                  aria-label="Tanggal selesai"
+                />
+              </div>
+
+              <div className="mt-3 flex flex-col gap-3 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
+                <ToggleGroup
+                  type="single"
+                  value={type}
+                  onValueChange={(value) => value && setType(value)}
+                  variant="outline"
+                  spacing={0}
+                  className="grid w-full grid-cols-3 sm:w-auto"
+                >
+                  <ToggleGroupItem value="ALL" className="w-full rounded-r-none sm:w-auto">Semua</ToggleGroupItem>
+                  <ToggleGroupItem value="INCOME" className="w-full rounded-none sm:w-auto">Kas Masuk</ToggleGroupItem>
+                  <ToggleGroupItem value="EXPENSE" className="w-full rounded-l-none sm:w-auto">Kas Keluar</ToggleGroupItem>
+                </ToggleGroup>
+
+                <div className="flex items-center justify-between gap-3 sm:justify-end">
+                  <span className="text-xs text-muted-foreground">{filtered.length} hasil</span>
+                  {hasFilters && (
+                    <Button variant="ghost" size="sm" onClick={resetFilters}>
+                      Reset filter
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="overflow-hidden">
+            <TransactionTable
+              data={filtered}
+              canManage={canManageTransactions}
+              busyId={busyId}
+              onEdit={setEditing}
+              onDelete={setDeleting}
+            />
+          </Card>
+        </>
       )}
+
+      <TransactionEditSheet
+        transaction={editing}
+        open={Boolean(editing)}
+        onOpenChange={(open) => !open && setEditing(null)}
+        onSaved={handleSaved}
+      />
+
+      <AlertDialog open={Boolean(deleting)} onOpenChange={(open) => !open && !busyId && setDeleting(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-destructive/10 text-destructive">
+              <IconTrash aria-hidden="true" />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Hapus transaksi ini?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleting
+                ? deleting.category + ' sebesar ' + formatRupiah(deleting.amount) + ' akan dihapus dari kas.'
+                : 'Transaksi akan dihapus.'}
+              {(deleting?.evidenceFileId || deleting?.bankMutationFileId)
+                ? ' Dokumen yang sudah tersimpan di Google Drive tetap dipertahankan untuk audit.'
+                : ''}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={Boolean(busyId)}>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={Boolean(busyId)}
+              onClick={(event) => {
+                event.preventDefault();
+                confirmDelete();
+              }}
+            >
+              {busyId ? 'Menghapus...' : 'Hapus transaksi'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

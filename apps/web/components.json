@@ -4,10 +4,14 @@
   "rsc": false,
   "tsx": false,
   "tailwind": {
-    "css": "apps/web/src/styles/ui.css",
+    "config": "",
+    "css": "src/styles/ui.css",
     "baseColor": "neutral",
-    "cssVariables": true
+    "cssVariables": true,
+    "prefix": ""
   },
+  "iconLibrary": "tabler",
+  "rtl": false,
   "aliases": {
     "components": "@/components",
     "utils": "@/lib/utils",
@@ -15,5 +19,5 @@
     "lib": "@/lib",
     "hooks": "@/hooks"
   },
-  "iconLibrary": "tabler"
+  "registries": {}
 }

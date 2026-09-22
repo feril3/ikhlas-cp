@@ -335,7 +335,8 @@ test('existing public agenda can be edited with an audited backend update', asyn
 test('transactions support audited edit and delete while preserving Drive evidence references', async () => {
   const routes = await source('apps/api/src/routes.js');
   const transactions = await source('apps/web/src/pages/Transactions.jsx');
-  const row = await source('apps/web/src/components/TransactionRow.jsx');
+  const editSheet = await source('apps/web/src/features/transactions/TransactionEditSheet.jsx');
+  const table = await source('apps/web/src/features/transactions/TransactionTable.jsx');
   const admin = await source('apps/web/src/pages/AdminSettings.jsx');
 
   assert.match(routes, /apiRouter\.put\([\s\S]*'\/transactions\/:id'/);
@@ -345,10 +346,13 @@ test('transactions support audited edit and delete while preserving Drive eviden
   assert.match(routes, /apiRouter\.delete\([\s\S]*'\/transactions\/:id'/);
   assert.match(routes, /TRANSACTION_DELETE/);
   assert.match(routes, /evidencePreservedOnGoogleDrive/);
-  assert.match(transactions, /TransactionEditPanel/);
+  assert.match(transactions, /TransactionEditSheet/);
   assert.match(transactions, /api\.deleteTransaction/);
-  assert.match(row, /onEdit/);
-  assert.match(row, /onDelete/);
+  assert.match(transactions, /AlertDialog/);
+  assert.match(editSheet, /api\.updateTransaction/);
+  assert.match(editSheet, /SheetContent/);
+  assert.match(table, /onEdit/);
+  assert.match(table, /onDelete/);
   assert.match(admin, /AuditTransactionDetails/);
   assert.match(admin, /Lihat snapshot transaksi terhapus/);
 });
