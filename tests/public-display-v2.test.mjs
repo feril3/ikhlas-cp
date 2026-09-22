@@ -127,7 +127,7 @@ test('database seeds verified Quran and sahih-hadith references without duplicat
   assert.match(db, /Sahih al-Bukhari 645/);
   assert.match(db, /Sahih Muslim 2588/);
   assert.match(db, /QS\. Al-Baqarah 2:261/);
-  assert.match(db, /ON CONFLICT\(seed_key\) DO NOTHING/);
+  assert.match(db, /INSERT OR IGNORE INTO public_messages/);
 });
 
 test('admin can edit, reorder, activate, and delete multiple running-text entries', async () => {
