@@ -112,6 +112,7 @@ Referensi:
 Public Display V4 memprioritaskan konsumsi jamaah dari jarak jauh dengan komposisi tetap:
 
 - kiri ±19%: waktu sekarang, adzan berikutnya, countdown menuju adzan, agenda publik, dan informasi petugas Jumat pada hari Jumat;
+- header: hari + tanggal Masehi + tanggal Hijriah; tanggal Hijriah memakai metadata AlAdhan dan fallback Umm al-Qura bila metadata provider tidak tersedia;
 - tengah ±57%: YouTube sebagai media/focal terbesar;
 - kanan ±20%: saldo, kas masuk, kas keluar selalu berada di rail keuangan; area bawah rail berotasi hanya untuk transaksi terbaru dan rekening donasi;
 - bawah main: lima jadwal salat dalam satu rail penuh;
