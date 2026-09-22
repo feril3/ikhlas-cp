@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { Slot } from '@radix-ui/react-slot';
 import { IconChevronRight } from '@tabler/icons-react';
 import { cn } from '@/lib/utils';
 
@@ -11,8 +12,9 @@ function BreadcrumbList({ className, ...props }) {
 function BreadcrumbItem({ className, ...props }) {
   return <li className={cn('inline-flex items-center gap-1', className)} {...props} />;
 }
-function BreadcrumbLink({ className, ...props }) {
-  return <a className={cn('transition-colors hover:text-foreground', className)} {...props} />;
+function BreadcrumbLink({ className, asChild = false, ...props }) {
+  const Comp = asChild ? Slot : 'a';
+  return <Comp className={cn('transition-colors hover:text-foreground', className)} {...props} />;
 }
 function BreadcrumbPage({ className, ...props }) {
   return <span aria-current="page" className={cn('font-medium text-foreground', className)} {...props} />;
