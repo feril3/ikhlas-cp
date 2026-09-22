@@ -79,6 +79,7 @@ export function initializeDatabase() {
       title TEXT,
       content TEXT NOT NULL,
       source TEXT,
+      seed_key TEXT,
       is_active INTEGER NOT NULL DEFAULT 1,
       sort_order INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -166,6 +167,9 @@ export function initializeDatabase() {
       ON transaction_categories(type, is_active, sort_order);
     CREATE INDEX IF NOT EXISTS idx_public_messages_active
       ON public_messages(is_active, sort_order);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_public_messages_seed_key
+      ON public_messages(seed_key)
+      WHERE seed_key IS NOT NULL;
     CREATE INDEX IF NOT EXISTS idx_prayer_schedule_date
       ON prayer_schedules(prayer_date, adhan_time);
     CREATE INDEX IF NOT EXISTS idx_prayer_cache_fetched
@@ -190,6 +194,12 @@ export function initializeDatabase() {
   ensureColumn('transactions', 'mutation_mime_type', 'TEXT');
   ensureColumn('transactions', 'created_by', 'INTEGER');
   ensureColumn('activities', 'live_url', 'TEXT');
+  ensureColumn('public_messages', 'seed_key', 'TEXT');
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_public_messages_seed_key
+      ON public_messages(seed_key)
+      WHERE seed_key IS NOT NULL
+  `);
   ensureColumn('activities', 'is_published', 'INTEGER NOT NULL DEFAULT 1');
 
   seedIfEmpty();
@@ -258,9 +268,59 @@ function seedIfEmpty() {
   if (publicMessageCount === 0) {
     db.prepare(`
       INSERT INTO public_messages (kind, title, content, source, sort_order)
-      VALUES ('ANNOUNCEMENT', 'Pengingat Jamaah', ?, '', 10)
+      VALUES ('ANNOUNCEMENT', 'Pengingat Jamaah', ?, '', 90)
     `).run('Mari jaga kebersihan, ketertiban, dan kenyamanan masjid bersama.');
   }
+
+  const insertSeedMessage = db.prepare(`
+    INSERT INTO public_messages
+      (kind, title, content, source, seed_key, sort_order, is_active)
+    VALUES
+      ('VERSE', @title, @content, @source, @seedKey, @sortOrder, 1)
+    ON CONFLICT(seed_key) DO NOTHING
+  `);
+
+  const verifiedRunningTextSeeds = [
+    {
+      seedKey: 'quran-at-tawbah-9-18',
+      title: 'Memakmurkan Masjid',
+      content: 'Yang memakmurkan masjid-masjid Allah hanyalah orang-orang yang beriman kepada Allah dan hari akhir, mendirikan salat, dan menunaikan zakat.',
+      source: 'QS. At-Taubah 9:18',
+      sortOrder: 10
+    },
+    {
+      seedKey: 'bukhari-527-prayer-on-time',
+      title: 'Shalat Tepat Waktu',
+      content: 'Amal yang paling dicintai Allah adalah shalat pada waktunya.',
+      source: 'Sahih al-Bukhari 527',
+      sortOrder: 20
+    },
+    {
+      seedKey: 'bukhari-645-congregation',
+      title: 'Keutamaan Shalat Berjamaah',
+      content: 'Shalat berjamaah lebih utama dua puluh tujuh derajat daripada shalat sendirian.',
+      source: 'Sahih al-Bukhari 645',
+      sortOrder: 30
+    },
+    {
+      seedKey: 'muslim-2588-charity',
+      title: 'Sedekah',
+      content: 'Sedekah tidak mengurangi harta.',
+      source: 'Sahih Muslim 2588',
+      sortOrder: 40
+    },
+    {
+      seedKey: 'quran-al-baqarah-2-261',
+      title: 'Keutamaan Infaq',
+      content: 'Perumpamaan orang yang menginfakkan hartanya di jalan Allah seperti sebutir biji yang menumbuhkan tujuh tangkai.',
+      source: 'QS. Al-Baqarah 2:261',
+      sortOrder: 50
+    }
+  ];
+
+  db.transaction((items) => {
+    for (const item of items) insertSeedMessage.run(item);
+  })(verifiedRunningTextSeeds);
 
   const transactionCount = db.prepare('SELECT COUNT(*) AS count FROM transactions').get().count;
   if (transactionCount === 0) {
