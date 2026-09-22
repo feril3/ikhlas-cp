@@ -1,7 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CircleDollarSign, Clock3, ExternalLink, Landmark, Radio, Wifi } from 'lucide-react';
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  CircleDollarSign,
+  Clock3,
+  ExternalLink,
+  Landmark,
+  Radio,
+  ReceiptText,
+  Wifi
+} from 'lucide-react';
 import { api } from '../lib/api.js';
-import { formatRupiah, toInputDate } from '../lib/format.js';
+import { formatDate, formatRupiah, toInputDate } from '../lib/format.js';
+
+const TRANSACTION_PAGE_SIZE = 4;
 
 function toYouTubeEmbed(url) {
   if (!url) return '';
@@ -82,15 +94,24 @@ function formatCountdown(milliseconds) {
     : `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
+function rotatingWindow(items, offset, size) {
+  if (!items.length) return [];
+  if (items.length <= size) return items;
+
+  return Array.from({ length: size }, (_, index) => items[(offset + index) % items.length]);
+}
+
 export default function PublicDisplay() {
   const [now, setNow] = useState(new Date());
   const [data, setData] = useState(null);
+  const [transactionOffset, setTransactionOffset] = useState(0);
+  const [messageIndex, setMessageIndex] = useState(0);
 
   async function load() {
     try {
       setData(await api.publicDisplay(toInputDate()));
     } catch {
-      // Keep the last successful public display data on transient network errors.
+      // Pertahankan data terakhir ketika koneksi TV sempat putus.
     }
   }
 
@@ -104,8 +125,39 @@ export default function PublicDisplay() {
     };
   }, []);
 
+  const transactions = data?.recentTransactions ?? [];
+  const messages = data?.messages ?? [];
+
+  useEffect(() => {
+    setTransactionOffset(0);
+    if (transactions.length <= TRANSACTION_PAGE_SIZE) return undefined;
+
+    const timer = setInterval(() => {
+      setTransactionOffset((current) => (current + TRANSACTION_PAGE_SIZE) % transactions.length);
+    }, 6000);
+
+    return () => clearInterval(timer);
+  }, [transactions.length]);
+
+  useEffect(() => {
+    setMessageIndex(0);
+    if (messages.length <= 1) return undefined;
+
+    const timer = setInterval(() => {
+      setMessageIndex((current) => (current + 1) % messages.length);
+    }, 12000);
+
+    return () => clearInterval(timer);
+  }, [messages.length]);
+
   const prayers = data?.prayerSchedule?.items ?? [];
   const countdown = useMemo(() => getCountdown(prayers, now), [prayers, now]);
+  const visibleTransactions = useMemo(
+    () => rotatingWindow(transactions, transactionOffset, TRANSACTION_PAGE_SIZE),
+    [transactions, transactionOffset]
+  );
+  const activeMessage = messages[messageIndex] ?? null;
+
   const time = new Intl.DateTimeFormat('id-ID', {
     hour: '2-digit',
     minute: '2-digit',
@@ -207,14 +259,64 @@ export default function PublicDisplay() {
             <span>Keluar bulan ini <b>-{formatRupiah(data?.finance?.totalExpense ?? 0)}</b></span>
           </div>
         </section>
+
+        <section className="display-transactions-card">
+          <div className="display-section-title">
+            <ReceiptText size={22} />
+            <span>Transaksi Terbaru</span>
+            {transactions.length > TRANSACTION_PAGE_SIZE && (
+              <small>berganti otomatis</small>
+            )}
+          </div>
+
+          <div className="display-transaction-grid">
+            {visibleTransactions.map((transaction) => {
+              const income = transaction.type === 'INCOME';
+              const Icon = income ? ArrowDownLeft : ArrowUpRight;
+              return (
+                <article className="display-transaction-row" key={transaction.id}>
+                  <span className={`display-transaction-icon ${income ? 'income' : 'expense'}`}><Icon size={19} /></span>
+                  <div>
+                    <strong>{transaction.category}</strong>
+                    <span>{formatDate(transaction.transactionDate)}</span>
+                  </div>
+                  <b className={income ? 'public-income' : 'public-expense'}>
+                    {income ? '+' : '-'}{formatRupiah(transaction.amount)}
+                  </b>
+                </article>
+              );
+            })}
+            {visibleTransactions.length === 0 && (
+              <div className="display-empty">Belum ada transaksi yang dipublikasikan.</div>
+            )}
+          </div>
+        </section>
       </main>
 
-      <footer className="display-footer">
-        <span>
-          Donasi · {settings.bankName || 'Bank belum diatur'} · {settings.bankAccountNumber || '-'}
-          {settings.bankAccountHolder ? ` · a.n. ${settings.bankAccountHolder}` : ''}
-        </span>
-        <a href="/" target="_blank" rel="noreferrer">Dashboard Admin <ExternalLink size={15} /></a>
+      <footer className="display-footer display-footer-rotating">
+        <div className="display-message">
+          {activeMessage ? (
+            <>
+              <span className="display-message-kind">
+                {activeMessage.kind === 'VERSE' ? 'Ayat / Hadits' : activeMessage.kind === 'ANNOUNCEMENT' ? 'Pengumuman' : 'Pesan Masjid'}
+              </span>
+              <strong>{activeMessage.title || activeMessage.content}</strong>
+              {activeMessage.title && <span>{activeMessage.content}</span>}
+              {activeMessage.source && <small>{activeMessage.source}</small>}
+            </>
+          ) : (
+            <>
+              <span className="display-message-kind">Donasi</span>
+              <strong>{settings.bankName || 'Bank belum diatur'} · {settings.bankAccountNumber || '-'}</strong>
+              {settings.bankAccountHolder && <span>a.n. {settings.bankAccountHolder}</span>}
+            </>
+          )}
+        </div>
+
+        <div className="display-footer-side">
+          <span>Donasi · {settings.bankName || '-'} · {settings.bankAccountNumber || '-'}</span>
+          <a href="/" target="_blank" rel="noreferrer">Dashboard Admin <ExternalLink size={15} /></a>
+        </div>
       </footer>
     </div>
   );

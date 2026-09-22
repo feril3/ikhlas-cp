@@ -14,6 +14,9 @@ export function TransactionRow({ transaction, compact = false }) {
           <strong>{transaction.category}</strong>
           <strong className={income ? 'amount-income' : 'amount-expense'}>{income ? '+' : '-'}{formatRupiah(transaction.amount)}</strong>
         </div>
+        {income && transaction.sourceDetail && (
+          <div className="transaction-source">Sumber: {transaction.sourceDetail}</div>
+        )}
         <div className="transaction-meta">
           <span>{formatDate(transaction.transactionDate)}</span>
           <span>•</span>

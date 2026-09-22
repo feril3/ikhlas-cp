@@ -24,6 +24,12 @@ function AdminOnly() {
   return <Outlet />;
 }
 
+function TreasurerOnly() {
+  const { user } = useAuth();
+  if (user?.role !== 'TREASURER') return <Navigate to="/transactions" replace />;
+  return <Outlet />;
+}
+
 export default function App() {
   return (
     <Routes>
@@ -33,8 +39,10 @@ export default function App() {
       <Route element={<ProtectedShell />}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/transactions" element={<Transactions />} />
-        <Route path="/transactions/income" element={<TransactionForm type="INCOME" />} />
-        <Route path="/transactions/expense" element={<TransactionForm type="EXPENSE" />} />
+        <Route element={<TreasurerOnly />}>
+          <Route path="/transactions/income" element={<TransactionForm type="INCOME" />} />
+          <Route path="/transactions/expense" element={<TransactionForm type="EXPENSE" />} />
+        </Route>
         <Route path="/reports" element={<Reports />} />
         <Route path="/schedule" element={<Schedule />} />
 

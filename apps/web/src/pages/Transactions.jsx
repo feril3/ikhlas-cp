@@ -5,8 +5,10 @@ import { api } from '../lib/api.js';
 import { formatRupiah } from '../lib/format.js';
 import { LoadingState } from '../components/LoadingState.jsx';
 import { TransactionRow } from '../components/TransactionRow.jsx';
+import { useAuth } from '../auth/AuthContext.jsx';
 
 export default function Transactions() {
+  const { user } = useAuth();
   const [type, setType] = useState('');
   const [query, setQuery] = useState('');
   const [data, setData] = useState(null);
@@ -14,16 +16,18 @@ export default function Transactions() {
 
   useEffect(() => {
     setData(null);
-    api.transactions(type || undefined).then(setData).catch((err) => setError(err.message));
+    api.transactions({ type: type || undefined }).then(setData).catch((err) => setError(err.message));
   }, [type]);
 
-  const filtered = data?.data.filter((item) => `${item.category} ${item.description ?? ''}`.toLowerCase().includes(query.toLowerCase())) ?? [];
+  const filtered = data?.data.filter((item) => `${item.category} ${item.sourceDetail ?? ''} ${item.description ?? ''}`.toLowerCase().includes(query.toLowerCase())) ?? [];
 
   return (
     <div className="page-stack">
       <header className="page-heading">
         <div><p className="eyebrow">Keuangan</p><h1>Riwayat Transaksi</h1><p className="page-subtitle">Pantau kas masuk dan keluar dalam satu tempat.</p></div>
-        <div className="heading-actions"><Link to="/transactions/income" className="button secondary"><ArrowDownToLine size={18} /> Kas Masuk</Link><Link to="/transactions/expense" className="button primary"><ArrowUpFromLine size={18} /> Kas Keluar</Link></div>
+        {user?.role === 'TREASURER' && (
+          <div className="heading-actions"><Link to="/transactions/income" className="button secondary"><ArrowDownToLine size={18} /> Kas Masuk</Link><Link to="/transactions/expense" className="button primary"><ArrowUpFromLine size={18} /> Kas Keluar</Link></div>
+        )}
       </header>
 
       {data && (

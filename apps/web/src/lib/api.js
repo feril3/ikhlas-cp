@@ -70,6 +70,16 @@ export const api = {
   },
   attachmentUrl: (id, kind) => `${API_URL}/transactions/${id}/attachments/${kind}`,
 
+  transactionCategories: (type) => request(`/transaction-categories${queryString({ type })}`),
+  createTransactionCategory: (input) => request('/transaction-categories', {
+    method: 'POST',
+    body: JSON.stringify(input)
+  }),
+  updateTransactionCategory: (id, input) => request(`/transaction-categories/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(input)
+  }),
+
   reportSummary: (from, to) => request(`/reports/summary${queryString({ from, to })}`),
   async downloadTransactionsCsv(from, to) {
     const response = await fetch(`${API_URL}/reports/transactions.csv${queryString({ from, to })}`, {
@@ -116,6 +126,17 @@ export const api = {
     method: 'PUT',
     body: JSON.stringify(input)
   }),
+
+  publicMessages: () => request('/public-messages'),
+  createPublicMessage: (input) => request('/public-messages', {
+    method: 'POST',
+    body: JSON.stringify(input)
+  }),
+  updatePublicMessage: (id, input) => request(`/public-messages/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(input)
+  }),
+  deletePublicMessage: (id) => request(`/public-messages/${id}`, { method: 'DELETE' }),
 
   auditLogs: (limit = 100) => request(`/audit-logs${queryString({ limit })}`)
 };

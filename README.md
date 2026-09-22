@@ -10,7 +10,11 @@ Aplikasi sengaja dibagi menjadi dua surface utama:
 ## Fitur Saat Ini
 
 ### Keuangan
-- Kas masuk dan kas keluar.
+- Kas masuk dan kas keluar oleh Bendahara.
+- Admin/Pengurus memonitor keuangan secara read-only.
+- Kategori transaksi dinamis yang dikelola Admin.
+- Kas masuk memiliki sumber dana + detail sumber terpisah.
+- Saldo awal dapat dikonfigurasi Admin lengkap dengan tanggal dan catatan.
 - Saldo otomatis dari saldo awal + kas masuk - kas keluar.
 - Pembeda Cash/Kotak Amal dan Transfer.
 - Bukti transaksi dan mutasi rekening.
@@ -28,11 +32,13 @@ Aplikasi sengaja dibagi menjadi dua surface utama:
 - Konfigurasi identitas masjid dan rekening donasi.
 - Live Masjid melalui YouTube embed.
 - Public Display dengan waktu real-time, countdown 5 menit menjelang adzan/iqamah, agenda, keuangan, donasi, dan live stream.
+- Recent transaksi publik yang disanitasi dan berotasi otomatis.
+- Footer Public Display untuk rotasi ayat/hadits terverifikasi, pengumuman, dan pesan masjid.
 
 ### Akses & Keamanan
 - Initial setup tanpa password bawaan.
 - Login Admin/Pengurus dan Bendahara.
-- Role-based access.
+- Role-based access dengan pemisahan tugas: Admin mengelola informasi/config dan monitoring, Bendahara mencatat transaksi/bukti.
 - Password di-hash dengan PBKDF2-HMAC-SHA256.
 - Server-side session dengan HttpOnly cookie.
 - Rate limiting sederhana untuk login/setup.

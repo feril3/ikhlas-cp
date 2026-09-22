@@ -591,3 +591,166 @@
     align-items: start;
   }
 }
+
+
+/* Dynamic transaction categories + public message management */
+.category-columns {
+  display: grid;
+  gap: 12px;
+  padding: 0 16px 16px;
+}
+
+.category-list {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fbfcfb;
+}
+
+.category-list h3 {
+  margin: 0 0 8px;
+  color: var(--green-deep);
+  font-size: 11px;
+  letter-spacing: .01em;
+}
+
+.category-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid #e8edeb;
+}
+
+.category-row:last-child {
+  border-bottom: 0;
+}
+
+.category-row.inactive,
+.public-message-row.inactive {
+  opacity: .55;
+}
+
+.category-row > div {
+  display: grid;
+  gap: 2px;
+}
+
+.category-row strong {
+  font-size: 10px;
+}
+
+.category-row span {
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.text-button {
+  min-height: 32px;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 7px;
+  color: var(--green-deep);
+  background: #eaf4f0;
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.text-button:hover {
+  background: #dcece6;
+}
+
+.public-message-list {
+  display: grid;
+  padding: 0 16px 16px;
+}
+
+.public-message-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px 11px;
+  padding: 12px 0;
+  border-bottom: 1px solid #e8edeb;
+}
+
+.public-message-row:last-child {
+  border-bottom: 0;
+}
+
+.public-message-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  color: var(--green);
+  background: var(--green-soft);
+}
+
+.public-message-row > div:nth-child(2) {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.public-message-row strong {
+  font-size: 11px;
+}
+
+.public-message-row p {
+  margin: 0;
+  color: #46534e;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.public-message-row span {
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.row-actions {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.role-policy-note {
+  display: grid;
+  gap: 3px;
+  margin: 0 16px 10px;
+  padding: 10px 12px;
+  border: 1px solid #d6e5df;
+  border-radius: 9px;
+  background: #f1f8f5;
+}
+
+.role-policy-note strong {
+  color: var(--green-deep);
+  font-size: 10px;
+}
+
+.role-policy-note span {
+  color: #596761;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+@media (min-width: 640px) {
+  .category-columns {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .public-message-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+  }
+
+  .row-actions {
+    grid-column: auto;
+  }
+}

@@ -36,13 +36,20 @@ type=INCOME
 amount=500000
 transactionDate=2026-09-22
 method=TRANSFER
-category=Donasi Jamaah
+categoryId=2
+sourceDetail=Donatur tetap / detail sumber (opsional, khusus kas masuk)
 description=Transfer donatur
 evidence=<file opsional untuk kas masuk, wajib untuk kas keluar>
 mutation=<file opsional>
 ```
 
 File diteruskan ke Google Drive. Database hanya menyimpan Google Drive file ID dan metadata referensi.
+
+## Transaction Categories
+
+- `GET /transaction-categories?type=INCOME|EXPENSE` — Admin melihat semua, Bendahara hanya kategori aktif
+- `POST /transaction-categories` — Admin
+- `PUT /transaction-categories/:id` — Admin
 
 ## Reports
 
@@ -68,7 +75,22 @@ File diteruskan ke Google Drive. Database hanya menyimpan Google Drive file ID d
 ## Settings
 
 - `GET /settings` — Admin
-- `PUT /settings` — Admin
+- `PUT /settings` — Admin; termasuk saldo awal, tanggal saldo awal, dan catatan
+
+## Public Display Messages
+
+- `GET /public-messages` — Admin
+- `POST /public-messages` — Admin
+- `PUT /public-messages/:id` — Admin
+- `DELETE /public-messages/:id` — Admin
+
+Endpoint publik `GET /public/display` mengembalikan transaksi terbaru yang sudah disanitasi (jenis, nominal, tanggal, kategori) dan konten Public Display aktif. Data sumber detail, keterangan internal, bukti, mutasi, dan user pencatat tidak diekspos.
+
+## Authorization Summary
+
+- Admin/Pengurus: monitoring transaksi & laporan, jadwal/kegiatan, kategori, settings, user, audit, konten Public Display.
+- Bendahara: pencatatan kas masuk/keluar, bukti/mutasi, riwayat transaksi, laporan.
+- `POST /transactions` dan penggantian attachment hanya untuk Bendahara.
 
 ## Audit
 

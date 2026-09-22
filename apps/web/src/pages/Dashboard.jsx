@@ -42,10 +42,12 @@ export default function Dashboard() {
           <h1>Assalamu'alaikum, {user?.name?.split(' ')[0] ?? 'Pengurus'}</h1>
           <p className="page-subtitle">Ringkasan kondisi masjid dan keuangan yang tercatat saat ini.</p>
         </div>
-        <div className="heading-actions">
-          <Link to="/transactions/income" className="button secondary"><ArrowDownToLine size={18} /> Kas Masuk</Link>
-          <Link to="/transactions/expense" className="button primary"><ArrowUpFromLine size={18} /> Kas Keluar</Link>
-        </div>
+        {user?.role === 'TREASURER' && (
+          <div className="heading-actions">
+            <Link to="/transactions/income" className="button secondary"><ArrowDownToLine size={18} /> Kas Masuk</Link>
+            <Link to="/transactions/expense" className="button primary"><ArrowUpFromLine size={18} /> Kas Keluar</Link>
+          </div>
+        )}
       </header>
 
       {error ? (
@@ -115,8 +117,12 @@ export default function Dashboard() {
           </div>
 
           <section className="quick-actions" aria-label="Aksi cepat">
-            <Link to="/transactions/income" className="quick-action"><span className="quick-icon income"><ArrowDownToLine size={20} /></span><div><strong>Catat Kas Masuk</strong><span>Cash, kotak amal, atau transfer</span></div><ArrowRight size={18} /></Link>
-            <Link to="/transactions/expense" className="quick-action"><span className="quick-icon expense"><ArrowUpFromLine size={20} /></span><div><strong>Catat Kas Keluar</strong><span>Dengan bukti transaksi</span></div><ArrowRight size={18} /></Link>
+            {user?.role === 'TREASURER' && (
+              <>
+                <Link to="/transactions/income" className="quick-action"><span className="quick-icon income"><ArrowDownToLine size={20} /></span><div><strong>Catat Kas Masuk</strong><span>Cash, kotak amal, atau transfer</span></div><ArrowRight size={18} /></Link>
+                <Link to="/transactions/expense" className="quick-action"><span className="quick-icon expense"><ArrowUpFromLine size={20} /></span><div><strong>Catat Kas Keluar</strong><span>Dengan bukti transaksi</span></div><ArrowRight size={18} /></Link>
+              </>
+            )}
             <Link to="/public-display" target="_blank" rel="noreferrer" className="quick-action"><span className="quick-icon neutral"><CircleDollarSign size={20} /></span><div><strong>Buka Public Display</strong><span>Preview tampilan TV masjid</span></div><ArrowRight size={18} /></Link>
           </section>
         </>

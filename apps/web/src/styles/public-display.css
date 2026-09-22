@@ -130,7 +130,8 @@
 
 .display-prayer-card,
 .display-activity-card,
-.display-finance-card {
+.display-finance-card,
+.display-transactions-card {
   padding: clamp(18px, 2.6vw, 32px);
 }
 
@@ -327,6 +328,159 @@
   }
 
   .public-display .display-finance-card {
+    grid-column: 1 / -1;
+  }
+}
+
+
+.display-transactions-card {
+  padding: clamp(18px, 2.6vw, 32px);
+}
+
+.display-transactions-card .display-section-title {
+  justify-content: flex-start;
+}
+
+.display-transactions-card .display-section-title small {
+  margin-left: auto;
+  color: #7f9a91;
+  font-size: clamp(7px, .8vw, 10px);
+  font-weight: 600;
+}
+
+.display-transaction-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 7px;
+}
+
+.display-transaction-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 62px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, .07);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .035);
+}
+
+.display-transaction-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+}
+
+.display-transaction-icon.income {
+  color: #9de0c9;
+  background: rgba(55, 145, 113, .18);
+}
+
+.display-transaction-icon.expense {
+  color: #ffc0b8;
+  background: rgba(180, 35, 24, .14);
+}
+
+.display-transaction-row > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.display-transaction-row > div strong {
+  overflow: hidden;
+  font-size: clamp(9px, 1vw, 13px);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.display-transaction-row > div span {
+  color: #809d93;
+  font-size: clamp(7px, .75vw, 10px);
+}
+
+.display-transaction-row > b {
+  font-size: clamp(11px, 1.3vw, 17px);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.public-income {
+  color: #a8e4cf;
+}
+
+.public-expense {
+  color: #ffc1b9;
+}
+
+.display-empty {
+  padding: 18px;
+  color: #78978d;
+  font-size: clamp(8px, .9vw, 11px);
+  text-align: center;
+}
+
+.display-footer-rotating {
+  align-items: center;
+}
+
+.display-message {
+  display: grid;
+  min-width: 0;
+  max-width: 70%;
+  gap: 2px;
+}
+
+.display-message-kind {
+  color: #79b8a4 !important;
+  font-size: clamp(7px, .75vw, 10px) !important;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.display-message strong {
+  overflow: hidden;
+  color: #e3f3ed;
+  font-size: clamp(10px, 1.2vw, 16px);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.display-message > span:not(.display-message-kind) {
+  overflow: hidden;
+  color: #9db5ad;
+  font-size: clamp(8px, .85vw, 11px);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.display-message small {
+  color: #78978d;
+  font-size: clamp(7px, .75vw, 9px);
+}
+
+.display-footer-side {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  flex-shrink: 0;
+  color: #819e94;
+  font-size: clamp(7px, .75vw, 10px);
+}
+
+@media (min-width: 700px) {
+  .display-transaction-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (min-width: 900px) {
+  .public-display .display-transactions-card {
     grid-column: 1 / -1;
   }
 }

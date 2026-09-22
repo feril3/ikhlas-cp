@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowDownToLine,
@@ -12,24 +12,39 @@ import {
 } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { formatRupiah, toInputDate } from '../lib/format.js';
-
-const incomeCategories = ['Kotak Amal', 'Donasi Jamaah', 'Infaq Jumat', 'Donatur Tetap', 'Lainnya'];
-const expenseCategories = ['Operasional', 'Kebersihan', 'Listrik & Air', 'Kegiatan Masjid', 'Perawatan', 'Lainnya'];
+import { LoadingState } from '../components/LoadingState.jsx';
 
 export default function TransactionForm({ type }) {
   const income = type === 'INCOME';
   const navigate = useNavigate();
-  const categories = income ? incomeCategories : expenseCategories;
+  const [categories, setCategories] = useState([]);
   const [amountInput, setAmountInput] = useState('');
   const [form, setForm] = useState({
     transactionDate: toInputDate(),
     method: income ? 'CASH' : 'TRANSFER',
-    category: categories[0],
+    categoryId: '',
+    sourceDetail: '',
     description: ''
   });
   const [evidence, setEvidence] = useState(null);
   const [mutation, setMutation] = useState(null);
   const [status, setStatus] = useState({ type: 'idle', message: '' });
+  const [loadingCategories, setLoadingCategories] = useState(true);
+
+  useEffect(() => {
+    setLoadingCategories(true);
+    api.transactionCategories(type)
+      .then((result) => {
+        const active = result.data.filter((item) => item.isActive);
+        setCategories(active);
+        setForm((current) => ({
+          ...current,
+          categoryId: active[0]?.id ? String(active[0].id) : ''
+        }));
+      })
+      .catch((error) => setStatus({ type: 'error', message: error.message }))
+      .finally(() => setLoadingCategories(false));
+  }, [type]);
 
   const amount = useMemo(() => Number(amountInput.replace(/\D/g, '') || 0), [amountInput]);
 
@@ -50,6 +65,11 @@ export default function TransactionForm({ type }) {
       return;
     }
 
+    if (!form.categoryId) {
+      setStatus({ type: 'error', message: 'Pilih kategori transaksi terlebih dahulu.' });
+      return;
+    }
+
     if (!income && !evidence) {
       setStatus({ type: 'error', message: 'Bukti transaksi wajib dilampirkan untuk kas keluar.' });
       return;
@@ -64,13 +84,20 @@ export default function TransactionForm({ type }) {
 
     try {
       const created = await api.createTransaction(
-        { type, amount, ...form },
+        {
+          type,
+          amount,
+          ...form,
+          categoryId: Number(form.categoryId),
+          sourceDetail: income ? form.sourceDetail : ''
+        },
         { evidence, mutation }
       );
 
       const telegramNote = created.notification?.status === 'failed'
         ? ' Transaksi tersimpan, tetapi notifikasi Telegram gagal dikirim.'
         : '';
+
       setStatus({
         type: created.notification?.status === 'failed' ? 'warning' : 'success',
         message: `${income ? 'Kas masuk' : 'Kas keluar'} berhasil dicatat.${telegramNote}`
@@ -84,6 +111,8 @@ export default function TransactionForm({ type }) {
 
   const TypeIcon = income ? ArrowDownToLine : ArrowUpFromLine;
 
+  if (loadingCategories) return <LoadingState label="Memuat kategori transaksi..." />;
+
   return (
     <div className="form-page">
       <button className="back-link" onClick={() => navigate(-1)}><ArrowLeft size={18} /> Kembali</button>
@@ -93,7 +122,7 @@ export default function TransactionForm({ type }) {
         <div>
           <p className="eyebrow">Pencatatan transaksi</p>
           <h1>{income ? 'Kas Masuk' : 'Kas Keluar'}</h1>
-          <p className="page-subtitle">Catat transaksi dengan data yang mudah diverifikasi dan terdokumentasi.</p>
+          <p className="page-subtitle">Catat transaksi dengan sumber, kategori, dan bukti yang mudah diverifikasi.</p>
         </div>
       </header>
 
@@ -133,15 +162,36 @@ export default function TransactionForm({ type }) {
             </fieldset>
 
             <label className="field full-field">
-              <span>{income ? 'Sumber pemasukan' : 'Kategori pengeluaran'} <b>*</b></span>
-              <select value={form.category} onChange={(e) => update('category', e.target.value)}>
-                {categories.map((category) => <option key={category}>{category}</option>)}
+              <span>{income ? 'Sumber dana' : 'Kategori pengeluaran'} <b>*</b></span>
+              <select value={form.categoryId} onChange={(e) => update('categoryId', e.target.value)} required>
+                {categories.length === 0 && <option value="">Belum ada kategori aktif</option>}
+                {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
               </select>
+              <small>Kategori dikelola Admin dari Pengaturan Sistem.</small>
             </label>
+
+            {income && (
+              <label className="field full-field">
+                <span>Detail sumber dana</span>
+                <input
+                  value={form.sourceDetail}
+                  onChange={(e) => update('sourceDetail', e.target.value)}
+                  maxLength="120"
+                  placeholder="Contoh: Donatur tetap, Kotak Amal Lt. 1, Hamba Allah"
+                />
+                <small>Opsional. Tidak ditampilkan pada Public Display agar informasi sensitif tidak bocor.</small>
+              </label>
+            )}
 
             <label className="field full-field">
               <span>Keterangan</span>
-              <textarea rows="4" value={form.description} onChange={(e) => update('description', e.target.value)} placeholder={income ? 'Contoh: Donasi jamaah setelah kajian' : 'Contoh: Pembelian perlengkapan kebersihan'} maxLength="300" />
+              <textarea
+                rows="4"
+                value={form.description}
+                onChange={(e) => update('description', e.target.value)}
+                placeholder={income ? 'Contoh: Donasi setelah kajian Ahad' : 'Contoh: Pembelian perlengkapan kebersihan'}
+                maxLength="300"
+              />
               <small>{form.description.length}/300 karakter</small>
             </label>
           </div>
@@ -183,7 +233,9 @@ export default function TransactionForm({ type }) {
 
         <div className="form-actions">
           <button type="button" className="button secondary" onClick={() => navigate(-1)}>Batal</button>
-          <button type="submit" className="button primary" disabled={status.type === 'loading'}>{status.type === 'loading' ? 'Memproses...' : `Simpan ${income ? 'Kas Masuk' : 'Kas Keluar'}`}</button>
+          <button type="submit" className="button primary" disabled={status.type === 'loading' || categories.length === 0}>
+            {status.type === 'loading' ? 'Memproses...' : `Simpan ${income ? 'Kas Masuk' : 'Kas Keluar'}`}
+          </button>
         </div>
       </form>
     </div>

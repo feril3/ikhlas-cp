@@ -1,7 +1,21 @@
-import { useEffect, useState } from 'react';
-import { Activity, Landmark, Save, ShieldCheck, UserPlus, Users, Youtube } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Activity,
+  BookOpenText,
+  CircleDollarSign,
+  Landmark,
+  Megaphone,
+  Plus,
+  Save,
+  ShieldCheck,
+  Tag,
+  Trash2,
+  UserPlus,
+  Users,
+  Youtube
+} from 'lucide-react';
 import { api } from '../lib/api.js';
-import { formatDate } from '../lib/format.js';
+import { formatRupiah } from '../lib/format.js';
 import { LoadingState } from '../components/LoadingState.jsx';
 
 const emptyUser = {
@@ -11,23 +25,47 @@ const emptyUser = {
   role: 'TREASURER'
 };
 
+const emptyCategory = {
+  type: 'INCOME',
+  name: '',
+  sortOrder: 50,
+  isActive: true
+};
+
+const emptyMessage = {
+  kind: 'ANNOUNCEMENT',
+  title: '',
+  content: '',
+  source: '',
+  sortOrder: 50,
+  isActive: true
+};
+
 export default function AdminSettings() {
   const [settings, setSettings] = useState(null);
   const [users, setUsers] = useState([]);
   const [logs, setLogs] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [messages, setMessages] = useState([]);
   const [newUser, setNewUser] = useState(emptyUser);
+  const [newCategory, setNewCategory] = useState(emptyCategory);
+  const [newMessage, setNewMessage] = useState(emptyMessage);
   const [status, setStatus] = useState({ type: 'idle', message: '' });
 
   async function load() {
     try {
-      const [settingsData, usersData, auditData] = await Promise.all([
+      const [settingsData, usersData, auditData, categoryData, messageData] = await Promise.all([
         api.settings(),
         api.users(),
-        api.auditLogs(60)
+        api.auditLogs(60),
+        api.transactionCategories(),
+        api.publicMessages()
       ]);
       setSettings(settingsData);
       setUsers(usersData.data);
       setLogs(auditData.data);
+      setCategories(categoryData.data);
+      setMessages(messageData.data);
     } catch (error) {
       setStatus({ type: 'error', message: error.message });
     }
@@ -37,11 +75,23 @@ export default function AdminSettings() {
     load();
   }, []);
 
+  const incomeCategories = useMemo(
+    () => categories.filter((item) => item.type === 'INCOME'),
+    [categories]
+  );
+  const expenseCategories = useMemo(
+    () => categories.filter((item) => item.type === 'EXPENSE'),
+    [categories]
+  );
+
   async function saveSettings(event) {
     event.preventDefault();
     setStatus({ type: 'loading', message: 'Menyimpan pengaturan...' });
     try {
-      const saved = await api.updateSettings(settings);
+      const saved = await api.updateSettings({
+        ...settings,
+        openingBalance: Number(settings.openingBalance || 0)
+      });
       setSettings(saved);
       setStatus({ type: 'success', message: 'Pengaturan masjid berhasil disimpan.' });
       await load();
@@ -63,6 +113,79 @@ export default function AdminSettings() {
     }
   }
 
+  async function createCategory(event) {
+    event.preventDefault();
+    setStatus({ type: 'loading', message: 'Menambah kategori...' });
+    try {
+      await api.createTransactionCategory({
+        ...newCategory,
+        sortOrder: Number(newCategory.sortOrder || 0)
+      });
+      setNewCategory((current) => ({ ...emptyCategory, type: current.type }));
+      setStatus({ type: 'success', message: 'Kategori transaksi berhasil ditambahkan.' });
+      await load();
+    } catch (error) {
+      setStatus({ type: 'error', message: error.message });
+    }
+  }
+
+  async function toggleCategory(category) {
+    try {
+      await api.updateTransactionCategory(category.id, {
+        type: category.type,
+        name: category.name,
+        sortOrder: category.sortOrder,
+        isActive: !category.isActive
+      });
+      await load();
+    } catch (error) {
+      setStatus({ type: 'error', message: error.message });
+    }
+  }
+
+  async function createMessage(event) {
+    event.preventDefault();
+    setStatus({ type: 'loading', message: 'Menambah konten Public Display...' });
+    try {
+      await api.createPublicMessage({
+        ...newMessage,
+        sortOrder: Number(newMessage.sortOrder || 0)
+      });
+      setNewMessage(emptyMessage);
+      setStatus({ type: 'success', message: 'Konten Public Display berhasil ditambahkan.' });
+      await load();
+    } catch (error) {
+      setStatus({ type: 'error', message: error.message });
+    }
+  }
+
+  async function toggleMessage(message) {
+    try {
+      await api.updatePublicMessage(message.id, {
+        kind: message.kind,
+        title: message.title ?? '',
+        content: message.content,
+        source: message.source ?? '',
+        sortOrder: message.sortOrder,
+        isActive: !message.isActive
+      });
+      await load();
+    } catch (error) {
+      setStatus({ type: 'error', message: error.message });
+    }
+  }
+
+  async function deleteMessage(id) {
+    if (!window.confirm('Hapus konten Public Display ini?')) return;
+    try {
+      await api.deletePublicMessage(id);
+      setMessages((current) => current.filter((item) => item.id !== id));
+      setStatus({ type: 'success', message: 'Konten Public Display dihapus.' });
+    } catch (error) {
+      setStatus({ type: 'error', message: error.message });
+    }
+  }
+
   if (!settings && status.type !== 'error') return <LoadingState label="Memuat pengaturan..." />;
 
   return (
@@ -71,18 +194,23 @@ export default function AdminSettings() {
         <div>
           <p className="eyebrow">Administrasi</p>
           <h1>Pengaturan Sistem</h1>
-          <p className="page-subtitle">Identitas publik, rekening donasi, Live Masjid, pengguna, dan jejak audit.</p>
+          <p className="page-subtitle">Identitas publik, saldo awal, kategori transaksi, konten TV, pengguna, dan audit.</p>
         </div>
       </header>
 
-      {status.message && <div className={`notice ${status.type === 'error' ? 'error' : status.type === 'success' ? 'success' : ''}`}>{status.message}</div>}
+      {status.message && (
+        <div className={`notice ${status.type === 'error' ? 'error' : status.type === 'success' ? 'success' : ''}`}>
+          {status.message}
+        </div>
+      )}
 
       {settings && (
         <section className="panel settings-section">
           <div className="panel-heading">
-            <div><p className="section-kicker">Public Display</p><h2>Identitas & informasi publik</h2></div>
+            <div><p className="section-kicker">Konfigurasi utama</p><h2>Identitas, keuangan awal & informasi publik</h2></div>
             <Landmark size={20} className="muted-icon" />
           </div>
+
           <form className="settings-form" onSubmit={saveSettings}>
             <div className="form-grid settings-grid">
               <label className="field"><span>Nama masjid</span><input value={settings.mosqueName} onChange={(e) => setSettings((current) => ({ ...current, mosqueName: e.target.value }))} required /></label>
@@ -90,6 +218,49 @@ export default function AdminSettings() {
               <label className="field"><span>Nama bank</span><input value={settings.bankName} onChange={(e) => setSettings((current) => ({ ...current, bankName: e.target.value }))} /></label>
               <label className="field"><span>Nomor rekening donasi</span><input inputMode="numeric" value={settings.bankAccountNumber} onChange={(e) => setSettings((current) => ({ ...current, bankAccountNumber: e.target.value }))} /></label>
               <label className="field full-field"><span>Nama pemilik rekening</span><input value={settings.bankAccountHolder} onChange={(e) => setSettings((current) => ({ ...current, bankAccountHolder: e.target.value }))} /></label>
+            </div>
+
+            <div className="settings-subsection">
+              <div className="settings-subheading">
+                <CircleDollarSign size={18} />
+                <div>
+                  <strong>Saldo awal sistem</strong>
+                  <span>Nilai sebelum transaksi mulai dicatat di IKHLAS. Perubahan tercatat pada audit log.</span>
+                </div>
+              </div>
+
+              <div className="form-grid settings-grid">
+                <label className="field">
+                  <span>Saldo awal</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={settings.openingBalance}
+                    onChange={(e) => setSettings((current) => ({ ...current, openingBalance: e.target.value }))}
+                    required
+                  />
+                  <small>{formatRupiah(Number(settings.openingBalance || 0))}</small>
+                </label>
+                <label className="field">
+                  <span>Tanggal saldo awal</span>
+                  <input
+                    type="date"
+                    value={settings.openingBalanceDate ?? ''}
+                    onChange={(e) => setSettings((current) => ({ ...current, openingBalanceDate: e.target.value }))}
+                  />
+                </label>
+                <label className="field full-field">
+                  <span>Catatan saldo awal</span>
+                  <textarea
+                    rows="3"
+                    maxLength="240"
+                    value={settings.openingBalanceNote ?? ''}
+                    onChange={(e) => setSettings((current) => ({ ...current, openingBalanceNote: e.target.value }))}
+                    placeholder="Contoh: Saldo kas sebelum migrasi pencatatan ke IKHLAS"
+                  />
+                </label>
+              </div>
             </div>
 
             <div className="settings-subsection">
@@ -109,9 +280,99 @@ export default function AdminSettings() {
       <section className="admin-two-column">
         <div className="panel settings-section">
           <div className="panel-heading">
+            <div><p className="section-kicker">Keuangan</p><h2>Kategori transaksi</h2></div>
+            <Tag size={20} className="muted-icon" />
+          </div>
+
+          <div className="category-columns">
+            <CategoryList title="Kas Masuk / Sumber Dana" items={incomeCategories} onToggle={toggleCategory} />
+            <CategoryList title="Kas Keluar" items={expenseCategories} onToggle={toggleCategory} />
+          </div>
+
+          <form className="create-user-form" onSubmit={createCategory}>
+            <div className="settings-subheading"><Plus size={18} /><div><strong>Tambah kategori</strong><span>Kategori aktif otomatis muncul pada form Bendahara.</span></div></div>
+            <div className="form-grid settings-grid">
+              <label className="field">
+                <span>Jenis</span>
+                <select value={newCategory.type} onChange={(e) => setNewCategory((current) => ({ ...current, type: e.target.value }))}>
+                  <option value="INCOME">Kas Masuk</option>
+                  <option value="EXPENSE">Kas Keluar</option>
+                </select>
+              </label>
+              <label className="field">
+                <span>Urutan</span>
+                <input type="number" min="0" max="999" value={newCategory.sortOrder} onChange={(e) => setNewCategory((current) => ({ ...current, sortOrder: e.target.value }))} />
+              </label>
+              <label className="field full-field">
+                <span>Nama kategori</span>
+                <input value={newCategory.name} onChange={(e) => setNewCategory((current) => ({ ...current, name: e.target.value }))} required placeholder="Contoh: Wakaf Renovasi" />
+              </label>
+            </div>
+            <button className="button secondary"><Plus size={17} /> Tambah kategori</button>
+          </form>
+        </div>
+
+        <div className="panel settings-section">
+          <div className="panel-heading">
+            <div><p className="section-kicker">Public Display</p><h2>Ayat, pengumuman & pesan</h2></div>
+            <Megaphone size={20} className="muted-icon" />
+          </div>
+
+          <div className="public-message-list">
+            {messages.map((message) => (
+              <article className={`public-message-row ${message.isActive ? '' : 'inactive'}`} key={message.id}>
+                <span className="public-message-icon">
+                  {message.kind === 'VERSE' ? <BookOpenText size={16} /> : <Megaphone size={16} />}
+                </span>
+                <div>
+                  <strong>{message.title || (message.kind === 'VERSE' ? 'Ayat / Hadits' : message.kind === 'ANNOUNCEMENT' ? 'Pengumuman' : 'Pesan')}</strong>
+                  <p>{message.content}</p>
+                  {message.source && <span>{message.source}</span>}
+                </div>
+                <div className="row-actions">
+                  <button className="text-button" type="button" onClick={() => toggleMessage(message)}>{message.isActive ? 'Nonaktifkan' : 'Aktifkan'}</button>
+                  <button className="icon-button danger-icon-button" type="button" onClick={() => deleteMessage(message.id)} aria-label="Hapus konten"><Trash2 size={15} /></button>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <form className="create-user-form" onSubmit={createMessage}>
+            <div className="settings-subheading"><Plus size={18} /><div><strong>Tambah konten rotasi</strong><span>Untuk ayat/hadits, verifikasi teks dan sumber sebelum dipublikasikan.</span></div></div>
+            <div className="form-grid settings-grid">
+              <label className="field">
+                <span>Jenis</span>
+                <select value={newMessage.kind} onChange={(e) => setNewMessage((current) => ({ ...current, kind: e.target.value }))}>
+                  <option value="ANNOUNCEMENT">Pengumuman</option>
+                  <option value="MESSAGE">Pesan Masjid</option>
+                  <option value="VERSE">Ayat / Hadits</option>
+                </select>
+              </label>
+              <label className="field">
+                <span>Urutan</span>
+                <input type="number" min="0" max="999" value={newMessage.sortOrder} onChange={(e) => setNewMessage((current) => ({ ...current, sortOrder: e.target.value }))} />
+              </label>
+              <label className="field full-field"><span>Judul</span><input value={newMessage.title} onChange={(e) => setNewMessage((current) => ({ ...current, title: e.target.value }))} placeholder="Contoh: Kajian Malam Jumat" /></label>
+              <label className="field full-field"><span>Isi</span><textarea rows="4" maxLength="400" value={newMessage.content} onChange={(e) => setNewMessage((current) => ({ ...current, content: e.target.value }))} required /></label>
+              <label className="field full-field"><span>Sumber / referensi</span><input value={newMessage.source} onChange={(e) => setNewMessage((current) => ({ ...current, source: e.target.value }))} placeholder="Contoh: QS. ... / HR. ... (setelah diverifikasi)" /></label>
+            </div>
+            <button className="button secondary"><Plus size={17} /> Tambah konten</button>
+          </form>
+        </div>
+      </section>
+
+      <section className="admin-two-column">
+        <div className="panel settings-section">
+          <div className="panel-heading">
             <div><p className="section-kicker">Hak akses</p><h2>Pengguna</h2></div>
             <Users size={20} className="muted-icon" />
           </div>
+
+          <div className="role-policy-note">
+            <strong>Pemisahan tugas</strong>
+            <span>Admin mengelola informasi, jadwal, konfigurasi dan monitoring. Bendahara mencatat transaksi dan mengelola bukti keuangan.</span>
+          </div>
+
           <div className="user-list">
             {users.map((user) => (
               <div className="user-row" key={user.id}>
@@ -154,6 +415,21 @@ export default function AdminSettings() {
           </div>
         </div>
       </section>
+    </div>
+  );
+}
+
+function CategoryList({ title, items, onToggle }) {
+  return (
+    <div className="category-list">
+      <h3>{title}</h3>
+      {items.map((category) => (
+        <div className={`category-row ${category.isActive ? '' : 'inactive'}`} key={category.id}>
+          <div><strong>{category.name}</strong><span>Urutan {category.sortOrder}</span></div>
+          <button className="text-button" type="button" onClick={() => onToggle(category)}>{category.isActive ? 'Nonaktifkan' : 'Aktifkan'}</button>
+        </div>
+      ))}
+      {items.length === 0 && <div className="empty-state">Belum ada kategori.</div>}
     </div>
   );
 }

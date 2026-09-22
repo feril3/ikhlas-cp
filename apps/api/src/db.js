@@ -63,6 +63,28 @@ export function initializeDatabase() {
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS transaction_categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      type TEXT NOT NULL CHECK (type IN ('INCOME', 'EXPENSE')),
+      name TEXT NOT NULL,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(type, name)
+    );
+
+    CREATE TABLE IF NOT EXISTS public_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      kind TEXT NOT NULL CHECK (kind IN ('VERSE', 'ANNOUNCEMENT', 'MESSAGE')),
+      title TEXT,
+      content TEXT NOT NULL,
+      source TEXT,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS transactions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       type TEXT NOT NULL CHECK (type IN ('INCOME', 'EXPENSE')),
@@ -70,6 +92,8 @@ export function initializeDatabase() {
       transaction_date TEXT NOT NULL,
       method TEXT NOT NULL CHECK (method IN ('CASH', 'TRANSFER')),
       category TEXT NOT NULL,
+      category_id INTEGER,
+      source_detail TEXT,
       description TEXT,
       evidence_path TEXT,
       bank_mutation_path TEXT,
@@ -81,6 +105,7 @@ export function initializeDatabase() {
       mutation_mime_type TEXT,
       created_by INTEGER,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (category_id) REFERENCES transaction_categories(id),
       FOREIGN KEY (created_by) REFERENCES users(id)
     );
 
@@ -124,6 +149,12 @@ export function initializeDatabase() {
       ON transactions(transaction_date DESC, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_transactions_type
       ON transactions(type);
+    CREATE INDEX IF NOT EXISTS idx_transactions_category
+      ON transactions(category_id);
+    CREATE INDEX IF NOT EXISTS idx_transaction_categories_type
+      ON transaction_categories(type, is_active, sort_order);
+    CREATE INDEX IF NOT EXISTS idx_public_messages_active
+      ON public_messages(is_active, sort_order);
     CREATE INDEX IF NOT EXISTS idx_prayer_schedule_date
       ON prayer_schedules(prayer_date, adhan_time);
     CREATE INDEX IF NOT EXISTS idx_activities_date
@@ -134,6 +165,8 @@ export function initializeDatabase() {
       ON audit_logs(created_at DESC);
   `);
 
+  ensureColumn('transactions', 'category_id', 'INTEGER');
+  ensureColumn('transactions', 'source_detail', 'TEXT');
   ensureColumn('transactions', 'evidence_path', 'TEXT');
   ensureColumn('transactions', 'bank_mutation_path', 'TEXT');
   ensureColumn('transactions', 'evidence_drive_file_id', 'TEXT');
@@ -158,6 +191,8 @@ function seedIfEmpty() {
   }
 
   insertSetting('opening_balance', '12500000');
+  insertSetting('opening_balance_date', '');
+  insertSetting('opening_balance_note', 'Saldo awal sebelum pencatatan digital IKHLAS');
   insertSetting('mosque_name', 'Masjid Al-Ikhlas');
   insertSetting('mosque_tagline', 'Pusat Informasi Jamaah');
   insertSetting('bank_name', 'Bank Syariah Indonesia');
@@ -167,6 +202,52 @@ function seedIfEmpty() {
   insertSetting('active_live_url', '');
   insertSetting('active_live_title', '');
   insertSetting('public_finance_period', 'MONTH');
+
+  const categoryCount = db.prepare('SELECT COUNT(*) AS count FROM transaction_categories').get().count;
+  if (categoryCount === 0) {
+    const insertCategory = db.prepare(`
+      INSERT INTO transaction_categories (type, name, sort_order)
+      VALUES (?, ?, ?)
+    `);
+
+    const categories = [
+      ['INCOME', 'Kotak Amal', 10],
+      ['INCOME', 'Donasi Jamaah', 20],
+      ['INCOME', 'Infaq Jumat', 30],
+      ['INCOME', 'Donatur Tetap', 40],
+      ['INCOME', 'Lainnya', 90],
+      ['EXPENSE', 'Operasional', 10],
+      ['EXPENSE', 'Kebersihan', 20],
+      ['EXPENSE', 'Listrik & Air', 30],
+      ['EXPENSE', 'Kegiatan Masjid', 40],
+      ['EXPENSE', 'Perawatan', 50],
+      ['EXPENSE', 'Lainnya', 90]
+    ];
+
+    db.transaction((items) => {
+      for (const item of items) insertCategory.run(...item);
+    })(categories);
+  }
+
+  db.prepare(`
+    UPDATE transactions
+    SET category_id = (
+      SELECT transaction_categories.id
+      FROM transaction_categories
+      WHERE transaction_categories.type = transactions.type
+        AND transaction_categories.name = transactions.category
+      LIMIT 1
+    )
+    WHERE category_id IS NULL
+  `).run();
+
+  const publicMessageCount = db.prepare('SELECT COUNT(*) AS count FROM public_messages').get().count;
+  if (publicMessageCount === 0) {
+    db.prepare(`
+      INSERT INTO public_messages (kind, title, content, source, sort_order)
+      VALUES ('ANNOUNCEMENT', 'Pengingat Jamaah', ?, '', 10)
+    `).run('Mari jaga kebersihan, ketertiban, dan kenyamanan masjid bersama.');
+  }
 
   const transactionCount = db.prepare('SELECT COUNT(*) AS count FROM transactions').get().count;
   if (transactionCount === 0) {
