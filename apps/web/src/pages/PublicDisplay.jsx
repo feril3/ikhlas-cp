@@ -288,6 +288,9 @@ export default function PublicDisplay() {
         <div className="signage-date-block">
           <strong>{weekday}</strong>
           <span>{masehiDate} Masehi</span>
+          <span className="signage-hijri-date">
+            {data?.prayerSchedule?.hijriDate?.formatted || 'Tanggal Hijriah memuat...'}
+          </span>
         </div>
       </header>
 
