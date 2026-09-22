@@ -166,5 +166,21 @@ test('public display hides application branding and technical provider copy', as
   assert.doesNotMatch(jsx, /Kementerian Agama Republik Indonesia/);
   assert.doesNotMatch(jsx, /cache aman/i);
   assert.doesNotMatch(jsx, /Fallback jadwal lokal/);
-  assert.match(jsx, /Iqamah 5 menit setelah adzan/);
+  assert.doesNotMatch(jsx, /Iqamah 5 menit setelah adzan/);
+});
+
+
+test('screenshot QA pass reduces dead space and framing noise', async () => {
+  const jsx = await source('apps/web/src/pages/PublicDisplay.jsx');
+  const css = await source('apps/web/src/styles/public-display.css');
+  const ornament = await source('apps/web/src/styles/public-display-ornamental.css');
+
+  assert.doesNotMatch(jsx, /youtube-caption/);
+  assert.match(jsx, /Bulan ini/);
+  assert.match(jsx, /Infaq & Donasi/);
+  assert.match(css, /minmax\(104px, 15dvh\)/);
+  assert.match(css, /minmax\(54px, 7\.4dvh\)/);
+  assert.match(css, /mask-image: linear-gradient/);
+  assert.doesNotMatch(ornament, /border-radius: 50% 50% 0 0 \/ 45% 45% 0 0/);
+  assert.match(ornament, /inset 0 2px 0/);
 });
