@@ -31,12 +31,13 @@ export function UserMenu({ compact = false, sidebar = false }) {
           className={
             sidebar
               ? compact
-                ? 'size-10 min-h-10 p-0 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                : 'h-auto min-h-10 w-full justify-start gap-3 px-2.5 py-2 text-left text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                ? 'size-10 min-h-10 bg-transparent p-0 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                : 'h-auto min-h-10 w-full justify-start gap-3 bg-transparent px-2.5 py-2 text-left text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
               : compact
                 ? 'size-10 min-h-10 p-0'
                 : 'h-auto min-h-10 justify-start gap-3 px-2.5 py-2 text-left'
           }
+          aria-label={compact ? `Menu akun ${user?.name ?? ''}` : undefined}
         >
           <Avatar className="size-8">
             <AvatarFallback className={sidebar ? 'bg-sidebar-accent text-sidebar-accent-foreground' : undefined}>{initials}</AvatarFallback>
@@ -49,7 +50,7 @@ export function UserMenu({ compact = false, sidebar = false }) {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align={sidebar ? "start" : "end"} side={sidebar ? "right" : "bottom"} sideOffset={8} className="w-56">
         <DropdownMenuLabel>
           <span className="block text-xs font-semibold text-foreground">{user?.name}</span>
           <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">{role}</span>
