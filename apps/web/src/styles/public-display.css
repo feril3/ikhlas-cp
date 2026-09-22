@@ -84,11 +84,22 @@
   font-size: clamp(8px, .66vw, 10.5px);
 }
 
-.media-signage-header > time {
-  font-size: clamp(10px, .92vw, 15px);
-  font-weight: 720;
+.signage-date-block {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
   text-align: right;
   white-space: nowrap;
+}
+
+.signage-date-block strong {
+  font-size: clamp(11px, .92vw, 15px);
+  font-weight: 800;
+}
+
+.signage-date-block span {
+  font-size: clamp(9px, .72vw, 12px);
+  font-weight: 650;
 }
 
 .media-signage-main {
@@ -148,7 +159,7 @@
   display: grid;
   justify-items: start;
   gap: .55dvh;
-  margin-top: clamp(34px, 4.4dvh, 50px);
+  margin-top: clamp(22px, 2.8dvh, 34px);
 }
 
 .prayer-focus-next h1 {
@@ -188,6 +199,123 @@
 
 .prayer-focus-iqamah strong {
   font-size: clamp(16px, 1.65vw, 26px);
+}
+
+.friday-public-info,
+.public-agenda {
+  position: relative;
+  z-index: 2;
+}
+
+.friday-public-info {
+  display: grid;
+  gap: .38dvh;
+  margin-top: 1dvh;
+  padding-top: .9dvh;
+  border-top: 1px solid rgba(219, 186, 119, .22);
+}
+
+.friday-public-info > strong,
+.public-agenda > strong {
+  font-size: clamp(10px, .78vw, 13px);
+  font-weight: 820;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.friday-public-info > div {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: .35vw;
+  align-items: baseline;
+}
+
+.friday-public-info span {
+  font-size: clamp(7px, .56vw, 9px);
+}
+
+.friday-public-info b {
+  overflow: hidden;
+  font-size: clamp(8px, .67vw, 11px);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.public-agenda {
+  margin-top: auto;
+  padding-top: 1dvh;
+  border-top: 1px solid rgba(219, 186, 119, .22);
+}
+
+.public-agenda-list {
+  display: grid;
+  gap: .55dvh;
+  margin-top: .6dvh;
+}
+
+.public-agenda-list article {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: .5vw;
+  align-items: start;
+}
+
+.public-agenda-list time {
+  min-width: 42px;
+  font-size: clamp(8px, .66vw, 10px);
+  font-weight: 800;
+}
+
+.public-agenda-list article > div {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.public-agenda-list b,
+.public-agenda-list span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.public-agenda-list b {
+  font-size: clamp(8px, .7vw, 11px);
+}
+
+.public-agenda-list span,
+.public-agenda-empty {
+  font-size: clamp(7px, .55vw, 9px);
+}
+
+.countdown-takeover {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  width: 100vw;
+  height: 100dvh;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 2.2dvh;
+  overflow: hidden;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.countdown-takeover span {
+  font-size: clamp(20px, 2.2vw, 36px);
+  font-weight: 820;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.countdown-takeover strong {
+  font-size: clamp(120px, 21vw, 330px);
+  font-weight: 780;
+  line-height: .8;
+  letter-spacing: -.055em;
 }
 
 
@@ -499,12 +627,12 @@
 }
 
 .verse-ticker-label svg {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
 }
 
 .verse-ticker-label span {
-  font-size: clamp(8px, .66vw, 10px);
+  font-size: clamp(11px, .88vw, 14px);
   font-weight: 820;
   letter-spacing: .08em;
   text-transform: uppercase;
@@ -535,13 +663,13 @@
 }
 
 .verse-ticker-item strong {
-  font-size: clamp(11px, .96vw, 15px);
-  font-weight: 650;
+  font-size: clamp(14px, 1.18vw, 19px);
+  font-weight: 680;
 }
 
 .verse-ticker-item span {
-  font-size: clamp(9px, .72vw, 11px);
-  font-weight: 760;
+  font-size: clamp(10px, .82vw, 13px);
+  font-weight: 780;
 }
 
 .verse-ticker-item i {
@@ -580,7 +708,7 @@
   }
 
   .prayer-focus-next {
-    margin-top: 3.4dvh;
+    margin-top: 2.2dvh;
   }
 
   .prayer-focus-clock time {

@@ -88,8 +88,12 @@
   color: #94aaa2;
 }
 
-.media-signage-header > time {
-  color: #e3cf9d;
+.signage-date-block strong {
+  color: #e7d5a9;
+}
+
+.signage-date-block span {
+  color: #9db0a9;
 }
 
 .prayer-focus-panel {
@@ -434,4 +438,59 @@
   .finance-carousel-window {
     animation: none;
   }
+}
+
+
+.friday-public-info > strong,
+.public-agenda > strong,
+.public-agenda-list time {
+  color: #d1b875;
+}
+
+.friday-public-info span,
+.public-agenda-list span,
+.public-agenda-empty {
+  color: #829990;
+}
+
+.friday-public-info b,
+.public-agenda-list b {
+  color: #dfe8e4;
+}
+
+.countdown-takeover {
+  color: #f4ead5;
+  background:
+    radial-gradient(circle at center, rgba(197, 164, 104, .12), transparent 28%),
+    linear-gradient(155deg, #061712, #0b2a22 55%, #061712);
+}
+
+.countdown-takeover::before,
+.countdown-takeover::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.countdown-takeover::before {
+  inset: 3.5dvh 3vw;
+  border: 1px solid rgba(215, 184, 121, .28);
+}
+
+.countdown-takeover::after {
+  top: 6dvh;
+  right: 50%;
+  bottom: 6dvh;
+  width: 1px;
+  opacity: .12;
+  background: linear-gradient(transparent, #c5a468, transparent);
+}
+
+.countdown-takeover span {
+  color: #cdb274;
+}
+
+.countdown-takeover strong {
+  color: #f5ead0;
+  text-shadow: 0 14px 36px rgba(0, 0, 0, .28);
 }

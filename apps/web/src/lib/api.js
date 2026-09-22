@@ -60,6 +60,11 @@ export const api = {
       body: formData
     });
   },
+  updateTransaction: (id, input) => request(`/transactions/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(input)
+  }),
+  deleteTransaction: (id) => request(`/transactions/${id}`, { method: 'DELETE' }),
   uploadTransactionAttachments: (id, { evidence, mutation }) => {
     const formData = new FormData();
     if (evidence) formData.append('evidence', evidence);
@@ -104,6 +109,12 @@ export const api = {
     URL.revokeObjectURL(url);
   },
 
+  fridaySchedule: (date) => request(`/friday-schedules${queryString({ date })}`),
+  updateFridaySchedule: (date, input) => request(`/friday-schedules/${date}`, {
+    method: 'PUT',
+    body: JSON.stringify(input)
+  }),
+
   prayerSchedule: (date) => request(`/prayer-schedules${queryString({ date })}`),
   updatePrayerSchedule: (date, items) => request(`/prayer-schedules/${date}`, {
     method: 'PUT',
@@ -113,6 +124,10 @@ export const api = {
   activities: (from) => request(`/activities${queryString({ from })}`),
   createActivity: (input) => request('/activities', {
     method: 'POST',
+    body: JSON.stringify(input)
+  }),
+  updateActivity: (id, input) => request(`/activities/${id}`, {
+    method: 'PUT',
     body: JSON.stringify(input)
   }),
   deleteActivity: (id) => request(`/activities/${id}`, { method: 'DELETE' }),

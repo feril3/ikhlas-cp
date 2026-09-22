@@ -3,6 +3,8 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { test } from 'node:test';
 import {
+  formatMinuteSecondCountdown,
+  getCountdownFocus,
   getIqamahTime,
   getPrayerDisplayState
 } from '../apps/web/src/lib/prayerDisplay.js';
@@ -193,7 +195,7 @@ test('left prayer focus uses one alignment axis without centered mihrab collisio
 
   assert.doesNotMatch(jsx, /prayer-focus-star/);
   assert.match(css, /\.prayer-focus-panel \{[\s\S]*display:\s*flex/);
-  assert.match(css, /\.prayer-focus-next \{[\s\S]*margin-top:\s*clamp\(34px, 4\.4dvh, 50px\)/);
+  assert.match(css, /\.prayer-focus-next \{[\s\S]*margin-top:\s*clamp\(22px, 2\.8dvh, 34px\)/);
   assert.match(css, /\.prayer-focus-countdown \{[\s\S]*padding:\s*1\.15dvh 0/);
   assert.match(css, /\.prayer-focus-iqamah \{[\s\S]*padding:\s*\.8dvh 0/);
   assert.doesNotMatch(ornament, /\.prayer-focus-panel::after/);
@@ -210,4 +212,120 @@ test('public display header shows the full RS Elizabeth Situbondo address', asyn
   assert.match(css, /grid-template-columns:\s*minmax\(250px, \.9fr\)\s+minmax\(420px, 1\.15fr\)\s+auto/);
   assert.match(css, /-webkit-line-clamp:\s*2/);
   assert.match(css, /white-space:\s*normal/);
+});
+
+
+test('five-minute takeover shows only MM:SS before adhan and through iqamah window', () => {
+  const today = {
+    scheduleDate: '2026-09-22',
+    items: [
+      { prayerName: 'Dzuhur', adhanTime: '11:17' },
+      { prayerName: 'Ashar', adhanTime: '14:29' },
+      { prayerName: 'Maghrib', adhanTime: '17:20' }
+    ]
+  };
+  const tomorrow = {
+    scheduleDate: '2026-09-23',
+    items: [{ prayerName: 'Subuh', adhanTime: '03:56' }]
+  };
+
+  const beforeWindow = getCountdownFocus(today, tomorrow, new Date('2026-09-22T14:23:59+07:00'));
+  assert.equal(beforeWindow, null);
+
+  const adhanWindow = getCountdownFocus(today, tomorrow, new Date('2026-09-22T14:24:00+07:00'));
+  assert.equal(adhanWindow.kind, 'ADHAN');
+  assert.equal(adhanWindow.prayerName, 'Ashar');
+  assert.equal(formatMinuteSecondCountdown(adhanWindow.target - new Date('2026-09-22T14:24:00+07:00')), '05:00');
+
+  const iqamahWindow = getCountdownFocus(today, tomorrow, new Date('2026-09-22T14:29:01+07:00'));
+  assert.equal(iqamahWindow.kind, 'IQAMAH');
+  assert.equal(iqamahWindow.prayerName, 'Ashar');
+  assert.equal(formatMinuteSecondCountdown(iqamahWindow.target - new Date('2026-09-22T14:29:01+07:00')), '04:59');
+
+  const afterIqamah = getCountdownFocus(today, tomorrow, new Date('2026-09-22T14:34:00+07:00'));
+  assert.equal(afterIqamah, null);
+});
+
+test('public display takeover hides normal dashboard composition during five-minute focus', async () => {
+  const jsx = await source('apps/web/src/pages/PublicDisplay.jsx');
+  const css = await source('apps/web/src/styles/public-display.css');
+
+  assert.match(jsx, /if \(countdownFocus\)/);
+  assert.match(jsx, /className="public-display countdown-takeover"/);
+  assert.match(jsx, /formatMinuteSecondCountdown/);
+  assert.match(css, /\.countdown-takeover \{[\s\S]*position:\s*fixed/);
+  assert.match(css, /\.countdown-takeover strong \{[\s\S]*font-size:\s*clamp\(120px, 21vw, 330px\)/);
+});
+
+test('public display shows public agenda under prayer focus and Friday officers only from Friday payload', async () => {
+  const jsx = await source('apps/web/src/pages/PublicDisplay.jsx');
+  const routes = await source('apps/api/src/routes.js');
+
+  assert.match(jsx, /className="public-agenda"/);
+  assert.match(jsx, /publicAgenda = data\?\.activities\?\.slice\(0, 2\)/);
+  assert.match(jsx, /fridaySchedule &&/);
+  assert.match(jsx, /Imam/);
+  assert.match(jsx, /Khatib/);
+  assert.match(jsx, /Bilal/);
+  assert.match(routes, /fridaySchedule: getFridaySchedule\(date\)/);
+});
+
+test('Friday schedule is persisted and editable by Admin', async () => {
+  const db = await source('apps/api/src/db.js');
+  const routes = await source('apps/api/src/routes.js');
+  const schedule = await source('apps/web/src/pages/Schedule.jsx');
+  const api = await source('apps/web/src/lib/api.js');
+
+  assert.match(db, /CREATE TABLE IF NOT EXISTS friday_schedules/);
+  assert.match(routes, /apiRouter\.put\('\/friday-schedules\/:date'/);
+  assert.match(routes, /FRIDAY_SCHEDULE_UPDATE/);
+  assert.match(schedule, /Petugas Jumat/);
+  assert.match(schedule, /Imam Jumat/);
+  assert.match(schedule, /Khatib/);
+  assert.match(schedule, /Bilal/);
+  assert.match(api, /updateFridaySchedule/);
+});
+
+test('existing public agenda can be edited with an audited backend update', async () => {
+  const routes = await source('apps/api/src/routes.js');
+  const schedule = await source('apps/web/src/pages/Schedule.jsx');
+  const api = await source('apps/web/src/lib/api.js');
+
+  assert.match(routes, /apiRouter\.put\('\/activities\/:id'/);
+  assert.match(routes, /ACTIVITY_UPDATE/);
+  assert.match(routes, /details: \{ before:/);
+  assert.match(schedule, /startEditActivity/);
+  assert.match(schedule, /saveActivityEdit/);
+  assert.match(api, /updateActivity/);
+});
+
+test('transactions support audited edit and delete while preserving Drive evidence references', async () => {
+  const routes = await source('apps/api/src/routes.js');
+  const transactions = await source('apps/web/src/pages/Transactions.jsx');
+  const row = await source('apps/web/src/components/TransactionRow.jsx');
+  const admin = await source('apps/web/src/pages/AdminSettings.jsx');
+
+  assert.match(routes, /apiRouter\.put\([\s\S]*'\/transactions\/:id'/);
+  assert.match(routes, /TRANSACTION_UPDATE/);
+  assert.match(routes, /before: existing/);
+  assert.match(routes, /after: updated/);
+  assert.match(routes, /apiRouter\.delete\([\s\S]*'\/transactions\/:id'/);
+  assert.match(routes, /TRANSACTION_DELETE/);
+  assert.match(routes, /evidencePreservedOnGoogleDrive/);
+  assert.match(transactions, /TransactionEditPanel/);
+  assert.match(transactions, /api\.deleteTransaction/);
+  assert.match(row, /onEdit/);
+  assert.match(row, /onDelete/);
+  assert.match(admin, /AuditTransactionDetails/);
+  assert.match(admin, /Lihat snapshot transaksi terhapus/);
+});
+
+test('header includes explicit Gregorian date and running text is sized for TV readability', async () => {
+  const jsx = await source('apps/web/src/pages/PublicDisplay.jsx');
+  const css = await source('apps/web/src/styles/public-display.css');
+
+  assert.match(jsx, /\{masehiDate\} Masehi/);
+  assert.match(jsx, /\{weekday\}/);
+  assert.match(css, /\.verse-ticker-item strong \{[\s\S]*font-size:\s*clamp\(14px, 1\.18vw, 19px\)/);
+  assert.match(css, /\.verse-ticker-label span \{[\s\S]*font-size:\s*clamp\(11px, \.88vw, 14px\)/);
 });

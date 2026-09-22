@@ -42,6 +42,14 @@ const transactionSchema = z.object({
   description: z.string().trim().max(300).optional().default('')
 });
 
+const transactionEditSchema = transactionSchema.omit({ type: true });
+
+const fridayScheduleSchema = z.object({
+  imam: z.string().trim().min(2).max(120),
+  khatib: z.string().trim().min(2).max(120),
+  bilal: z.string().trim().min(2).max(120)
+});
+
 const setupSchema = z.object({
   name: z.string().trim().min(2).max(100),
   email: z.string().trim().email().max(160),
@@ -219,6 +227,51 @@ function getUpcomingActivities(date, limit = 6) {
     ORDER BY activity_date ASC, start_time ASC
     LIMIT ?
   `).all(date, limit).map((row) => ({ ...row, isPublished: Boolean(row.isPublished) }));
+}
+
+function isFridayDate(date) {
+  if (!datePattern.test(String(date ?? ''))) return false;
+  return new Date(`${date}T12:00:00+07:00`).getUTCDay() === 5;
+}
+
+function getFridaySchedule(date) {
+  if (!isFridayDate(date)) return null;
+  return db.prepare(`
+    SELECT
+      schedule_date AS scheduleDate,
+      imam,
+      khatib,
+      bilal,
+      updated_at AS updatedAt
+    FROM friday_schedules
+    WHERE schedule_date = ?
+  `).get(date) ?? null;
+}
+
+function getTransactionRecord(id) {
+  return db.prepare(`
+    SELECT
+      id,
+      type,
+      amount,
+      transaction_date AS transactionDate,
+      method,
+      category,
+      category_id AS categoryId,
+      source_detail AS sourceDetail,
+      description,
+      evidence_drive_file_id AS evidenceFileId,
+      evidence_original_name AS evidenceOriginalName,
+      evidence_mime_type AS evidenceMimeType,
+      mutation_drive_file_id AS bankMutationFileId,
+      mutation_original_name AS bankMutationOriginalName,
+      mutation_mime_type AS bankMutationMimeType,
+      created_by AS createdBy,
+      created_at AS createdAt,
+      updated_at AS updatedAt
+    FROM transactions
+    WHERE id = ?
+  `).get(id) ?? null;
 }
 
 function todayIso(timeZone = PRAYER_LOCATION.timezone) {
@@ -475,6 +528,7 @@ apiRouter.get('/public/display', async (req, res) => {
     prayerSchedule,
     nextDayPrayerSchedule,
     activities: getUpcomingActivities(date, 4).filter((item) => item.isPublished),
+    fridaySchedule: getFridaySchedule(date),
     recentTransactions,
     messages: getActivePublicMessages()
   });
@@ -554,7 +608,8 @@ apiRouter.get('/transactions', requireAuth, (req, res) => {
       mutation_drive_file_id AS bankMutationFileId,
       mutation_original_name AS bankMutationOriginalName,
       mutation_mime_type AS bankMutationMimeType,
-      created_at AS createdAt
+      created_at AS createdAt,
+      updated_at AS updatedAt
     FROM transactions
     ${where}
     ORDER BY transaction_date DESC, created_at DESC
@@ -676,6 +731,8 @@ apiRouter.post(
         transaction_date AS transactionDate,
         method,
         category,
+        category_id AS categoryId,
+        source_detail AS sourceDetail,
         description,
         evidence_drive_file_id AS evidenceFileId,
         evidence_original_name AS evidenceOriginalName,
@@ -711,6 +768,110 @@ apiRouter.post(
       transaction,
       summary,
       notification
+    });
+  }
+);
+
+apiRouter.put(
+  '/transactions/:id',
+  requireAuth,
+  requireRole('ADMIN', 'TREASURER'),
+  (req, res) => {
+    const existing = getTransactionRecord(req.params.id);
+    if (!existing) return res.status(404).json({ message: 'Transaksi tidak ditemukan.' });
+
+    const parsed = transactionEditSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(422).json({
+        message: 'Perubahan transaksi belum valid.',
+        errors: parsed.error.flatten().fieldErrors
+      });
+    }
+
+    const input = parsed.data;
+    const category = db.prepare(`
+      SELECT id, type, name, is_active AS isActive
+      FROM transaction_categories
+      WHERE id = ?
+      LIMIT 1
+    `).get(input.categoryId);
+
+    if (
+      !category ||
+      category.type !== existing.type ||
+      (!category.isActive && Number(category.id) !== Number(existing.categoryId))
+    ) {
+      return res.status(422).json({
+        message: 'Kategori transaksi tidak valid untuk jenis transaksi ini.'
+      });
+    }
+
+    db.prepare(`
+      UPDATE transactions
+      SET
+        amount = ?,
+        transaction_date = ?,
+        method = ?,
+        category = ?,
+        category_id = ?,
+        source_detail = ?,
+        description = ?,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(
+      input.amount,
+      input.transactionDate,
+      input.method,
+      category.name,
+      category.id,
+      existing.type === 'INCOME' ? input.sourceDetail : '',
+      input.description,
+      existing.id
+    );
+
+    const updated = getTransactionRecord(existing.id);
+    logAudit(req, {
+      action: 'TRANSACTION_UPDATE',
+      entityType: 'TRANSACTION',
+      entityId: existing.id,
+      details: {
+        before: existing,
+        after: updated
+      }
+    });
+
+    return res.json({
+      message: 'Transaksi berhasil diperbarui.',
+      transaction: updated,
+      summary: getSummary()
+    });
+  }
+);
+
+apiRouter.delete(
+  '/transactions/:id',
+  requireAuth,
+  requireRole('ADMIN', 'TREASURER'),
+  (req, res) => {
+    const existing = getTransactionRecord(req.params.id);
+    if (!existing) return res.status(404).json({ message: 'Transaksi tidak ditemukan.' });
+
+    db.prepare('DELETE FROM transactions WHERE id = ?').run(existing.id);
+
+    logAudit(req, {
+      action: 'TRANSACTION_DELETE',
+      entityType: 'TRANSACTION',
+      entityId: existing.id,
+      details: {
+        deleted: existing,
+        evidencePreservedOnGoogleDrive: Boolean(existing.evidenceFileId),
+        mutationPreservedOnGoogleDrive: Boolean(existing.bankMutationFileId)
+      }
+    });
+
+    return res.json({
+      message: 'Transaksi berhasil dihapus. Bukti Google Drive dipertahankan untuk audit.',
+      summary: getSummary()
     });
   }
 );
@@ -936,6 +1097,49 @@ apiRouter.get('/reports/transactions.csv', requireAuth, (req, res) => {
   res.send('\uFEFF' + lines.join('\n'));
 });
 
+apiRouter.get('/friday-schedules', requireAuth, (req, res) => {
+  const date = datePattern.test(String(req.query.date ?? '')) ? String(req.query.date) : todayIso();
+  res.json({
+    date,
+    isFriday: isFridayDate(date),
+    schedule: getFridaySchedule(date)
+  });
+});
+
+apiRouter.put('/friday-schedules/:date', requireAuth, requireRole('ADMIN'), (req, res) => {
+  if (!datePattern.test(req.params.date) || !isFridayDate(req.params.date)) {
+    return res.status(422).json({ message: 'Jadwal Jumat hanya dapat disimpan untuk tanggal hari Jumat.' });
+  }
+
+  const parsed = fridayScheduleSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(422).json({ message: 'Data petugas Jumat belum valid.', errors: parsed.error.flatten().fieldErrors });
+  }
+
+  const before = getFridaySchedule(req.params.date);
+  const input = parsed.data;
+
+  db.prepare(`
+    INSERT INTO friday_schedules (schedule_date, imam, khatib, bilal, updated_at)
+    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(schedule_date) DO UPDATE SET
+      imam = excluded.imam,
+      khatib = excluded.khatib,
+      bilal = excluded.bilal,
+      updated_at = CURRENT_TIMESTAMP
+  `).run(req.params.date, input.imam, input.khatib, input.bilal);
+
+  const after = getFridaySchedule(req.params.date);
+  logAudit(req, {
+    action: before ? 'FRIDAY_SCHEDULE_UPDATE' : 'FRIDAY_SCHEDULE_CREATE',
+    entityType: 'FRIDAY_SCHEDULE',
+    entityId: req.params.date,
+    details: { before, after }
+  });
+
+  return res.json({ schedule: after });
+});
+
 apiRouter.get('/prayer-schedules', requireAuth, async (req, res) => {
   const date = datePattern.test(String(req.query.date ?? '')) ? String(req.query.date) : todayIso();
   res.json(await getProviderPrayerSchedule(date));
@@ -1016,6 +1220,59 @@ apiRouter.post('/activities', requireAuth, requireRole('ADMIN'), (req, res) => {
   });
 
   res.status(201).json({ id: Number(result.lastInsertRowid) });
+});
+
+apiRouter.put('/activities/:id', requireAuth, requireRole('ADMIN'), (req, res) => {
+  const existing = db.prepare(`
+    SELECT
+      id,
+      title,
+      activity_date AS activityDate,
+      start_time AS startTime,
+      location,
+      speaker,
+      live_url AS liveUrl,
+      is_published AS isPublished
+    FROM activities
+    WHERE id = ?
+  `).get(req.params.id);
+
+  if (!existing) return res.status(404).json({ message: 'Kegiatan tidak ditemukan.' });
+
+  const parsed = activitySchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(422).json({ message: 'Perubahan kegiatan belum valid.', errors: parsed.error.flatten().fieldErrors });
+  }
+
+  const input = parsed.data;
+  db.prepare(`
+    UPDATE activities
+    SET title = ?, activity_date = ?, start_time = ?, location = ?, speaker = ?, live_url = ?, is_published = ?
+    WHERE id = ?
+  `).run(
+    input.title,
+    input.activityDate,
+    input.startTime || null,
+    input.location || null,
+    input.speaker || null,
+    input.liveUrl || null,
+    input.isPublished ? 1 : 0,
+    existing.id
+  );
+
+  const after = {
+    id: existing.id,
+    ...input
+  };
+
+  logAudit(req, {
+    action: 'ACTIVITY_UPDATE',
+    entityType: 'ACTIVITY',
+    entityId: existing.id,
+    details: { before: { ...existing, isPublished: Boolean(existing.isPublished) }, after }
+  });
+
+  return res.json(after);
 });
 
 apiRouter.delete('/activities/:id', requireAuth, requireRole('ADMIN'), (req, res) => {

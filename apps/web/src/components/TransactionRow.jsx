@@ -1,8 +1,8 @@
-import { ArrowDownLeft, ArrowUpRight, FileText, Paperclip } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, FileText, Paperclip, Pencil, Trash2 } from 'lucide-react';
 import { formatDate, formatRupiah } from '../lib/format.js';
 import { api } from '../lib/api.js';
 
-export function TransactionRow({ transaction, compact = false }) {
+export function TransactionRow({ transaction, compact = false, onEdit, onDelete, busy = false }) {
   const income = transaction.type === 'INCOME';
   const Icon = income ? ArrowDownLeft : ArrowUpRight;
 
@@ -30,6 +30,21 @@ export function TransactionRow({ transaction, compact = false }) {
           <div className="attachment-links">
             {transaction.evidenceFileId && <a href={api.attachmentUrl(transaction.id, 'evidence')} target="_blank" rel="noreferrer"><FileText size={14} /> Bukti transaksi</a>}
             {transaction.bankMutationFileId && <a href={api.attachmentUrl(transaction.id, 'mutation')} target="_blank" rel="noreferrer"><FileText size={14} /> Mutasi rekening</a>}
+          </div>
+        )}
+
+        {!compact && (onEdit || onDelete) && (
+          <div className="transaction-row-actions">
+            {onEdit && (
+              <button type="button" className="text-button" onClick={() => onEdit(transaction)} disabled={busy}>
+                <Pencil size={14} /> Edit
+              </button>
+            )}
+            {onDelete && (
+              <button type="button" className="text-button danger-text-button" onClick={() => onDelete(transaction)} disabled={busy}>
+                <Trash2 size={14} /> Hapus
+              </button>
+            )}
           </div>
         )}
       </div>
