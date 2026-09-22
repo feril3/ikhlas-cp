@@ -84,3 +84,39 @@ test('phase 2 reports combines Recharts analysis with verifiable numeric tables'
   assert.match(reports, /Unduh CSV/);
   assert.doesNotMatch(reports, /section-kicker/);
 });
+
+
+test('phase 3 transactions use TanStack desktop tables, mobile cards, Radix sheets, and alert dialogs', async () => {
+  const page = await source('apps/web/src/pages/Transactions.jsx');
+  const table = await source('apps/web/src/components/finance/TransactionTable.jsx');
+  const edit = await source('apps/web/src/components/finance/TransactionEditSheet.jsx');
+  const remove = await source('apps/web/src/components/finance/TransactionDeleteDialog.jsx');
+
+  assert.match(page, /TransactionTable/);
+  assert.match(page, /TransactionMobileList/);
+  assert.match(page, /TransactionEditSheet/);
+  assert.match(page, /TransactionDeleteDialog/);
+  assert.doesNotMatch(page, /window\.confirm/);
+  assert.doesNotMatch(page, /TransactionRow/);
+
+  assert.match(table, /@tanstack\/react-table/);
+  assert.match(table, /getPaginationRowModel/);
+  assert.match(table, /DropdownMenu/);
+  assert.match(edit, /SheetContent/);
+  assert.match(edit, /FieldGroup/);
+  assert.match(remove, /AlertDialogContent/);
+});
+
+test('phase 3 transaction entry is mobile-first shadcn form composition', async () => {
+  const form = await source('apps/web/src/pages/TransactionForm.jsx');
+
+  assert.match(form, /InputGroup/);
+  assert.match(form, /ToggleGroup/);
+  assert.match(form, /FieldGroup/);
+  assert.match(form, /SelectGroup/);
+  assert.match(form, /UploadField/);
+  assert.match(form, /fixed inset-x-0 bottom-0/);
+  assert.match(form, /@tabler\/icons-react/);
+  assert.doesNotMatch(form, /lucide-react/);
+  assert.doesNotMatch(form, /section-kicker/);
+});
