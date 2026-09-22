@@ -341,3 +341,65 @@ test('phase 6a charts render immediately with compact non-wrapping axes', async 
   assert.match(reports, /isAnimationActive=\{false\}/);
   assert.doesNotMatch(reports, /function compactRupiah/);
 });
+
+
+test('phase 6b contrast tokens meet visual accessibility gates', async () => {
+  const uiCss = await source('apps/web/src/styles/ui.css');
+
+  function token(name) {
+    const match = uiCss.match(new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{6})`));
+    assert.ok(match, `Missing color token --${name}`);
+    return match[1];
+  }
+
+  function luminance(hex) {
+    const channels = hex.slice(1).match(/.{2}/g).map((part) => Number.parseInt(part, 16) / 255);
+    const linear = channels.map((value) => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+  }
+
+  function contrast(a, b) {
+    const first = luminance(a);
+    const second = luminance(b);
+    const lighter = Math.max(first, second);
+    const darker = Math.min(first, second);
+    return (lighter + 0.05) / (darker + 0.05);
+  }
+
+  assert.ok(contrast(token('ui-input'), token('ui-card')) >= 3, 'Input boundary must reach 3:1 against card');
+  assert.ok(contrast(token('ui-muted-foreground'), token('ui-background')) >= 4.5, 'Muted text must reach 4.5:1 against app background');
+  assert.match(uiCss, /:where\(\.dashboard-shell \*\)/);
+  assert.doesNotMatch(uiCss, /\.dashboard-shell \* \{/);
+});
+
+test('phase 6b primitives expose clear borders, focus and selected states', async () => {
+  const input = await source('apps/web/src/components/ui/input.jsx');
+  const textarea = await source('apps/web/src/components/ui/textarea.jsx');
+  const inputGroup = await source('apps/web/src/components/ui/input-group.jsx');
+  const button = await source('apps/web/src/components/ui/button.jsx');
+  const table = await source('apps/web/src/components/ui/table.jsx');
+  const toggle = await source('apps/web/src/components/ui/toggle.jsx');
+  const select = await source('apps/web/src/components/ui/select.jsx');
+  const switchUi = await source('apps/web/src/components/ui/switch.jsx');
+  const badge = await source('apps/web/src/components/ui/badge.jsx');
+  const alert = await source('apps/web/src/components/ui/alert.jsx');
+  const settingsNav = await source('apps/web/src/components/settings/SettingsNav.jsx');
+
+  assert.match(input, /border-input/);
+  assert.match(input, /hover:border-ring\/70/);
+  assert.match(textarea, /bg-card/);
+  assert.match(textarea, /focus-visible:ring-ring\/25/);
+  assert.match(inputGroup, /bg-card/);
+  assert.match(button, /outline: 'border border-input/);
+  assert.match(table, /bg-muted\/55/);
+  assert.match(table, /hover:bg-accent\/45/);
+  assert.match(toggle, /data-\[state=on\]:border-primary\/55/);
+  assert.match(toggle, /data-\[state=on\]:bg-accent/);
+  assert.match(select, /hover:border-ring\/70/);
+  assert.match(switchUi, /border border-input bg-card/);
+  assert.match(switchUi, /data-\[state=checked\]:border-primary/);
+  assert.match(badge, /ui-success-border/);
+  assert.match(alert, /ui-danger-border/);
+  assert.doesNotMatch(alert, /opacity-90/);
+  assert.match(settingsNav, /inset_3px_0_0_var\(--ui-primary\)/);
+});
