@@ -56,7 +56,7 @@ function NavigationPanel({ mobile = false }) {
   return (
     <>
       <SidebarHeader className="border-b border-sidebar-border">
-        <div className="flex h-11 items-center px-1">
+        <div className={`flex h-11 items-center ${expanded ? 'px-1' : 'justify-center'}`}>
           <AppBrand compact={!expanded} />
         </div>
       </SidebarHeader>
@@ -75,7 +75,7 @@ function NavigationPanel({ mobile = false }) {
                     return (
                       <Tooltip key={to}>
                         <TooltipTrigger asChild>
-                          <SidebarMenuButton asChild active={active}>
+                          <SidebarMenuButton asChild active={active} className={!expanded ? 'justify-center px-0' : undefined}>
                             <NavLink
                               to={to}
                               end={to === '/'}
@@ -100,7 +100,7 @@ function NavigationPanel({ mobile = false }) {
             <SidebarMenu>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton asChild className={!expanded ? 'justify-center px-0' : undefined}>
                     <a href="/public-display" target="_blank" rel="noreferrer">
                       <IconScreenShare aria-hidden="true" stroke={1.8} />
                       {expanded && (
@@ -120,7 +120,7 @@ function NavigationPanel({ mobile = false }) {
       </SidebarContent>
 
       <SidebarFooter>
-        <div className={expanded ? 'rounded-md bg-sidebar-accent/35' : 'flex justify-center'}>
+        <div className={expanded ? 'rounded-md bg-sidebar-accent/35' : 'flex w-full justify-center'}>
           <UserMenu compact={!expanded} sidebar />
         </div>
       </SidebarFooter>
