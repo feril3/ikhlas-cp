@@ -67,7 +67,7 @@ export default function AdminSettings() {
   if (!settings && !loadingError) return <LoadingState label="Memuat pengaturan..." />;
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-5">
       <PageHeader
         title="Pengaturan"
         description="Kelola identitas masjid, keuangan awal, kategori, Public Display, pengguna, dan audit tanpa menumpuk semuanya dalam satu halaman."
@@ -80,9 +80,9 @@ export default function AdminSettings() {
       )}
 
       {settings && (
-        <div className="grid gap-5 md:grid-cols-[220px_minmax(0,1fr)] md:items-start">
+        <div className="grid gap-5 lg:grid-cols-[190px_minmax(0,1fr)] lg:items-start">
           <SettingsNav value={active} onChange={setActive} />
-          <div className="min-w-0">
+          <div className="min-w-0 max-w-5xl">
             {active === 'general' && <GeneralSettings settings={settings} setSettings={setSettings} onSave={saveSettings} saving={savingSettings} />}
             {active === 'finance' && <FinanceSettings settings={settings} setSettings={setSettings} onSave={saveSettings} saving={savingSettings} />}
             {active === 'categories' && <CategorySettings categories={categories} api={api} reload={load} />}
