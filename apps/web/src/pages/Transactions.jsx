@@ -1,223 +1,178 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowDownToLine, ArrowUpFromLine, Filter, Save, Search, X } from 'lucide-react';
-import { api } from '../lib/api.js';
-import { formatRupiah } from '../lib/format.js';
-import { LoadingState } from '../components/LoadingState.jsx';
-import { TransactionRow } from '../components/TransactionRow.jsx';
-import { useAuth } from '../auth/AuthContext.jsx';
+import {
+  IconArrowDown,
+  IconArrowUp,
+  IconSearch,
+  IconX
+} from '@tabler/icons-react';
+import { api } from '@/lib/api.js';
+import { formatRupiah } from '@/lib/format.js';
+import { useAuth } from '@/auth/AuthContext.jsx';
+import { PageHeader } from '@/components/app/PageHeader.jsx';
+import { TransactionDeleteDialog } from '@/components/finance/TransactionDeleteDialog.jsx';
+import { TransactionEditSheet } from '@/components/finance/TransactionEditSheet.jsx';
+import { TransactionMobileList } from '@/components/finance/TransactionMobileList.jsx';
+import { TransactionTable } from '@/components/finance/TransactionTable.jsx';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
 
-function TransactionEditPanel({ transaction, onClose, onSaved }) {
-  const income = transaction.type === 'INCOME';
-  const [categories, setCategories] = useState([]);
-  const [form, setForm] = useState({
-    amount: transaction.amount,
-    transactionDate: transaction.transactionDate,
-    method: transaction.method,
-    categoryId: String(transaction.categoryId ?? ''),
-    sourceDetail: transaction.sourceDetail ?? '',
-    description: transaction.description ?? ''
-  });
-  const [status, setStatus] = useState({ type: 'loading', message: 'Memuat kategori...' });
-
-  useEffect(() => {
-    let cancelled = false;
-    api.transactionCategories(transaction.type)
-      .then((result) => {
-        if (cancelled) return;
-        const available = result.data.filter(
-          (item) => item.isActive || Number(item.id) === Number(transaction.categoryId)
-        );
-        setCategories(available);
-        setForm((current) => ({
-          ...current,
-          categoryId: current.categoryId || String(available.find((item) => item.name === transaction.category)?.id ?? '')
-        }));
-        setStatus({ type: 'idle', message: '' });
-      })
-      .catch((error) => {
-        if (!cancelled) setStatus({ type: 'error', message: error.message });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [transaction]);
-
-  function update(name, value) {
-    setForm((current) => ({ ...current, [name]: value }));
-  }
-
-  async function submit(event) {
-    event.preventDefault();
-    setStatus({ type: 'loading', message: 'Menyimpan perubahan...' });
-    try {
-      await api.updateTransaction(transaction.id, {
-        amount: Number(form.amount),
-        transactionDate: form.transactionDate,
-        method: form.method,
-        categoryId: Number(form.categoryId),
-        sourceDetail: income ? form.sourceDetail : '',
-        description: form.description
-      });
-      setStatus({ type: 'success', message: 'Transaksi berhasil diperbarui.' });
-      await onSaved();
-      onClose();
-    } catch (error) {
-      setStatus({ type: 'error', message: error.message });
-    }
-  }
-
+function SummaryMetric({ label, value, tone }) {
   return (
-    <div className="modal-backdrop" role="presentation" onMouseDown={(event) => {
-      if (event.target === event.currentTarget) onClose();
-    }}>
-      <section className="transaction-edit-modal" role="dialog" aria-modal="true" aria-labelledby="edit-transaction-title">
-        <header className="modal-heading">
-          <div>
-            <p className="section-kicker">Audit perubahan aktif</p>
-            <h2 id="edit-transaction-title">Edit {income ? 'Kas Masuk' : 'Kas Keluar'}</h2>
-          </div>
-          <button type="button" className="icon-button" onClick={onClose} aria-label="Tutup"><X size={18} /></button>
-        </header>
-
-        <form className="transaction-edit-form" onSubmit={submit}>
-          <label className="field">
-            <span>Nominal</span>
-            <input type="number" min="1" max="9999999999" inputMode="numeric" value={form.amount} onChange={(event) => update('amount', event.target.value)} required />
-          </label>
-          <label className="field">
-            <span>Tanggal transaksi</span>
-            <input type="date" value={form.transactionDate} onChange={(event) => update('transactionDate', event.target.value)} required />
-          </label>
-          <label className="field">
-            <span>Metode</span>
-            <select value={form.method} onChange={(event) => update('method', event.target.value)}>
-              <option value="CASH">Cash / Tunai</option>
-              <option value="TRANSFER">Transfer Bank</option>
-            </select>
-          </label>
-          <label className="field">
-            <span>Kategori</span>
-            <select value={form.categoryId} onChange={(event) => update('categoryId', event.target.value)} required>
-              {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
-            </select>
-          </label>
-          {income && (
-            <label className="field full-field">
-              <span>Detail sumber dana</span>
-              <input maxLength="120" value={form.sourceDetail} onChange={(event) => update('sourceDetail', event.target.value)} />
-            </label>
-          )}
-          <label className="field full-field">
-            <span>Keterangan</span>
-            <textarea rows="4" maxLength="300" value={form.description} onChange={(event) => update('description', event.target.value)} />
-          </label>
-
-          {status.message && <div className={`notice ${status.type} full-field`}>{status.message}</div>}
-          <p className="audit-edit-note full-field">Nilai sebelum dan sesudah perubahan dicatat ke audit trail. Jenis kas masuk/keluar tidak dapat diubah.</p>
-
-          <div className="inline-actions full-field">
-            <button type="button" className="button secondary" onClick={onClose}>Batal</button>
-            <button className="button primary" disabled={status.type === 'loading' || !form.categoryId}>
-              <Save size={16} /> Simpan perubahan
-            </button>
-          </div>
-        </form>
-      </section>
+    <div className="min-w-0 px-4 py-4 sm:px-5">
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      <strong className={`mt-1.5 block truncate text-lg font-semibold tabular-nums sm:text-xl ${tone === 'income' ? 'text-primary' : tone === 'expense' ? 'text-destructive' : ''}`}>{value}</strong>
     </div>
   );
 }
 
 export default function Transactions() {
   const { user } = useAuth();
-  const canManageTransactions = ['ADMIN', 'TREASURER'].includes(user?.role);
-  const [type, setType] = useState('');
-  const [query, setQuery] = useState('');
+  const canManage = ['ADMIN', 'TREASURER'].includes(user?.role);
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
+  const [filters, setFilters] = useState({
+    query: '',
+    type: 'ALL',
+    method: 'ALL',
+    from: '',
+    to: ''
+  });
   const [editing, setEditing] = useState(null);
-  const [busyId, setBusyId] = useState(null);
+  const [deleting, setDeleting] = useState(null);
 
   async function loadTransactions() {
     setError('');
     try {
-      const result = await api.transactions({ type: type || undefined });
-      setData(result);
+      setData(await api.transactions());
     } catch (err) {
       setError(err.message);
     }
   }
 
   useEffect(() => {
-    setData(null);
     loadTransactions();
-  }, [type]);
+  }, []);
 
-  async function deleteTransaction(transaction) {
-    const attachmentNote = transaction.evidenceFileId || transaction.bankMutationFileId
-      ? '\n\nFile bukti di Google Drive akan dipertahankan untuk audit.'
-      : '';
-    if (!window.confirm(`Hapus transaksi ${transaction.category} sebesar ${formatRupiah(transaction.amount)}?${attachmentNote}`)) return;
+  const filtered = useMemo(() => {
+    const query = filters.query.trim().toLowerCase();
+    return (data?.data ?? []).filter((item) => {
+      if (filters.type !== 'ALL' && item.type !== filters.type) return false;
+      if (filters.method !== 'ALL' && item.method !== filters.method) return false;
+      if (filters.from && item.transactionDate < filters.from) return false;
+      if (filters.to && item.transactionDate > filters.to) return false;
+      if (!query) return true;
+      return `${item.category} ${item.sourceDetail ?? ''} ${item.description ?? ''}`.toLowerCase().includes(query);
+    });
+  }, [data, filters]);
 
-    setBusyId(transaction.id);
-    try {
-      await api.deleteTransaction(transaction.id);
-      await loadTransactions();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusyId(null);
-    }
+  function setFilter(name, value) {
+    setFilters((current) => ({ ...current, [name]: value }));
   }
 
-  const filtered = data?.data.filter((item) => `${item.category} ${item.sourceDetail ?? ''} ${item.description ?? ''}`.toLowerCase().includes(query.toLowerCase())) ?? [];
+  function resetFilters() {
+    setFilters({ query: '', type: 'ALL', method: 'ALL', from: '', to: '' });
+  }
 
   return (
-    <div className="page-stack">
-      <header className="page-heading">
-        <div><p className="eyebrow">Keuangan</p><h1>Riwayat Transaksi</h1><p className="page-subtitle">Pantau, koreksi, dan audit kas masuk maupun keluar dalam satu tempat.</p></div>
-        {canManageTransactions && (
-          <div className="heading-actions"><Link to="/transactions/income" className="button secondary"><ArrowDownToLine size={18} /> Kas Masuk</Link><Link to="/transactions/expense" className="button primary"><ArrowUpFromLine size={18} /> Kas Keluar</Link></div>
-        )}
-      </header>
+    <div className="flex flex-col gap-5">
+      <PageHeader
+        title="Transaksi"
+        description="Cari, filter, koreksi, dan audit seluruh pencatatan kas dalam satu ledger operasional."
+        actions={canManage ? (
+          <>
+            <Button variant="outline" asChild><Link to="/transactions/income"><IconArrowDown data-icon="inline-start" /> Kas Masuk</Link></Button>
+            <Button asChild><Link to="/transactions/expense"><IconArrowUp data-icon="inline-start" /> Kas Keluar</Link></Button>
+          </>
+        ) : null}
+      />
 
-      {data && (
-        <section className="mini-summary">
-          <div><span>Saldo saat ini</span><strong>{formatRupiah(data.summary.currentBalance)}</strong></div>
-          <div><span>Total masuk</span><strong className="amount-income">+{formatRupiah(data.summary.totalIncome)}</strong></div>
-          <div><span>Total keluar</span><strong className="amount-expense">-{formatRupiah(data.summary.totalExpense)}</strong></div>
-        </section>
+      {data ? (
+        <Card className="overflow-hidden">
+          <div className="grid divide-y sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+            <SummaryMetric label="Saldo saat ini" value={formatRupiah(data.summary.currentBalance)} />
+            <SummaryMetric label="Total kas masuk" value={`+${formatRupiah(data.summary.totalIncome)}`} tone="income" />
+            <SummaryMetric label="Total kas keluar" value={`-${formatRupiah(data.summary.totalExpense)}`} tone="expense" />
+          </div>
+        </Card>
+      ) : (
+        <Skeleton className="h-24 w-full" />
       )}
 
-      <section className="panel history-panel">
-        <div className="toolbar">
-          <div className="search-box"><Search size={18} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cari transaksi..." /></div>
-          <div className="filter-group"><Filter size={17} /><button className={!type ? 'active' : ''} onClick={() => setType('')}>Semua</button><button className={type === 'INCOME' ? 'active' : ''} onClick={() => setType('INCOME')}>Masuk</button><button className={type === 'EXPENSE' ? 'active' : ''} onClick={() => setType('EXPENSE')}>Keluar</button></div>
-        </div>
-        {error && <div className="notice error">{error}</div>}
-        {!data && !error && <LoadingState />}
-        {data && (
-          <div className="transaction-list full-list">
-            {filtered.length ? filtered.map((item) => (
-              <TransactionRow
-                key={item.id}
-                transaction={item}
-                busy={busyId === item.id}
-                onEdit={canManageTransactions ? setEditing : undefined}
-                onDelete={canManageTransactions ? deleteTransaction : undefined}
-              />
-            )) : <div className="empty-state">Tidak ada transaksi yang cocok.</div>}
+      <Card className="overflow-hidden">
+        <CardContent className="border-b p-3 sm:p-4">
+          <div className="grid gap-2 lg:grid-cols-[minmax(220px,1fr)_160px_160px_150px_150px_auto]">
+            <div className="relative">
+              <IconSearch className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input className="pl-9" value={filters.query} onChange={(event) => setFilter('query', event.target.value)} placeholder="Cari kategori, sumber, keterangan..." />
+            </div>
+
+            <Select value={filters.type} onValueChange={(value) => setFilter('type', value)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent><SelectGroup>
+                <SelectItem value="ALL">Semua jenis</SelectItem>
+                <SelectItem value="INCOME">Kas Masuk</SelectItem>
+                <SelectItem value="EXPENSE">Kas Keluar</SelectItem>
+              </SelectGroup></SelectContent>
+            </Select>
+
+            <Select value={filters.method} onValueChange={(value) => setFilter('method', value)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent><SelectGroup>
+                <SelectItem value="ALL">Semua metode</SelectItem>
+                <SelectItem value="CASH">Tunai</SelectItem>
+                <SelectItem value="TRANSFER">Transfer</SelectItem>
+              </SelectGroup></SelectContent>
+            </Select>
+
+            <Input type="date" aria-label="Dari tanggal" value={filters.from} onChange={(event) => setFilter('from', event.target.value)} />
+            <Input type="date" aria-label="Sampai tanggal" value={filters.to} onChange={(event) => setFilter('to', event.target.value)} />
+
+            <Button variant="ghost" onClick={resetFilters} disabled={!filters.query && filters.type === 'ALL' && filters.method === 'ALL' && !filters.from && !filters.to}>
+              <IconX data-icon="inline-start" /> Reset
+            </Button>
+          </div>
+          <div className="mt-2 text-[11px] text-muted-foreground">{filtered.length} dari {data?.data.length ?? 0} transaksi</div>
+        </CardContent>
+
+        {error && <div className="p-4"><Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert></div>}
+
+        {!data && !error && (
+          <div className="p-4">
+            <Skeleton className="h-[360px] w-full" />
           </div>
         )}
-      </section>
 
-      {editing && (
-        <TransactionEditPanel
-          transaction={editing}
-          onClose={() => setEditing(null)}
-          onSaved={loadTransactions}
-        />
-      )}
+        {data && (
+          <>
+            <div className="hidden md:block">
+              <TransactionTable data={filtered} canManage={canManage} onEdit={setEditing} onDelete={setDeleting} />
+            </div>
+            <div className="md:hidden">
+              <TransactionMobileList data={filtered} canManage={canManage} onEdit={setEditing} onDelete={setDeleting} />
+            </div>
+          </>
+        )}
+      </Card>
+
+      <TransactionEditSheet
+        transaction={editing}
+        open={Boolean(editing)}
+        onOpenChange={(open) => !open && setEditing(null)}
+        onSaved={loadTransactions}
+      />
+
+      <TransactionDeleteDialog
+        transaction={deleting}
+        open={Boolean(deleting)}
+        onOpenChange={(open) => !open && setDeleting(null)}
+        onDeleted={loadTransactions}
+        onError={(err) => setError(err.message)}
+      />
     </div>
   );
 }
