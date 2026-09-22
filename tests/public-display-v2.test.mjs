@@ -145,7 +145,9 @@ test('public display copy stays jamaah-first and hides technical/product brandin
   assert.doesNotMatch(jsx, /cache aman/i);
   assert.doesNotMatch(jsx, /Fallback jadwal lokal/);
 
+  const prayerHelper = await source('apps/web/src/lib/prayerDisplay.js');
+
   assert.match(jsx, /Iqamah 5 menit setelah adzan/);
-  assert.match(jsx, /Salat berikutnya/);
+  assert.match(prayerHelper, /Salat berikutnya/);
   assert.match(jsx, /Transaksi Terbaru/);
 });
