@@ -22,16 +22,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const chartConfig = {
-  income: { label: 'Kas masuk', color: 'var(--color-chart-1)' },
-  expense: { label: 'Kas keluar', color: 'var(--color-chart-2)' }
+  income: { label: 'Kas masuk', color: 'var(--ui-chart-1)' },
+  expense: { label: 'Kas keluar', color: 'var(--ui-chart-2)' }
 };
 
-function compactRupiah(value) {
+function formatAxisAmount(value) {
   const number = Number(value ?? 0);
-  if (Math.abs(number) >= 1_000_000_000) return `Rp ${(number / 1_000_000_000).toFixed(number % 1_000_000_000 ? 1 : 0)} M`;
-  if (Math.abs(number) >= 1_000_000) return `Rp ${(number / 1_000_000).toFixed(number % 1_000_000 ? 1 : 0)} jt`;
-  if (Math.abs(number) >= 1_000) return `Rp ${Math.round(number / 1_000)} rb`;
-  return `Rp ${number}`;
+  const compact = (amount) => new Intl.NumberFormat('id-ID', { maximumFractionDigits: 1 }).format(amount);
+  if (Math.abs(number) >= 1_000_000_000) return `${compact(number / 1_000_000_000)} M`;
+  if (Math.abs(number) >= 1_000_000) return `${compact(number / 1_000_000)} jt`;
+  if (Math.abs(number) >= 1_000) return `${compact(number / 1_000)} rb`;
+  return new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(number);
 }
 
 function Metric({ label, value, tone = 'default', caption }) {
@@ -152,7 +153,7 @@ export default function Dashboard() {
                 </Button>
               </CardHeader>
               <CardContent>
-                <ChartContainer config={chartConfig} className="h-[300px] min-h-[260px]">
+                <ChartContainer config={chartConfig} className="h-[280px] min-h-[260px]">
                   <AreaChart data={data.cashflow} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
                     <defs>
                       <linearGradient id="incomeFill" x1="0" y1="0" x2="0" y2="1">
@@ -174,10 +175,12 @@ export default function Dashboard() {
                       tickFormatter={(value) => new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(`${value}T00:00:00`))}
                     />
                     <YAxis
-                      width={58}
+                      width={54}
                       axisLine={false}
                       tickLine={false}
-                      tickFormatter={compactRupiah}
+                      tickMargin={8}
+                      tick={{ fontSize: 11 }}
+                      tickFormatter={formatAxisAmount}
                     />
                     <ChartTooltip
                       content={<ChartTooltipContent
@@ -185,8 +188,8 @@ export default function Dashboard() {
                         formatter={(value) => formatRupiah(value)}
                       />}
                     />
-                    <Area type="monotone" dataKey="income" stroke="var(--color-income)" strokeWidth={2} fill="url(#incomeFill)" />
-                    <Area type="monotone" dataKey="expense" stroke="var(--color-expense)" strokeWidth={2} fill="url(#expenseFill)" />
+                    <Area type="monotone" dataKey="income" stroke="var(--color-income)" strokeWidth={2.5} fill="url(#incomeFill)" dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
+                    <Area type="monotone" dataKey="expense" stroke="var(--color-expense)" strokeWidth={2.5} fill="url(#expenseFill)" dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
                   </AreaChart>
                 </ChartContainer>
               </CardContent>
