@@ -107,33 +107,13 @@
 .prayer-focus-panel::before {
   content: "";
   position: absolute;
-  display: none;
-}
-
-.prayer-focus-panel::after {
-  content: "";
-  position: absolute;
-  left: 8%;
-  right: 8%;
-  top: 10%;
-  height: 49%;
-  border: 1px solid rgba(209, 174, 105, .43);
-  border-bottom: 0;
-  border-radius: 52% 52% 0 0 / 35% 35% 0 0;
+  top: 18px;
+  right: 18px;
+  width: 34px;
+  height: 34px;
+  border-top: 1px solid rgba(213, 181, 116, .42);
+  border-right: 1px solid rgba(213, 181, 116, .42);
   pointer-events: none;
-}
-
-.prayer-focus-star {
-  position: absolute;
-  top: 5.7%;
-  left: 50%;
-  z-index: 1;
-  width: clamp(20px, 1.5vw, 26px);
-  height: clamp(20px, 1.5vw, 26px);
-  transform: translateX(-50%);
-  fill: #0b3027;
-  stroke: var(--display-brass);
-  stroke-width: 2.2;
 }
 
 .prayer-focus-clock,
@@ -145,7 +125,7 @@
 }
 
 .prayer-focus-clock {
-  margin-top: 4.7dvh;
+  margin-top: .4dvh;
 }
 
 .prayer-focus-clock > span,
