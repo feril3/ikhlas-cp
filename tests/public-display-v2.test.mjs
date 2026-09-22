@@ -28,7 +28,7 @@ test('media-first layout gives YouTube the largest column and finance about twen
   assert.match(jsx, /prayer-focus-panel/);
   assert.match(jsx, /youtube-stage/);
   assert.match(jsx, /finance-rail/);
-  assert.match(css, /grid-template-columns:\s*21%\s+minmax\(0,\s*1fr\)\s+20%/);
+  assert.match(css, /grid-template-columns:\s*19%\s+minmax\(0,\s*1fr\)\s+20%/);
 
   const left = jsx.indexOf('className="prayer-focus-panel"');
   const video = jsx.indexOf('className="youtube-stage"');
@@ -166,5 +166,21 @@ test('public display hides application branding and technical provider copy', as
   assert.doesNotMatch(jsx, /Kementerian Agama Republik Indonesia/);
   assert.doesNotMatch(jsx, /cache aman/i);
   assert.doesNotMatch(jsx, /Fallback jadwal lokal/);
-  assert.match(jsx, /Iqamah 5 menit setelah adzan/);
+  assert.doesNotMatch(jsx, /Iqamah 5 menit setelah adzan/);
+});
+
+
+test('screenshot QA pass reduces dead space and framing noise', async () => {
+  const jsx = await source('apps/web/src/pages/PublicDisplay.jsx');
+  const css = await source('apps/web/src/styles/public-display.css');
+  const ornament = await source('apps/web/src/styles/public-display-ornamental.css');
+
+  assert.doesNotMatch(jsx, /youtube-caption/);
+  assert.match(jsx, /Bulan ini/);
+  assert.match(jsx, /Infaq & Donasi/);
+  assert.match(css, /minmax\(104px, 15dvh\)/);
+  assert.match(css, /minmax\(54px, 7\.4dvh\)/);
+  assert.match(css, /mask-image: linear-gradient/);
+  assert.doesNotMatch(ornament, /border-radius: 50% 50% 0 0 \/ 45% 45% 0 0/);
+  assert.match(ornament, /inset 0 2px 0/);
 });
