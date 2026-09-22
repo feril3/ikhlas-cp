@@ -35,7 +35,7 @@ jobs:
 
       - name: Initialize shadcn Radix Nova
         working-directory: apps/web
-        run: npx shadcn@latest init -y --preset radix-nova
+        run: npx shadcn@latest init -y --base radix --preset nova
 
       - name: Add phase-one shadcn primitives
         working-directory: apps/web
