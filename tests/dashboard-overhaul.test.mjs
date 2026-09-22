@@ -289,3 +289,55 @@ test('phase 5 final dashboard pages no longer depend on legacy page primitives',
     assert.doesNotMatch(content, /section-kicker|page-stack|page-heading|className="panel|className="button /);
   }
 });
+
+
+test('phase 6a overlay stack stays above sticky app chrome', async () => {
+  const sheet = await source('apps/web/src/components/ui/sheet.jsx');
+  const dialog = await source('apps/web/src/components/ui/dialog.jsx');
+  const alertDialog = await source('apps/web/src/components/ui/alert-dialog.jsx');
+  const dropdown = await source('apps/web/src/components/ui/dropdown-menu.jsx');
+  const select = await source('apps/web/src/components/ui/select.jsx');
+  const tooltip = await source('apps/web/src/components/ui/tooltip.jsx');
+  const header = await source('apps/web/src/components/app/AppHeader.jsx');
+
+  assert.match(header, /z-30/);
+  assert.match(sheet, /fixed inset-0 z-50/);
+  assert.match(sheet, /fixed z-\[60\]/);
+  assert.match(dialog, /z-\[60\]/);
+  assert.match(alertDialog, /z-\[60\]/);
+  assert.match(dropdown, /z-\[70\]/);
+  assert.match(select, /z-\[70\]/);
+  assert.match(tooltip, /z-\[80\]/);
+});
+
+test('phase 6a collapsed sidebar becomes a true icon rail with a stable account trigger', async () => {
+  const sidebarUi = await source('apps/web/src/components/ui/sidebar.jsx');
+  const sidebar = await source('apps/web/src/components/app/AppSidebar.jsx');
+  const userMenu = await source('apps/web/src/components/app/UserMenu.jsx');
+
+  assert.match(sidebarUi, /lg:data-\[state=collapsed\]:w-\[72px\]/);
+  assert.match(sidebarUi, /IconLayoutSidebarLeftExpand/);
+  assert.match(sidebarUi, /Lebarkan navigasi/);
+  assert.match(sidebar, /justify-center px-0/);
+  assert.match(sidebar, /flex w-full justify-center/);
+  assert.match(userMenu, /bg-transparent p-0 text-sidebar-foreground/);
+  assert.match(userMenu, /side=\{sidebar \? "right" : "bottom"\}/);
+  assert.match(userMenu, /Menu akun/);
+});
+
+test('phase 6a charts render immediately with compact non-wrapping axes', async () => {
+  const dashboard = await source('apps/web/src/pages/Dashboard.jsx');
+  const reports = await source('apps/web/src/pages/Reports.jsx');
+
+  assert.match(dashboard, /formatAxisAmount/);
+  assert.match(dashboard, /color: 'var\(--ui-chart-1\)'/);
+  assert.match(dashboard, /color: 'var\(--ui-chart-2\)'/);
+  assert.match(dashboard, /tickFormatter=\{formatAxisAmount\}/);
+  assert.match(dashboard, /isAnimationActive=\{false\}/);
+  assert.doesNotMatch(dashboard, /function compactRupiah/);
+
+  assert.match(reports, /formatAxisAmount/);
+  assert.match(reports, /tickFormatter=\{formatAxisAmount\}/);
+  assert.match(reports, /isAnimationActive=\{false\}/);
+  assert.doesNotMatch(reports, /function compactRupiah/);
+});
