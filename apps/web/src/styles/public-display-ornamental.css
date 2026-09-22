@@ -741,3 +741,453 @@
     animation: none;
   }
 }
+
+
+/* Screenshot QA pass: visual balance, viewing-distance legibility, and stronger slide composition. */
+.signage-header {
+  grid-template-columns: minmax(270px, 1fr) minmax(76px, .25fr) minmax(300px, .9fr) auto;
+}
+
+.signage-brand span {
+  font-size: clamp(9px, .78vw, 13px);
+}
+
+.signage-location strong {
+  font-size: clamp(11px, 1vw, 16px);
+}
+
+.signage-location span {
+  font-size: clamp(9px, .78vw, 13px);
+}
+
+.signage-date {
+  font-size: clamp(11px, .98vw, 16px);
+  font-weight: 720;
+}
+
+.mihrab-line-outer {
+  stroke-width: 1.85;
+  opacity: .82;
+}
+
+.mihrab-line-middle {
+  stroke-width: 1.05;
+  opacity: .48;
+}
+
+.mihrab-line-inner {
+  stroke-width: .9;
+  opacity: .32;
+}
+
+.mihrab-base,
+.mihrab-column,
+.mihrab-capital {
+  stroke-width: .95;
+  opacity: .42;
+}
+
+.signage-primary-star {
+  top: 1.8dvh;
+  width: clamp(19px, 1.5vw, 25px);
+  height: clamp(19px, 1.5vw, 25px);
+  opacity: .82;
+}
+
+.signage-clock {
+  margin-top: 3.2dvh;
+}
+
+.signage-clock > span {
+  color: #c8b27f;
+  font-size: clamp(10px, .82vw, 13px);
+}
+
+.signage-clock time {
+  font-size: clamp(38px, 5.15vw, 80px);
+  letter-spacing: -.045em;
+}
+
+.signage-clock::after {
+  content: "";
+  width: min(72%, 250px);
+  height: 1px;
+  margin-top: 1.1dvh;
+  background: linear-gradient(90deg, transparent, rgba(218, 188, 127, .52), transparent);
+}
+
+.signage-next-prayer {
+  align-self: start;
+  padding: 4.7dvh 0 .8dvh;
+}
+
+.signage-next-prayer > span {
+  font-size: clamp(10px, .82vw, 13px);
+}
+
+.signage-next-prayer h1 {
+  font-size: clamp(34px, 4.45vw, 70px);
+}
+
+.signage-next-meta {
+  margin-top: 1.1dvh;
+}
+
+.signage-next-meta span {
+  font-size: clamp(9px, .72vw, 11px);
+}
+
+.signage-next-meta strong {
+  font-size: clamp(21px, 2.5vw, 40px);
+}
+
+.signage-prayer-source {
+  gap: 3px;
+  padding-top: 1.15dvh;
+}
+
+.signage-prayer-source span {
+  color: #c2d0cb;
+  font-size: clamp(9px, .72vw, 11px);
+}
+
+.signage-prayer-source small {
+  color: #839b92;
+  font-size: clamp(8px, .64vw, 10px);
+}
+
+.signage-carousel {
+  border-color: rgba(222, 192, 131, .46);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, .035),
+    inset 0 0 46px rgba(207, 175, 108, .025),
+    0 16px 34px rgba(0, 0, 0, .2);
+}
+
+.signage-carousel::before {
+  border-color: rgba(224, 195, 132, .18);
+}
+
+.signage-corner-ornament {
+  stroke-width: 2;
+  opacity: .66;
+}
+
+.signage-slide-header span {
+  color: #a9b9b2;
+  font-size: clamp(9px, .74vw, 12px);
+}
+
+.signage-slide-header h2 {
+  font-size: clamp(22px, 2.1vw, 34px);
+}
+
+.signage-slide-icon {
+  width: clamp(39px, 3.05vw, 50px);
+  height: clamp(39px, 3.05vw, 50px);
+}
+
+.signage-geometric-divider {
+  margin-top: .2dvh;
+  opacity: .64;
+}
+
+.signage-slide-body {
+  padding-top: 1.5dvh;
+}
+
+.signage-donation {
+  position: relative;
+  width: min(90%, 940px);
+  min-height: 74%;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(150px, .42fr) minmax(0, 1fr);
+  align-items: center;
+  justify-items: stretch;
+  gap: clamp(28px, 3vw, 54px);
+  text-align: left;
+}
+
+.signage-donation::before {
+  content: "";
+  position: absolute;
+  inset: 4% 0;
+  border-top: 1px solid rgba(212, 179, 113, .16);
+  border-bottom: 1px solid rgba(212, 179, 113, .16);
+  pointer-events: none;
+}
+
+.signage-donation-emblem {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: clamp(130px, 12vw, 200px);
+  aspect-ratio: 1;
+  justify-self: end;
+  color: #d9bd7b;
+  border: 1px solid rgba(218, 185, 119, .48);
+  background:
+    radial-gradient(circle, rgba(203, 169, 98, .09), transparent 62%),
+    rgba(8, 33, 26, .48);
+  clip-path: polygon(50% 0%, 85% 15%, 100% 50%, 85% 85%, 50% 100%, 15% 85%, 0% 50%, 15% 15%);
+}
+
+.signage-donation-emblem::before,
+.signage-donation-emblem::after {
+  content: "";
+  position: absolute;
+  inset: 12%;
+  border: 1px solid rgba(218, 185, 119, .22);
+  transform: rotate(45deg);
+}
+
+.signage-donation-emblem::after {
+  inset: 24%;
+  opacity: .72;
+}
+
+.signage-donation-emblem > svg:last-child {
+  position: relative;
+  z-index: 2;
+}
+
+.signage-donation-star {
+  position: absolute;
+  inset: 9%;
+  width: 82%;
+  height: 82%;
+  fill: none;
+  stroke: rgba(218, 185, 119, .24);
+  stroke-width: 1.5;
+}
+
+.signage-donation-content {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  gap: .75dvh;
+}
+
+.signage-donation-lead {
+  color: #c9b27c !important;
+  font-size: clamp(10px, .85vw, 14px) !important;
+  font-weight: 780 !important;
+  letter-spacing: .08em !important;
+  text-transform: uppercase;
+}
+
+.signage-donation-number {
+  overflow: hidden;
+  color: #f4ead3 !important;
+  font-size: clamp(40px, 5vw, 78px) !important;
+  line-height: 1 !important;
+  letter-spacing: .055em !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.signage-donation-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: .9vw;
+  margin-top: 1.2dvh;
+}
+
+.signage-donation-meta > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  padding: .95dvh .8vw;
+  border-top: 1px solid rgba(216, 183, 118, .34);
+  background: linear-gradient(180deg, rgba(196, 160, 92, .045), transparent);
+}
+
+.signage-donation-meta span {
+  color: #8fa59d !important;
+  font-size: clamp(8px, .68vw, 10px) !important;
+  font-weight: 700 !important;
+  letter-spacing: .06em !important;
+  text-transform: uppercase;
+}
+
+.signage-donation-meta b {
+  overflow: hidden;
+  color: #e1e8e4;
+  font-size: clamp(11px, 1vw, 16px);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.signage-donation-content > p {
+  margin: .75dvh 0 0;
+  color: #9eb0a9;
+  font-size: clamp(9px, .75vw, 12px);
+}
+
+.signage-carousel-progress {
+  position: relative;
+  z-index: 4;
+  display: grid;
+  grid-template-columns: auto auto auto;
+  align-items: center;
+  justify-content: center;
+  gap: .7vw;
+  min-height: 20px;
+  padding-top: .75dvh;
+  color: #8d7a52;
+}
+
+.signage-carousel-progress > b {
+  font-size: clamp(8px, .66vw, 10px);
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+
+.signage-carousel-dots {
+  min-height: 0;
+  padding-top: 0;
+  gap: .5vw;
+}
+
+.signage-carousel-dots span {
+  width: clamp(7px, .5vw, 9px);
+  height: clamp(7px, .5vw, 9px);
+}
+
+.signage-carousel-dots span.active {
+  width: clamp(7px, .5vw, 9px);
+  box-shadow: 0 0 0 4px rgba(199, 165, 101, .1);
+}
+
+.signage-prayer {
+  padding-top: .7dvh;
+}
+
+.signage-prayer-next {
+  position: absolute;
+  top: .45dvh;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #dfc982;
+  font-size: clamp(7px, .58vw, 9px);
+  font-style: normal;
+  font-weight: 830;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.signage-prayer.active {
+  background:
+    radial-gradient(ellipse at 50% 43%, rgba(203, 168, 96, .105), transparent 68%);
+}
+
+.signage-prayer.active::before {
+  top: 7%;
+  left: 10%;
+  right: 10%;
+  border-width: 1.5px;
+  border-color: rgba(229, 199, 138, .76);
+}
+
+.signage-prayer.active::after {
+  content: "";
+  position: absolute;
+  top: 6.1%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  border: 1px solid #d7b96f;
+  background: #143b31;
+}
+
+.signage-prayer > span {
+  font-size: clamp(10px, .82vw, 13px);
+}
+
+.signage-prayer > strong {
+  font-size: clamp(26px, 2.75vw, 43px);
+}
+
+.signage-prayer > small {
+  color: #819a91;
+  font-size: clamp(8px, .66vw, 10px);
+}
+
+.signage-prayer.active > small {
+  color: #ceb985;
+}
+
+.signage-footer {
+  min-height: 0;
+}
+
+.signage-ticker {
+  gap: .95vw;
+}
+
+.signage-ticker-label {
+  padding: .5dvh .65vw;
+  font-size: clamp(8px, .66vw, 10px);
+}
+
+.signage-ticker strong {
+  font-size: clamp(11px, 1vw, 16px);
+}
+
+.signage-ticker span {
+  color: #aabbb5;
+  font-size: clamp(9px, .78vw, 12px);
+}
+
+.signage-ticker small {
+  font-size: clamp(8px, .66vw, 10px);
+}
+
+.signage-footer-donation {
+  font-size: clamp(9px, .76vw, 12px);
+}
+
+@media (max-width: 1180px) {
+  .signage-header {
+    grid-template-columns: minmax(235px, 1fr) minmax(48px, .18fr) minmax(210px, .72fr) auto;
+  }
+
+  .signage-donation {
+    width: 94%;
+    grid-template-columns: minmax(110px, .34fr) minmax(0, 1fr);
+    gap: 2vw;
+  }
+
+  .signage-donation-emblem {
+    width: clamp(110px, 11vw, 150px);
+  }
+}
+
+@media (max-height: 820px) {
+  .signage-clock {
+    margin-top: 2.4dvh;
+  }
+
+  .signage-next-prayer {
+    padding-top: 3.2dvh;
+  }
+
+  .signage-donation {
+    min-height: 68%;
+  }
+
+  .signage-donation-emblem {
+    width: clamp(104px, 10.2vw, 150px);
+  }
+
+  .signage-donation-number {
+    font-size: clamp(34px, 4.4vw, 64px) !important;
+  }
+}

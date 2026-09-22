@@ -379,10 +379,28 @@ function CarouselSlide({ slide }) {
 
         {slide.kind === 'donation' && (
           <div className="signage-donation">
-            <span>{slide.settings.bankName || 'Bank belum diatur'}</span>
-            <strong>{slide.settings.bankAccountNumber || '-'}</strong>
-            {slide.settings.bankAccountHolder && <p>a.n. {slide.settings.bankAccountHolder}</p>}
-            <small>Terima kasih atas amanah dan dukungan jamaah.</small>
+            <div className="signage-donation-emblem" aria-hidden="true">
+              <IslamicStar className="signage-donation-star" />
+              <Landmark size={52} strokeWidth={1.25} />
+            </div>
+
+            <div className="signage-donation-content">
+              <span className="signage-donation-lead">Rekening resmi masjid</span>
+              <strong className="signage-donation-number">{slide.settings.bankAccountNumber || '-'}</strong>
+
+              <div className="signage-donation-meta">
+                <div>
+                  <span>Bank</span>
+                  <b>{slide.settings.bankName || 'Belum diatur'}</b>
+                </div>
+                <div>
+                  <span>Atas nama</span>
+                  <b>{slide.settings.bankAccountHolder || '-'}</b>
+                </div>
+              </div>
+
+              <p>Salurkan infaq dan donasi melalui rekening resmi masjid.</p>
+            </div>
           </div>
         )}
       </div>
@@ -470,6 +488,7 @@ export default function PublicDisplay() {
     name: 'RS Elizabeth Situbondo',
     address: 'Jl. WR. Supratman No.2, Situbondo, Jawa Timur'
   };
+  const locationSummary = 'Patokan · Situbondo · Jawa Timur';
 
   const time = new Intl.DateTimeFormat('id-ID', {
     hour: '2-digit',
@@ -511,7 +530,7 @@ export default function PublicDisplay() {
           <MapPin size={17} />
           <div>
             <strong>{location.name}</strong>
-            <span>{location.address}</span>
+            <span title={location.address}>{locationSummary}</span>
           </div>
         </div>
 
@@ -563,13 +582,17 @@ export default function PublicDisplay() {
             {activeSlide && <CarouselSlide key={activeSlide.id} slide={activeSlide} />}
           </div>
 
-          <div className="signage-carousel-dots" aria-hidden="true">
-            {slides.map((slide, index) => (
-              <span
-                key={slide.id}
-                className={index === slideIndex ? 'active' : ''}
-              />
-            ))}
+          <div className="signage-carousel-progress" aria-hidden="true">
+            <b>{String(slideIndex + 1).padStart(2, '0')}</b>
+            <div className="signage-carousel-dots">
+              {slides.map((slide, index) => (
+                <span
+                  key={slide.id}
+                  className={index === slideIndex ? 'active' : ''}
+                />
+              ))}
+            </div>
+            <b>{String(slides.length).padStart(2, '0')}</b>
           </div>
         </section>
       </main>
@@ -580,6 +603,7 @@ export default function PublicDisplay() {
           const isNext = prayerState?.today && prayerState?.prayerName === prayer.prayerName;
           return (
             <article className={isNext ? 'signage-prayer active' : 'signage-prayer'} key={prayer.prayerName}>
+              {isNext && <em className="signage-prayer-next">Berikutnya</em>}
               <IslamicStar className="signage-prayer-star" />
               <span>{prayer.prayerName}</span>
               <strong>{prayer.adhanTime}</strong>
