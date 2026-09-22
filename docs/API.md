@@ -60,10 +60,10 @@ File diteruskan ke Google Drive. Database hanya menyimpan Google Drive file ID d
 
 ## Prayer Schedule
 
-- `GET /friday-schedules?date=YYYY-MM-DD` — status hari Jumat + petugas Jumat jika ada
-- `PUT /friday-schedules/:date` — Admin; khusus tanggal Jumat, menyimpan imam, khatib, bilal
-- `GET /prayer-schedules?date=YYYY-MM-DD` — adzan dari AlAdhan API dengan method 20 (Kementerian Agama RI), iqamah/imam/bilal dari SQLite
-- `PUT /prayer-schedules/:date` — Admin menyimpan metadata lokal iqamah/imam/bilal; adzan tetap API-managed
+- `GET /friday-schedules?from=YYYY-MM-DD&limit=8` — daftar tanggal Jumat mendatang mulai `from`; tanggal yang sudah lewat tidak ikut payload dashboard.
+- `GET /friday-schedules?date=YYYY-MM-DD` — satu jadwal petugas Jumat untuk tanggal tertentu.
+- `PUT /friday-schedules/:date` — Admin; khusus tanggal Jumat, menyimpan imam, khatib, bilal.
+- `GET /prayer-schedules?date=YYYY-MM-DD` — jadwal adzan read-only dari AlAdhan API dengan method 20 (Kementerian Agama RI).
 
 Provider location:
 - RS Elizabeth Situbondo
@@ -113,9 +113,17 @@ Endpoint publik `GET /public/display` mengembalikan transaksi terbaru yang sudah
 
 ## Public Display focus mode
 
-Public Display masuk mode takeover pada dua kondisi:
+Public Display memakai tiga fase khusus di sekitar adzan/iqamah:
 - 5 menit sebelum adzan: layar hanya menampilkan label adzan tujuan dan countdown `MM:SS`.
-- sesudah adzan sampai iqamah (+5 menit): layar hanya menampilkan label iqamah dan countdown `MM:SS`.
+- mulai tepat waktu adzan selama 2 menit: layar hanya menampilkan `Waktunya Adzan <nama salat>`.
+- iqamah ditetapkan 8 menit setelah adzan. Countdown iqamah mengambil alih layar hanya pada 5 menit terakhir sebelum iqamah.
+
+Contoh Ashar 14:29:
+- 14:24–14:28:59 → countdown menuju adzan.
+- 14:29–14:30:59 → `Waktunya Adzan Ashar`.
+- 14:31–14:31:59 → layout normal.
+- 14:32–14:36:59 → countdown menuju iqamah.
+- 14:37 → iqamah; layout normal kembali.
 
 Di luar window tersebut, layout normal tetap menampilkan video, keuangan, jadwal salat, agenda publik, dan running text.
 
