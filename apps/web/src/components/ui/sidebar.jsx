@@ -90,7 +90,7 @@ function SidebarMenuButton({ className, active = false, asChild = false, ...prop
   return (
     <Comp
       className={cn(
-        'flex min-h-10 w-full items-center gap-3 rounded-md px-3 text-left text-[13px] font-medium text-sidebar-foreground/78 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+        'flex min-h-10 w-full items-center gap-3 rounded-md px-3 text-left text-[13px] font-medium text-sidebar-foreground/78 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground [&_svg]:size-[18px] [&_svg]:shrink-0',
         active && 'bg-sidebar-accent text-sidebar-accent-foreground',
         className
       )}
