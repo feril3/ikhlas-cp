@@ -390,7 +390,8 @@ test('phase 6b primitives expose clear borders, focus and selected states', asyn
   assert.match(textarea, /bg-card/);
   assert.match(textarea, /focus-visible:ring-ring\/25/);
   assert.match(inputGroup, /bg-card/);
-  assert.match(button, /outline: 'border border-input/);
+  assert.match(button, /border border-transparent/);
+  assert.match(button, /outline: 'border-input bg-card/);
   assert.match(table, /bg-muted\/55/);
   assert.match(table, /hover:bg-accent\/45/);
   assert.match(toggle, /data-\[state=on\]:border-primary\/55/);
@@ -401,7 +402,8 @@ test('phase 6b primitives expose clear borders, focus and selected states', asyn
   assert.match(badge, /ui-success-border/);
   assert.match(alert, /ui-danger-border/);
   assert.doesNotMatch(alert, /opacity-90/);
-  assert.match(settingsNav, /inset_3px_0_0_var\(--ui-primary\)/);
+  assert.match(settingsNav, /border-l-2 bg-transparent/);
+  assert.match(settingsNav, /border-primary font-semibold text-foreground/);
 });
 
 
