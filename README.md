@@ -46,7 +46,7 @@ Aplikasi sengaja dibagi menjadi dua surface utama:
 - Installable PWA shell.
 - Service worker untuk app shell setelah kunjungan pertama.
 - SQLite WAL mode.
-- Perintah backup SQLite.
+- Backup SQLite lokal manual dan auto backup harian ke Google Drive dengan retention.
 
 ## Stack
 
@@ -106,11 +106,31 @@ Jika dua value ini kosong, transaksi tetap tersimpan dan notifikasi Telegram dil
 
 ## Backup Database
 
+Backup lokal manual:
+
 ```bash
 npm run db:backup
 ```
 
-Snapshot disimpan ke `apps/api/data/backups/` dan direktori tersebut di-ignore oleh Git.
+Backup langsung ke Google Drive:
+
+```bash
+npm run db:backup:drive
+```
+
+Untuk auto backup di VPS/deployment, aktifkan:
+
+```env
+GOOGLE_DRIVE_BACKUP_ENABLED=true
+GOOGLE_DRIVE_BACKUP_HOUR=2
+GOOGLE_DRIVE_BACKUP_MINUTE=0
+GOOGLE_DRIVE_BACKUP_TIMEZONE=Asia/Jakarta
+GOOGLE_DRIVE_BACKUP_RETENTION=30
+```
+
+Default tersebut berarti satu snapshot konsisten setiap hari pukul **02:00 WIB**, dengan **30 backup terakhir** dipertahankan. File disimpan private di folder **IKHLAS - Backup Database** pada Google Drive. Jika server baru hidup setelah jam backup dan snapshot hari itu belum ada, scheduler akan membuat backup yang tertinggal.
+
+Jalankan scheduler hanya pada satu instance API utama agar deployment multi-instance tidak membuat backup ganda. Detail setup dan restore ada di `docs/GOOGLE_DRIVE.md`.
 
 ## Struktur Repo
 

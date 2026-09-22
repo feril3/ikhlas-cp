@@ -44,7 +44,8 @@ Jangan commit:
 - Telegram bot token.
 - Telegram chat ID bila dianggap sensitif.
 - Database production.
-- Backup database.
+- Backup database lokal.
+- Snapshot backup Google Drive tetap private dan mengikuti akses akun OAuth.
 
 Semua sudah diarahkan melalui `.env` dan `.gitignore`.
 

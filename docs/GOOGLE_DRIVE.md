@@ -1,6 +1,6 @@
 # Google Drive Attachment Storage
 
-IKHLAS menyimpan **binary file** bukti transaksi dan mutasi rekening di Google Drive. SQLite hanya menyimpan identifier dan metadata yang dibutuhkan untuk mengaitkan file dengan transaksi.
+IKHLAS memakai Google Drive untuk dua kebutuhan: **binary file bukti transaksi/mutasi rekening** dan **arsip backup SQLite**. Database operasional tetap berjalan dari storage lokal server; Google Drive hanya menjadi penyimpanan dokumen dan backup.
 
 ## Kenapa OAuth user, bukan service account
 
@@ -103,6 +103,79 @@ Alurnya:
 5. Backend melakukan stream file ke browser.
 
 Dengan begitu bukti transaksi tidak perlu dibuat publik di Drive.
+
+## Auto backup SQLite ke Google Drive
+
+IKHLAS menggunakan `better-sqlite3.backup()` untuk membuat snapshot konsisten dari database yang sedang aktif. File snapshot dibuat sementara di direktori temporary OS, di-upload ke Google Drive, lalu file temporary dihapus.
+
+Folder default backup:
+
+**IKHLAS - Backup Database**
+
+Konfigurasi:
+
+```env
+GOOGLE_DRIVE_BACKUP_ENABLED=true
+
+# Opsional. Kosongkan agar IKHLAS membuat/mencari folder backup sendiri.
+GOOGLE_DRIVE_BACKUP_FOLDER_ID=
+GOOGLE_DRIVE_BACKUP_FOLDER_NAME=IKHLAS - Backup Database
+
+# Default: setiap hari pukul 02:00 WIB.
+GOOGLE_DRIVE_BACKUP_HOUR=2
+GOOGLE_DRIVE_BACKUP_MINUTE=0
+GOOGLE_DRIVE_BACKUP_TIMEZONE=Asia/Jakarta
+
+# Jumlah snapshot terbaru yang dipertahankan. Range 1-365.
+GOOGLE_DRIVE_BACKUP_RETENTION=30
+```
+
+### Perilaku scheduler
+
+Scheduler berjalan di proses API ketika `GOOGLE_DRIVE_BACKUP_ENABLED=true`.
+
+- Setiap hari hanya satu snapshot dibuat.
+- Jika API mati pada jam 02:00 lalu hidup kembali pukul 08:00 dan backup hari itu belum ada, backup langsung dijalankan.
+- Sebelum membuat backup susulan, aplikasi mengecek folder Drive agar restart server tidak menghasilkan backup duplikat.
+- Setelah upload berhasil, retention dijalankan dan backup yang lebih lama dari batas akan dihapus.
+- Jika upload gagal, snapshot temporary lokal tetap dibersihkan dan scheduler akan mencoba lagi pada pemeriksaan berikutnya.
+- Pada deployment multi-instance, aktifkan scheduler hanya di **satu** instance untuk menghindari race/backup ganda.
+
+Nama file backup berbentuk:
+
+```text
+ikhlas-db-2026-09-22T02-00-00-000Z.sqlite3
+```
+
+Waktu pada nama file menggunakan UTC ISO agar filename konsisten; jadwal tetap mengikuti timezone yang dikonfigurasi.
+
+### Backup manual ke Drive
+
+Untuk menguji credential dan alur backup tanpa menunggu scheduler:
+
+```bash
+npm run db:backup:drive
+```
+
+Command akan:
+1. membuat snapshot SQLite;
+2. upload ke folder backup Google Drive;
+3. menjalankan retention;
+4. menampilkan Drive file ID dan ukuran file.
+
+### Restore
+
+Restore sengaja tidak dibuat otomatis karena operasi ini destruktif.
+
+Prosedur aman:
+
+1. Stop API IKHLAS.
+2. Backup database aktif yang lama sebagai salinan tambahan.
+3. Download snapshot `.sqlite3` yang dipilih dari folder **IKHLAS - Backup Database**.
+4. Ganti file database yang ditunjuk oleh `DATABASE_PATH`.
+5. Pastikan tidak ada file `-wal` / `-shm` lama dari database sebelumnya.
+6. Jalankan `npm run db:init` untuk memastikan schema/migration kompatibel.
+7. Start API dan verifikasi dashboard serta transaksi.
 
 ## Catatan production
 

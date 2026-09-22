@@ -1,6 +1,6 @@
 {
   "name": "@ikhlas/api",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,7 +9,8 @@
     "db:init": "node src/init-db.js",
     "db:backup": "node src/backup-db.js",
     "drive:auth": "node src/google-drive-auth.js",
-    "check": "node --check src/server.js && node --check src/db.js && node --check src/routes.js && node --check src/auth.js && node --check src/uploads.js && node --check src/driveStorage.js && node --check src/google-drive-auth.js && node --check src/telegram.js"
+    "check": "node --check src/server.js && node --check src/db.js && node --check src/routes.js && node --check src/auth.js && node --check src/uploads.js && node --check src/driveStorage.js && node --check src/driveBackup.js && node --check src/backup-db-drive.js && node --check src/google-drive-auth.js && node --check src/telegram.js",
+    "db:backup:drive": "node src/backup-db-drive.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.8.1",
