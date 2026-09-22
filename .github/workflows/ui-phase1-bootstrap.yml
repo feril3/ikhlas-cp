@@ -1,0 +1,58 @@
+name: UI Phase 1 Bootstrap
+
+on:
+  push:
+    branches:
+      - redesign/phase-1-foundation-shell
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    if: "!contains(github.event.head_commit.message, '[ui-bootstrap]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: redesign/phase-1-foundation-shell
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Install dashboard design dependencies
+        run: |
+          npm install -w @ikhlas/web \
+            tailwindcss @tailwindcss/vite \
+            @fontsource-variable/ibm-plex-sans \
+            @tabler/icons-react \
+            recharts @tanstack/react-table
+
+      - name: Initialize shadcn Radix Nova
+        working-directory: apps/web
+        run: npx shadcn@latest init -y --preset radix-nova
+
+      - name: Add phase-one shadcn primitives
+        working-directory: apps/web
+        run: |
+          npx shadcn@latest add -y \
+            button card sidebar breadcrumb dropdown-menu avatar \
+            separator sheet tooltip sonner skeleton badge
+
+      - name: Commit generated foundation
+        run: |
+          git config user.name "IKHLAS UI Bootstrap"
+          git config user.email "actions@users.noreply.github.com"
+          touch .phase1-shadcn-ready
+          git add .
+          if git diff --cached --quiet; then
+            echo "No generated changes"
+            exit 0
+          fi
+          git commit -m "chore: bootstrap shadcn Radix Nova foundation [ui-bootstrap]"
+          git push origin HEAD:redesign/phase-1-foundation-shell
