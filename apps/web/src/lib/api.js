@@ -117,10 +117,6 @@ export const api = {
   }),
 
   prayerSchedule: (date) => request(`/prayer-schedules${queryString({ date })}`),
-  updatePrayerSchedule: (date, items) => request(`/prayer-schedules/${date}`, {
-    method: 'PUT',
-    body: JSON.stringify({ items })
-  }),
 
   activities: (from) => request(`/activities${queryString({ from })}`),
   createActivity: (input) => request('/activities', {
