@@ -26,7 +26,7 @@ export function SettingsNav({ value, onChange }) {
             key={id}
             type="button"
             onClick={() => onChange(id)}
-            className={`flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${value === id ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+            className={`flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${value === id ? 'bg-accent text-accent-foreground shadow-[inset_3px_0_0_var(--ui-primary)]' : 'text-muted-foreground hover:bg-muted/80 hover:text-foreground'}`}
           >
             {label}
           </button>
