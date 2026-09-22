@@ -166,3 +166,66 @@ test('phase 3 shadcn workspace config is valid for the web package', async () =>
   assert.equal(webComponents.tailwind.css, 'src/styles/ui.css');
   assert.deepEqual(webJsconfig.compilerOptions.paths['@/*'], ['./src/*']);
 });
+
+
+test('phase 4 Friday and agenda use tables, editors, and safe destructive interactions', async () => {
+  const schedule = await source('apps/web/src/pages/Schedule.jsx');
+
+  assert.match(schedule, /FridayEditor/);
+  assert.match(schedule, /AgendaEditor/);
+  assert.match(schedule, /TableHeader/);
+  assert.match(schedule, /SheetContent/);
+  assert.match(schedule, /DialogContent/);
+  assert.match(schedule, /AlertDialogContent/);
+  assert.match(schedule, /md:hidden/);
+  assert.doesNotMatch(schedule, /window\.confirm/);
+  assert.doesNotMatch(schedule, /lucide-react/);
+  assert.doesNotMatch(schedule, /section-kicker/);
+  assert.doesNotMatch(schedule, /className="panel/);
+});
+
+test('phase 4 settings are split into domain modules with Radix and shadcn interactions', async () => {
+  const page = await source('apps/web/src/pages/AdminSettings.jsx');
+  const nav = await source('apps/web/src/components/settings/SettingsNav.jsx');
+  const categories = await source('apps/web/src/components/settings/CategorySettings.jsx');
+  const display = await source('apps/web/src/components/settings/PublicDisplaySettings.jsx');
+  const users = await source('apps/web/src/components/settings/UserSettings.jsx');
+  const audit = await source('apps/web/src/components/settings/AuditSettings.jsx');
+
+  assert.match(page, /SettingsNav/);
+  assert.match(page, /GeneralSettings/);
+  assert.match(page, /FinanceSettings/);
+  assert.match(page, /CategorySettings/);
+  assert.match(page, /PublicDisplaySettings/);
+  assert.match(page, /UserSettings/);
+  assert.match(page, /AuditSettings/);
+  assert.doesNotMatch(page, /window\.confirm/);
+  assert.doesNotMatch(page, /lucide-react/);
+  assert.doesNotMatch(page, /section-kicker/);
+
+  assert.match(nav, /Umum/);
+  assert.match(nav, /Keuangan/);
+  assert.match(nav, /Kategori/);
+  assert.match(nav, /Public Display/);
+  assert.match(nav, /Pengguna/);
+  assert.match(nav, /Audit/);
+  assert.match(categories, /DialogContent/);
+  assert.match(display, /SheetContent/);
+  assert.match(display, /AlertDialogContent/);
+  assert.match(users, /Switch/);
+  assert.match(audit, /StructuredDetails/);
+  assert.match(audit, /Sebelum/);
+  assert.match(audit, /Sesudah/);
+});
+
+test('phase 4 user status management is audited and prevents self deactivation', async () => {
+  const routes = await source('apps/api/src/routes.js');
+  const client = await source('apps/web/src/lib/api.js');
+
+  assert.match(routes, /userStatusSchema/);
+  assert.match(routes, /put\('\/users\/:id\/status'/);
+  assert.match(routes, /Akun yang sedang digunakan tidak dapat dinonaktifkan/);
+  assert.match(routes, /USER_STATUS_UPDATE/);
+  assert.match(routes, /DELETE FROM sessions WHERE user_id/);
+  assert.match(client, /updateUserStatus/);
+});
