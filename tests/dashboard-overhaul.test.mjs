@@ -152,7 +152,7 @@ test('phase 3 transaction entry forms are mobile-first shadcn forms with upload 
 
   assert.match(upload, /IconPhotoScan/);
   assert.match(upload, /sr-only/);
-  assert.match(upload, /file\.name/);
+  assert.match(upload, /file\?\.name/);
 });
 
 test('phase 3 shadcn workspace config is valid for the web package', async () => {
