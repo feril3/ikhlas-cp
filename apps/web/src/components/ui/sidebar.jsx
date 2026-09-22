@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Slot } from '@radix-ui/react-slot';
-import { IconLayoutSidebarLeftCollapse, IconMenu2 } from '@tabler/icons-react';
+import { IconLayoutSidebarLeftCollapse, IconLayoutSidebarLeftExpand, IconMenu2 } from '@tabler/icons-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
@@ -45,7 +45,7 @@ function Sidebar({ className, children }) {
     <aside
       data-state={open ? 'expanded' : 'collapsed'}
       className={cn(
-        'hidden min-h-screen shrink-0 border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 lg:flex lg:w-64 lg:flex-col data-[state=collapsed]:lg:w-[72px]',
+        'hidden min-h-screen shrink-0 border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 lg:flex lg:w-64 lg:flex-col lg:data-[state=collapsed]:w-[72px]',
         className
       )}
     >
@@ -73,7 +73,8 @@ function SidebarContent({ className, ...props }) {
   return <div className={cn('flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-3', className)} {...props} />;
 }
 function SidebarFooter({ className, ...props }) {
-  return <div className={cn('border-t border-sidebar-border p-3', className)} {...props} />;
+  const { open } = useSidebar();
+  return <div className={cn('border-t border-sidebar-border p-3', !open && 'px-2', className)} {...props} />;
 }
 function SidebarGroup({ className, ...props }) {
   return <div className={cn('flex flex-col gap-1', className)} {...props} />;
@@ -108,7 +109,7 @@ function SidebarInset({ className, ...props }) {
   return <div className={cn('min-w-0 flex-1 bg-background', className)} {...props} />;
 }
 function SidebarTrigger({ className, mobile = false, ...props }) {
-  const { toggleSidebar, setOpenMobile } = useSidebar();
+  const { open, toggleSidebar, setOpenMobile } = useSidebar();
   return (
     <Button
       variant="ghost"
@@ -117,8 +118,8 @@ function SidebarTrigger({ className, mobile = false, ...props }) {
       onClick={() => mobile ? setOpenMobile(true) : toggleSidebar()}
       {...props}
     >
-      {mobile ? <IconMenu2 /> : <IconLayoutSidebarLeftCollapse />}
-      <span className="sr-only">{mobile ? 'Buka navigasi' : 'Ciutkan navigasi'}</span>
+      {mobile ? <IconMenu2 /> : open ? <IconLayoutSidebarLeftCollapse /> : <IconLayoutSidebarLeftExpand />}
+      <span className="sr-only">{mobile ? 'Buka navigasi' : open ? 'Ciutkan navigasi' : 'Lebarkan navigasi'}</span>
     </Button>
   );
 }
