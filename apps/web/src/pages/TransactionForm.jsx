@@ -1,18 +1,55 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowDownToLine,
-  ArrowLeft,
-  ArrowUpFromLine,
-  Camera,
-  CheckCircle2,
-  FileImage,
-  Landmark,
-  Wallet
-} from 'lucide-react';
-import { api } from '../lib/api.js';
-import { formatRupiah, toInputDate } from '../lib/format.js';
-import { LoadingState } from '../components/LoadingState.jsx';
+  IconArrowLeft,
+  IconBuildingBank,
+  IconCash,
+  IconDeviceFloppy,
+  IconInfoCircle
+} from '@tabler/icons-react';
+import { toast } from 'sonner';
+import { api } from '@/lib/api.js';
+import { formatRupiah, toInputDate } from '@/lib/format.js';
+import { PageHeader } from '@/components/app/PageHeader.jsx';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel
+} from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput
+} from '@/components/ui/input-group';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Spinner } from '@/components/ui/spinner';
+import { Textarea } from '@/components/ui/textarea';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { FileUploadField } from '@/features/transactions/FileUploadField.jsx';
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
+function TransactionFormSkeleton() {
+  return (
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+      <Skeleton className="h-12 w-32" />
+      <Skeleton className="h-24 w-full" />
+      <Skeleton className="h-[520px] w-full" />
+    </div>
+  );
+}
 
 export default function TransactionForm({ type }) {
   const income = type === 'INCOME';
@@ -32,29 +69,70 @@ export default function TransactionForm({ type }) {
   const [loadingCategories, setLoadingCategories] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     setLoadingCategories(true);
+    setStatus({ type: 'idle', message: '' });
+
     api.transactionCategories(type)
       .then((result) => {
+        if (cancelled) return;
         const active = result.data.filter((item) => item.isActive);
         setCategories(active);
-        setForm((current) => ({
-          ...current,
-          categoryId: active[0]?.id ? String(active[0].id) : ''
-        }));
+        setForm({
+          transactionDate: toInputDate(),
+          method: income ? 'CASH' : 'TRANSFER',
+          categoryId: active[0]?.id ? String(active[0].id) : '',
+          sourceDetail: '',
+          description: ''
+        });
+        setAmountInput('');
+        setEvidence(null);
+        setMutation(null);
       })
-      .catch((error) => setStatus({ type: 'error', message: error.message }))
-      .finally(() => setLoadingCategories(false));
-  }, [type]);
+      .catch((error) => {
+        if (!cancelled) setStatus({ type: 'error', message: error.message });
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingCategories(false);
+      });
 
-  const amount = useMemo(() => Number(amountInput.replace(/\D/g, '') || 0), [amountInput]);
+    return () => {
+      cancelled = true;
+    };
+  }, [income, type]);
+
+  const amount = useMemo(
+    () => Number(amountInput.replace(/\D/g, '') || 0),
+    [amountInput]
+  );
 
   function update(name, value) {
     setForm((current) => ({ ...current, [name]: value }));
   }
 
+  function handleMethod(value) {
+    if (!value) return;
+    update('method', value);
+    if (value === 'CASH') setMutation(null);
+  }
+
   function handleAmount(event) {
     const digits = event.target.value.replace(/\D/g, '').slice(0, 10);
     setAmountInput(digits ? new Intl.NumberFormat('id-ID').format(Number(digits)) : '');
+  }
+
+  function acceptFile(file, setter) {
+    if (!file) {
+      setter(null);
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error('Ukuran file terlalu besar.', { description: 'Maksimum 5 MB per dokumen.' });
+      return;
+    }
+
+    setter(file);
   }
 
   async function handleSubmit(event) {
@@ -78,7 +156,7 @@ export default function TransactionForm({ type }) {
     setStatus({
       type: 'loading',
       message: evidence || mutation
-        ? 'Menyimpan transaksi dan mengunggah bukti ke Google Drive...'
+        ? 'Menyimpan transaksi dan mengunggah dokumen...'
         : 'Menyimpan transaksi...'
     });
 
@@ -91,151 +169,230 @@ export default function TransactionForm({ type }) {
           categoryId: Number(form.categoryId),
           sourceDetail: income ? form.sourceDetail : ''
         },
-        { evidence, mutation }
+        {
+          evidence,
+          mutation: form.method === 'TRANSFER' ? mutation : null
+        }
       );
 
-      const telegramNote = created.notification?.status === 'failed'
-        ? ' Transaksi tersimpan, tetapi notifikasi Telegram gagal dikirim.'
-        : '';
+      if (created.notification?.status === 'failed') {
+        toast.warning(income ? 'Kas masuk tersimpan.' : 'Kas keluar tersimpan.', {
+          description: 'Notifikasi Telegram gagal dikirim.'
+        });
+      } else {
+        toast.success(income ? 'Kas masuk berhasil dicatat.' : 'Kas keluar berhasil dicatat.');
+      }
 
-      setStatus({
-        type: created.notification?.status === 'failed' ? 'warning' : 'success',
-        message: `${income ? 'Kas masuk' : 'Kas keluar'} berhasil dicatat.${telegramNote}`
-      });
-
-      setTimeout(() => navigate('/transactions'), 900);
+      navigate('/transactions');
     } catch (error) {
       setStatus({ type: 'error', message: error.message });
+      toast.error('Transaksi gagal disimpan.', { description: error.message });
     }
   }
 
-  const TypeIcon = income ? ArrowDownToLine : ArrowUpFromLine;
-
-  if (loadingCategories) return <LoadingState label="Memuat kategori transaksi..." />;
+  if (loadingCategories) return <TransactionFormSkeleton />;
 
   return (
-    <div className="form-page">
-      <button className="back-link" onClick={() => navigate(-1)}><ArrowLeft size={18} /> Kembali</button>
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
+      <div>
+        <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="-ml-2">
+          <IconArrowLeft data-icon="inline-start" aria-hidden="true" />
+          Kembali
+        </Button>
+      </div>
 
-      <header className="page-heading compact-heading">
-        <div className={`title-icon ${income ? 'income' : 'expense'}`}><TypeIcon size={22} /></div>
-        <div>
-          <p className="eyebrow">Pencatatan transaksi</p>
-          <h1>{income ? 'Kas Masuk' : 'Kas Keluar'}</h1>
-          <p className="page-subtitle">Catat transaksi dengan sumber, kategori, dan bukti yang mudah diverifikasi.</p>
-        </div>
-      </header>
+      <PageHeader
+        title={income ? 'Kas Masuk' : 'Kas Keluar'}
+        description="Catat transaksi dengan kategori dan bukti yang mudah diverifikasi pengurus."
+      />
 
-      <form className="transaction-form" onSubmit={handleSubmit}>
-        <section className="form-section amount-section">
-          <label htmlFor="amount">Nominal <span aria-hidden="true">*</span></label>
-          <div className="amount-field-wrap">
-            <span>Rp</span>
-            <input
-              id="amount"
-              value={amountInput}
-              onChange={handleAmount}
-              inputMode="numeric"
-              autoComplete="off"
-              placeholder="0"
-              aria-describedby="amount-preview"
-            />
-          </div>
-          <span id="amount-preview" className="field-help">{amount ? formatRupiah(amount) : 'Masukkan nominal tanpa pecahan desimal.'}</span>
-        </section>
-
-        <section className="form-section">
-          <div className="section-title"><div><p className="section-kicker">Detail</p><h2>Informasi transaksi</h2></div></div>
-
-          <div className="form-grid">
-            <label className="field">
-              <span>Tanggal transaksi <b>*</b></span>
-              <input type="date" value={form.transactionDate} onChange={(e) => update('transactionDate', e.target.value)} required />
-            </label>
-
-            <fieldset className="field full-field">
-              <legend>Metode {income ? 'penerimaan' : 'pembayaran'} <b>*</b></legend>
-              <div className="segmented-control">
-                <button type="button" className={form.method === 'CASH' ? 'selected' : ''} onClick={() => update('method', 'CASH')}><Wallet size={18} /> Cash / Tunai</button>
-                <button type="button" className={form.method === 'TRANSFER' ? 'selected' : ''} onClick={() => update('method', 'TRANSFER')}><Landmark size={18} /> Transfer Bank</button>
-              </div>
-            </fieldset>
-
-            <label className="field full-field">
-              <span>{income ? 'Sumber dana' : 'Kategori pengeluaran'} <b>*</b></span>
-              <select value={form.categoryId} onChange={(e) => update('categoryId', e.target.value)} required>
-                {categories.length === 0 && <option value="">Belum ada kategori aktif</option>}
-                {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
-              </select>
-              <small>Kategori dikelola Admin dari Pengaturan Sistem.</small>
-            </label>
-
-            {income && (
-              <label className="field full-field">
-                <span>Detail sumber dana</span>
-                <input
-                  value={form.sourceDetail}
-                  onChange={(e) => update('sourceDetail', e.target.value)}
-                  maxLength="120"
-                  placeholder="Contoh: Donatur tetap, Kotak Amal Lt. 1, Hamba Allah"
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle>Nominal transaksi</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Field>
+              <FieldLabel htmlFor="amount">Nominal</FieldLabel>
+              <InputGroup className="h-14">
+                <InputGroupAddon className="pl-4 text-base font-semibold text-foreground">Rp</InputGroupAddon>
+                <InputGroupInput
+                  id="amount"
+                  value={amountInput}
+                  onChange={handleAmount}
+                  inputMode="numeric"
+                  autoComplete="off"
+                  placeholder="0"
+                  className="h-14 text-xl font-semibold tracking-[-0.02em] sm:text-2xl"
+                  aria-describedby="amount-preview"
                 />
-                <small>Opsional. Tidak ditampilkan pada Public Display agar informasi sensitif tidak bocor.</small>
-              </label>
-            )}
+              </InputGroup>
+              <FieldDescription id="amount-preview">
+                {amount ? formatRupiah(amount) : 'Masukkan nominal tanpa pecahan desimal.'}
+              </FieldDescription>
+            </Field>
+          </CardContent>
+        </Card>
 
-            <label className="field full-field">
-              <span>Keterangan</span>
-              <textarea
-                rows="4"
-                value={form.description}
-                onChange={(e) => update('description', e.target.value)}
-                placeholder={income ? 'Contoh: Donasi setelah kajian Ahad' : 'Contoh: Pembelian perlengkapan kebersihan'}
-                maxLength="300"
-              />
-              <small>{form.description.length}/300 karakter</small>
-            </label>
-          </div>
-        </section>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle>Informasi transaksi</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="transaction-date">Tanggal transaksi</FieldLabel>
+                <Input
+                  id="transaction-date"
+                  type="date"
+                  className="h-12"
+                  value={form.transactionDate}
+                  onChange={(event) => update('transactionDate', event.target.value)}
+                  required
+                />
+              </Field>
 
-        <section className="form-section">
-          <div className="section-title">
-            <div><p className="section-kicker">Dokumentasi</p><h2>Bukti pendukung</h2></div>
-            {income && <span className="optional-badge">Bukti opsional</span>}
-          </div>
+              <Field>
+                <FieldLabel>Metode {income ? 'penerimaan' : 'pembayaran'}</FieldLabel>
+                <ToggleGroup
+                  type="single"
+                  value={form.method}
+                  onValueChange={handleMethod}
+                  variant="outline"
+                  spacing={0}
+                  className="grid w-full grid-cols-2"
+                >
+                  <ToggleGroupItem value="CASH" className="h-12 w-full rounded-r-none">
+                    <IconCash data-icon="inline-start" aria-hidden="true" />
+                    Tunai
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="TRANSFER" className="h-12 w-full rounded-l-none">
+                    <IconBuildingBank data-icon="inline-start" aria-hidden="true" />
+                    Transfer
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </Field>
 
-          <div className="upload-grid">
-            <label className="upload-card">
-              <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" capture="environment" onChange={(e) => setEvidence(e.target.files?.[0] ?? null)} />
-              <span className="upload-icon"><Camera size={21} /></span>
-              <span>
-                <strong>{evidence ? evidence.name : `Bukti transaksi${income ? '' : ' *'}`}</strong>
-                <small>{evidence ? 'Ketuk untuk mengganti file' : 'JPG, PNG, WEBP, atau PDF · maks. 5 MB'}</small>
-              </span>
-              {evidence && <CheckCircle2 size={20} className="success-icon" />}
-            </label>
+              <Field>
+                <FieldLabel>{income ? 'Sumber dana' : 'Kategori pengeluaran'}</FieldLabel>
+                <Select value={form.categoryId} onValueChange={(value) => update('categoryId', value)}>
+                  <SelectTrigger className="h-12 w-full">
+                    <SelectValue placeholder="Pilih kategori" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={String(category.id)}>{category.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FieldDescription>Kategori dikelola Admin dari Pengaturan Sistem.</FieldDescription>
+              </Field>
+
+              {income && (
+                <Field>
+                  <FieldLabel htmlFor="source-detail">Detail sumber dana</FieldLabel>
+                  <Input
+                    id="source-detail"
+                    className="h-12"
+                    value={form.sourceDetail}
+                    onChange={(event) => update('sourceDetail', event.target.value)}
+                    maxLength="120"
+                    placeholder="Contoh: Donatur tetap, Kotak Amal Lt. 1"
+                  />
+                  <FieldDescription>
+                    Opsional dan tidak ditampilkan pada Public Display.
+                  </FieldDescription>
+                </Field>
+              )}
+
+              <Field>
+                <FieldLabel htmlFor="transaction-description">Keterangan</FieldLabel>
+                <Textarea
+                  id="transaction-description"
+                  rows={4}
+                  className="min-h-28"
+                  value={form.description}
+                  onChange={(event) => update('description', event.target.value)}
+                  placeholder={income ? 'Contoh: Donasi setelah kajian Ahad' : 'Contoh: Pembelian perlengkapan kebersihan'}
+                  maxLength="300"
+                />
+                <FieldDescription>{form.description.length}/300 karakter</FieldDescription>
+              </Field>
+            </FieldGroup>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle>Bukti pendukung</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <FileUploadField
+              id="transaction-evidence"
+              label="Bukti transaksi"
+              description="JPG, PNG, WEBP, atau PDF · maks. 5 MB"
+              file={evidence}
+              onChange={(file) => acceptFile(file, setEvidence)}
+              required={!income}
+              capture="environment"
+            />
 
             {form.method === 'TRANSFER' && (
-              <label className="upload-card">
-                <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(e) => setMutation(e.target.files?.[0] ?? null)} />
-                <span className="upload-icon"><FileImage size={21} /></span>
-                <span>
-                  <strong>{mutation ? mutation.name : 'Mutasi rekening'}</strong>
-                  <small>{mutation ? 'Ketuk untuk mengganti file' : 'Lampirkan mutasi jika tersedia'}</small>
-                </span>
-                {mutation && <CheckCircle2 size={20} className="success-icon" />}
-              </label>
+              <FileUploadField
+                id="bank-mutation"
+                label="Mutasi rekening"
+                description="Lampirkan mutasi bank jika tersedia · maks. 5 MB"
+                file={mutation}
+                onChange={(file) => acceptFile(file, setMutation)}
+              />
             )}
-          </div>
-          <p className="field-help upload-note">Dokumen disimpan privat di Google Drive. Aplikasi hanya menyimpan referensi file untuk mengaitkannya dengan transaksi.</p>
-        </section>
 
-        {status.type !== 'idle' && <div className={`notice ${status.type}`}>{status.message}</div>}
+            <div className="flex gap-3 rounded-lg bg-muted/45 p-3 text-xs leading-5 text-muted-foreground">
+              <IconInfoCircle aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />
+              <p>
+                Dokumen disimpan privat di Google Drive. Aplikasi hanya menyimpan referensi file untuk mengaitkannya dengan transaksi.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
-        <div className="form-actions">
-          <button type="button" className="button secondary" onClick={() => navigate(-1)}>Batal</button>
-          <button type="submit" className="button primary" disabled={status.type === 'loading' || categories.length === 0}>
-            {status.type === 'loading' ? 'Memproses...' : `Simpan ${income ? 'Kas Masuk' : 'Kas Keluar'}`}
-          </button>
+        {status.type === 'error' && (
+          <Alert variant="destructive">
+            <AlertDescription>{status.message}</AlertDescription>
+          </Alert>
+        )}
+        {status.type === 'loading' && (
+          <Alert>
+            <AlertDescription className="flex items-center gap-2">
+              <Spinner /> {status.message}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {categories.length === 0 && (
+          <Alert variant="destructive">
+            <AlertDescription>Belum ada kategori aktif untuk jenis transaksi ini. Tambahkan kategori dari Pengaturan Sistem.</AlertDescription>
+          </Alert>
+        )}
+
+        <div className="sticky bottom-0 z-20 -mx-4 mt-1 flex gap-2 border-t bg-background/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:justify-end sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:backdrop-blur-none">
+          <Button
+            type="button"
+            variant="outline"
+            className="h-12 flex-1 sm:h-10 sm:flex-none"
+            onClick={() => navigate(-1)}
+            disabled={status.type === 'loading'}
+          >
+            Batal
+          </Button>
+          <Button
+            type="submit"
+            className="h-12 flex-1 sm:h-10 sm:flex-none"
+            disabled={status.type === 'loading' || categories.length === 0}
+          >
+            {status.type === 'loading' ? <Spinner /> : <IconDeviceFloppy data-icon="inline-start" aria-hidden="true" />}
+            {status.type === 'loading' ? 'Memproses...' : 'Simpan transaksi'}
+          </Button>
         </div>
       </form>
     </div>
