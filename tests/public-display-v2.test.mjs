@@ -70,3 +70,19 @@ test('public display includes a mosque-inspired ornament system', async () => {
   assert.match(css, /ornament-brass/);
   assert.match(css, /signage-prayer-frieze/);
 });
+
+
+test('public display visual-balance pass keeps donation, carousel, and next-prayer hierarchy explicit', async () => {
+  const jsx = await source('apps/web/src/pages/PublicDisplay.jsx');
+  const css = await source('apps/web/src/styles/public-display-ornamental.css');
+
+  assert.match(jsx, /signage-donation-emblem/);
+  assert.match(jsx, /signage-donation-meta/);
+  assert.match(jsx, /signage-carousel-progress/);
+  assert.match(jsx, /signage-prayer-next/);
+
+  assert.match(css, /viewing-distance legibility/);
+  assert.match(css, /signage-donation-number/);
+  assert.match(css, /signage-carousel-progress/);
+  assert.match(css, /signage-prayer-next/);
+});
