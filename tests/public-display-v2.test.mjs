@@ -28,7 +28,7 @@ test('media-first layout gives YouTube the largest column and finance about twen
   assert.match(jsx, /prayer-focus-panel/);
   assert.match(jsx, /youtube-stage/);
   assert.match(jsx, /finance-rail/);
-  assert.match(css, /grid-template-columns:\s*21%\s+minmax\(0,\s*1fr\)\s+20%/);
+  assert.match(css, /grid-template-columns:\s*19%\s+minmax\(0,\s*1fr\)\s+20%/);
 
   const left = jsx.indexOf('className="prayer-focus-panel"');
   const video = jsx.indexOf('className="youtube-stage"');
