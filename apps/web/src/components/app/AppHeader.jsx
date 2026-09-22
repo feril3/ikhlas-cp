@@ -48,7 +48,7 @@ export function AppHeader() {
                 <BreadcrumbItem>
                   {index === trail.length - 1
                     ? <BreadcrumbPage>{item}</BreadcrumbPage>
-                    : <BreadcrumbLink asChild><Link to="/">{item}</Link></BreadcrumbLink>}
+                    : <BreadcrumbLink asChild><Link to={location.pathname.startsWith('/transactions') || location.pathname === '/reports' ? '/transactions' : '/'}>{item}</Link></BreadcrumbLink>}
                 </BreadcrumbItem>
               </span>
             ))}
