@@ -78,9 +78,15 @@ function SidebarFooter({ className, ...props }) {
 function SidebarGroup({ className, ...props }) {
   return <div className={cn('flex flex-col gap-1', className)} {...props} />;
 }
-function SidebarGroupLabel({ className, ...props }) {
+function SidebarGroupLabel({ className, forceVisible = false, ...props }) {
   const { open } = useSidebar();
-  return <div className={cn('px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/55 data-[hidden=true]:sr-only', className)} data-hidden={!open} {...props} />;
+  return (
+    <div
+      className={cn('px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/55 data-[hidden=true]:sr-only', className)}
+      data-hidden={!forceVisible && !open}
+      {...props}
+    />
+  );
 }
 function SidebarMenu({ className, ...props }) {
   return <div className={cn('flex flex-col gap-1', className)} {...props} />;
@@ -90,7 +96,7 @@ function SidebarMenuButton({ className, active = false, asChild = false, ...prop
   return (
     <Comp
       className={cn(
-        'flex min-h-10 w-full items-center gap-3 rounded-md px-3 text-left text-[13px] font-medium text-sidebar-foreground/78 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+        'flex min-h-10 w-full items-center gap-3 rounded-md px-3 text-left text-[13px] font-medium text-sidebar-foreground/78 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground [&_svg]:size-[18px] [&_svg]:shrink-0',
         active && 'bg-sidebar-accent text-sidebar-accent-foreground',
         className
       )}
