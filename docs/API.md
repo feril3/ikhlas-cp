@@ -63,7 +63,7 @@ File diteruskan ke Google Drive. Database hanya menyimpan Google Drive file ID d
 - `GET /friday-schedules?from=YYYY-MM-DD&limit=8` — daftar tanggal Jumat mendatang mulai `from`; tanggal yang sudah lewat tidak ikut payload dashboard.
 - `GET /friday-schedules?date=YYYY-MM-DD` — satu jadwal petugas Jumat untuk tanggal tertentu.
 - `PUT /friday-schedules/:date` — Admin; khusus tanggal Jumat, menyimpan imam, khatib, bilal.
-- `GET /prayer-schedules?date=YYYY-MM-DD` — jadwal adzan read-only dari AlAdhan API dengan method 20 (Kementerian Agama RI).
+- `GET /prayer-schedules?date=YYYY-MM-DD` — jadwal adzan read-only dari AlAdhan API dengan method 20 (Kementerian Agama RI), termasuk metadata tanggal Hijriah `hijriDate`.
 
 Provider location:
 - RS Elizabeth Situbondo
@@ -128,3 +128,12 @@ Contoh Ashar 14:29:
 Di luar window tersebut, layout normal tetap menampilkan video, keuangan, jadwal salat, agenda publik, dan running text.
 
 Pada hari Jumat, payload Public Display menambahkan `fridaySchedule` berisi `imam`, `khatib`, dan `bilal` bila jadwal telah diinput Admin.
+
+
+## Public Display calendar
+
+Header Public Display menampilkan kalender ganda:
+- hari + tanggal Masehi;
+- tanggal Hijriah dari metadata AlAdhan pada jadwal hari tersebut.
+
+Jika payload cache lama atau fallback lokal belum membawa metadata Hijriah, backend memakai kalender `islamic-umalqura` sebagai fallback agar tanggal tetap tersedia.
