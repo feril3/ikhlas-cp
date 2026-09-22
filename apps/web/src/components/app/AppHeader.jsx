@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import { IconDeviceTv } from '@tabler/icons-react';
 import { Link, useLocation } from 'react-router-dom';
 import { UserMenu } from '@/components/app/UserMenu.jsx';
@@ -42,7 +43,7 @@ export function AppHeader() {
         <Breadcrumb className="min-w-0 flex-1">
           <BreadcrumbList className="flex-nowrap text-xs sm:text-sm">
             {trail.map((item, index) => (
-              <span className="contents" key={item}>
+              <Fragment key={item}>
                 {index > 0 && <BreadcrumbSeparator />}
                 <BreadcrumbItem className={index === 0 ? 'hidden sm:inline-flex' : 'min-w-0'}>
                   {index === trail.length - 1
@@ -54,7 +55,7 @@ export function AppHeader() {
                     )
                   }
                 </BreadcrumbItem>
-              </span>
+              </Fragment>
             ))}
           </BreadcrumbList>
         </Breadcrumb>

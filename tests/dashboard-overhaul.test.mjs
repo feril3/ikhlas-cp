@@ -390,7 +390,8 @@ test('phase 6b primitives expose clear borders, focus and selected states', asyn
   assert.match(textarea, /bg-card/);
   assert.match(textarea, /focus-visible:ring-ring\/25/);
   assert.match(inputGroup, /bg-card/);
-  assert.match(button, /outline: 'border border-input/);
+  assert.match(button, /border border-transparent/);
+  assert.match(button, /outline: 'border-input bg-card/);
   assert.match(table, /bg-muted\/55/);
   assert.match(table, /hover:bg-accent\/45/);
   assert.match(toggle, /data-\[state=on\]:border-primary\/55/);
@@ -401,7 +402,8 @@ test('phase 6b primitives expose clear borders, focus and selected states', asyn
   assert.match(badge, /ui-success-border/);
   assert.match(alert, /ui-danger-border/);
   assert.doesNotMatch(alert, /opacity-90/);
-  assert.match(settingsNav, /inset_3px_0_0_var\(--ui-primary\)/);
+  assert.match(settingsNav, /border-l-2 bg-transparent/);
+  assert.match(settingsNav, /border-primary font-semibold text-foreground/);
 });
 
 
@@ -475,4 +477,37 @@ test('phase 6c settings favor readable content width and responsive internal nav
 
   assert.match(audit, /bg-muted\/25/);
   assert.match(audit, /sm:grid-cols-2 xl:grid-cols-4/);
+});
+
+
+test('visual hotfix flattens buttons and fixes breadcrumb composition', async () => {
+  const button = await source('apps/web/src/components/ui/button.jsx');
+  const base = await source('apps/web/src/styles/base.css');
+  const uiCss = await source('apps/web/src/styles/ui.css');
+  const breadcrumb = await source('apps/web/src/components/ui/breadcrumb.jsx');
+  const header = await source('apps/web/src/components/app/AppHeader.jsx');
+  const settingsNav = await source('apps/web/src/components/settings/SettingsNav.jsx');
+
+  assert.match(button, /appearance-none/);
+  assert.match(button, /border border-transparent/);
+  assert.match(button, /default: 'bg-primary px-4 text-primary-foreground hover:bg-primary\/92'/);
+  assert.match(button, /outline: 'border-input bg-card/);
+  assert.doesNotMatch(button, /shadow-\[/);
+
+  assert.match(uiCss, /^@layer theme, base, components, utilities;/);
+  assert.match(base, /@layer base \{/);
+  assert.match(base, /a \{\s*color: inherit;\s*text-decoration: none;/);
+
+  assert.match(breadcrumb, /m-0 flex list-none/);
+  assert.match(breadcrumb, /p-0/);
+  assert.match(breadcrumb, /inline-flex shrink-0 items-center justify-center/);
+  assert.match(breadcrumb, /size-3\.5/);
+
+  assert.match(header, /import \{ Fragment \} from 'react'/);
+  assert.match(header, /<Fragment key=\{item\}>/);
+  assert.doesNotMatch(header, /className="contents"/);
+
+  assert.match(settingsNav, /border-l-2 bg-transparent/);
+  assert.match(settingsNav, /border-primary font-semibold text-foreground/);
+  assert.doesNotMatch(settingsNav, /shadow-\[/);
 });
