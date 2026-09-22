@@ -1,0 +1,90 @@
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@theme inline {
+  --font-sans: "IBM Plex Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  --color-background: var(--ui-background);
+  --color-foreground: var(--ui-foreground);
+  --color-card: var(--ui-card);
+  --color-card-foreground: var(--ui-card-foreground);
+  --color-popover: var(--ui-popover);
+  --color-popover-foreground: var(--ui-popover-foreground);
+  --color-primary: var(--ui-primary);
+  --color-primary-foreground: var(--ui-primary-foreground);
+  --color-secondary: var(--ui-secondary);
+  --color-secondary-foreground: var(--ui-secondary-foreground);
+  --color-muted: var(--ui-muted);
+  --color-muted-foreground: var(--ui-muted-foreground);
+  --color-accent: var(--ui-accent);
+  --color-accent-foreground: var(--ui-accent-foreground);
+  --color-destructive: var(--ui-destructive);
+  --color-border: var(--ui-border);
+  --color-input: var(--ui-input);
+  --color-ring: var(--ui-ring);
+  --color-sidebar: var(--ui-sidebar);
+  --color-sidebar-foreground: var(--ui-sidebar-foreground);
+  --color-sidebar-accent: var(--ui-sidebar-accent);
+  --color-sidebar-accent-foreground: var(--ui-sidebar-accent-foreground);
+  --color-sidebar-border: var(--ui-sidebar-border);
+  --color-chart-1: var(--ui-chart-1);
+  --color-chart-2: var(--ui-chart-2);
+  --color-chart-3: var(--ui-chart-3);
+  --radius-sm: calc(var(--ui-radius) - 4px);
+  --radius-md: calc(var(--ui-radius) - 2px);
+  --radius-lg: var(--ui-radius);
+  --radius-xl: calc(var(--ui-radius) + 4px);
+}
+
+.dashboard-shell {
+  --ui-background: #f7f6f2;
+  --ui-foreground: #17211e;
+  --ui-card: #ffffff;
+  --ui-card-foreground: #17211e;
+  --ui-popover: #ffffff;
+  --ui-popover-foreground: #17211e;
+  --ui-primary: #146b5a;
+  --ui-primary-foreground: #ffffff;
+  --ui-secondary: #edf3f0;
+  --ui-secondary-foreground: #25483f;
+  --ui-muted: #f1f3f1;
+  --ui-muted-foreground: #67736f;
+  --ui-accent: #e6f0ec;
+  --ui-accent-foreground: #0d4b3f;
+  --ui-destructive: #b42318;
+  --ui-border: #dce3df;
+  --ui-input: #d5ded9;
+  --ui-ring: #2b7a69;
+  --ui-sidebar: #0b3f35;
+  --ui-sidebar-foreground: #edf6f3;
+  --ui-sidebar-accent: #15594a;
+  --ui-sidebar-accent-foreground: #ffffff;
+  --ui-sidebar-border: rgba(255,255,255,.12);
+  --ui-chart-1: #146b5a;
+  --ui-chart-2: #c05b4e;
+  --ui-chart-3: #b58a42;
+  --ui-radius: .625rem;
+  min-height: 100vh;
+  background: var(--ui-background);
+  color: var(--ui-foreground);
+  font-family: "IBM Plex Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: "tnum" 1, "ss01" 1;
+}
+
+.dashboard-shell * {
+  border-color: var(--ui-border);
+}
+
+.dashboard-shell :focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--ui-ring) 75%, transparent);
+  outline-offset: 2px;
+}
+
+.dashboard-shell .page-container {
+  max-width: none;
+}
+
+@media (min-width: 1024px) {
+  .dashboard-shell .page-container {
+    padding: 28px 32px 48px;
+  }
+}
