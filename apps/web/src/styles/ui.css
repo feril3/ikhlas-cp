@@ -36,7 +36,7 @@
   --radius-xl: calc(var(--ui-radius) + 4px);
 }
 
-.dashboard-shell {
+:root {
   --ui-background: #f7f6f2;
   --ui-foreground: #17211e;
   --ui-card: #ffffff;
@@ -65,6 +65,9 @@
   --ui-chart-2: #c05b4e;
   --ui-chart-3: #b58a42;
   --ui-radius: .625rem;
+}
+
+.dashboard-shell {
   min-height: 100vh;
   background: var(--ui-background);
   color: var(--ui-foreground);

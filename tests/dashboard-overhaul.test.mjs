@@ -229,3 +229,63 @@ test('phase 4 user status management is audited and prevents self deactivation',
   assert.match(routes, /DELETE FROM sessions WHERE user_id/);
   assert.match(client, /updateUserStatus/);
 });
+
+
+test('phase 5 login uses the final dashboard design system', async () => {
+  const login = await source('apps/web/src/pages/Login.jsx');
+  const loading = await source('apps/web/src/components/LoadingState.jsx');
+  const uiCss = await source('apps/web/src/styles/ui.css');
+
+  assert.match(login, /@tabler\/icons-react/);
+  assert.match(login, /CardContent/);
+  assert.match(login, /FieldGroup/);
+  assert.match(login, /InputGroup/);
+  assert.match(login, /AlertDescription/);
+  assert.match(login, /Spinner/);
+  assert.match(login, /dashboard-shell/);
+  assert.match(login, /Buka Tampilan Publik/);
+  assert.doesNotMatch(login, /lucide-react/);
+  assert.doesNotMatch(login, /auth-screen|auth-card|password-field|button primary/);
+
+  assert.match(loading, /Spinner/);
+  assert.match(loading, /text-muted-foreground/);
+  assert.doesNotMatch(loading, /loading-state|spinner"/);
+
+  assert.match(uiCss, /:root \{[\s\S]*--ui-background:/);
+  assert.match(uiCss, /\.dashboard-shell \{/);
+});
+
+test('phase 5 removes legacy dashboard CSS and dead transaction row implementation', async () => {
+  const main = await source('apps/web/src/main.jsx');
+  const base = await source('apps/web/src/styles/base.css');
+
+  assert.doesNotMatch(main, /operations\.css/);
+  assert.doesNotMatch(main, /auth-admin\.css/);
+  assert.doesNotMatch(main, /responsive\.css/);
+  assert.match(main, /public-display\.css/);
+  assert.match(main, /public-display-ornamental\.css/);
+
+  assert.doesNotMatch(base, /\.page-stack|\.panel|\.field\s*\{|\.auth-|\.transaction-row|\.sidebar\s*\{/);
+
+  await assert.rejects(source('apps/web/src/styles/operations.css'));
+  await assert.rejects(source('apps/web/src/styles/auth-admin.css'));
+  await assert.rejects(source('apps/web/src/styles/responsive.css'));
+  await assert.rejects(source('apps/web/src/components/TransactionRow.jsx'));
+});
+
+test('phase 5 final dashboard pages no longer depend on legacy page primitives', async () => {
+  const pages = [
+    'apps/web/src/pages/Dashboard.jsx',
+    'apps/web/src/pages/Transactions.jsx',
+    'apps/web/src/pages/TransactionForm.jsx',
+    'apps/web/src/pages/Reports.jsx',
+    'apps/web/src/pages/Schedule.jsx',
+    'apps/web/src/pages/AdminSettings.jsx',
+    'apps/web/src/pages/Login.jsx'
+  ];
+
+  for (const page of pages) {
+    const content = await source(page);
+    assert.doesNotMatch(content, /section-kicker|page-stack|page-heading|className="panel|className="button /);
+  }
+});
