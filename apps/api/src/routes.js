@@ -608,7 +608,8 @@ apiRouter.get('/transactions', requireAuth, (req, res) => {
       mutation_drive_file_id AS bankMutationFileId,
       mutation_original_name AS bankMutationOriginalName,
       mutation_mime_type AS bankMutationMimeType,
-      created_at AS createdAt
+      created_at AS createdAt,
+      updated_at AS updatedAt
     FROM transactions
     ${where}
     ORDER BY transaction_date DESC, created_at DESC
@@ -730,6 +731,8 @@ apiRouter.post(
         transaction_date AS transactionDate,
         method,
         category,
+        category_id AS categoryId,
+        source_detail AS sourceDetail,
         description,
         evidence_drive_file_id AS evidenceFileId,
         evidence_original_name AS evidenceOriginalName,
