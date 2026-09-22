@@ -88,7 +88,7 @@ Endpoint publik `GET /public/display` mengembalikan transaksi terbaru yang sudah
 
 ## Authorization Summary
 
-- Admin/Pengurus: monitoring transaksi & laporan, jadwal/kegiatan, kategori, settings, user, audit, konten Public Display.
+- Admin/Pengurus: pencatatan kas masuk/keluar, monitoring transaksi & laporan, jadwal/kegiatan, kategori, settings, user, audit, konten Public Display.
 - Bendahara: pencatatan kas masuk/keluar, bukti/mutasi, riwayat transaksi, laporan.
 - `POST /transactions` dan penggantian attachment hanya untuk Bendahara.
 

@@ -534,7 +534,7 @@ apiRouter.get('/transactions', requireAuth, (req, res) => {
 apiRouter.post(
   '/transactions',
   requireAuth,
-  requireRole('TREASURER'),
+  requireRole('ADMIN', 'TREASURER'),
   transactionUpload,
   async (req, res) => {
     const parsed = transactionSchema.safeParse(req.body);
@@ -685,7 +685,7 @@ apiRouter.post(
 apiRouter.post(
   '/transactions/:id/attachments',
   requireAuth,
-  requireRole('TREASURER'),
+  requireRole('ADMIN', 'TREASURER'),
   transactionUpload,
   async (req, res) => {
     const transaction = db.prepare(`

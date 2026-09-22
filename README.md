@@ -10,8 +10,8 @@ Aplikasi sengaja dibagi menjadi dua surface utama:
 ## Fitur Saat Ini
 
 ### Keuangan
-- Kas masuk dan kas keluar oleh Bendahara.
-- Admin/Pengurus memonitor keuangan secara read-only.
+- Kas masuk dan kas keluar oleh Admin/Pengurus maupun Bendahara.
+- Admin/Pengurus dapat membantu pencatatan transaksi saat Bendahara tidak tersedia.
 - Kategori transaksi dinamis yang dikelola Admin.
 - Kas masuk memiliki sumber dana + detail sumber terpisah.
 - Saldo awal dapat dikonfigurasi Admin lengkap dengan tanggal dan catatan.
@@ -38,7 +38,7 @@ Aplikasi sengaja dibagi menjadi dua surface utama:
 ### Akses & Keamanan
 - Initial setup tanpa password bawaan.
 - Login Admin/Pengurus dan Bendahara.
-- Role-based access dengan pemisahan tugas: Admin mengelola informasi/config dan monitoring, Bendahara mencatat transaksi/bukti.
+- Role-based access dengan pemisahan tugas: Admin mengelola informasi/config, monitoring, dan dapat membantu mencatat transaksi; Bendahara mencatat transaksi/bukti.
 - Password di-hash dengan PBKDF2-HMAC-SHA256.
 - Server-side session dengan HttpOnly cookie.
 - Rate limiting sederhana untuk login/setup.

@@ -370,7 +370,7 @@ export default function AdminSettings() {
 
           <div className="role-policy-note">
             <strong>Pemisahan tugas</strong>
-            <span>Admin mengelola informasi, jadwal, konfigurasi dan monitoring. Bendahara mencatat transaksi dan mengelola bukti keuangan.</span>
+            <span>Admin mengelola informasi, jadwal, konfigurasi, monitoring, dan dapat membantu mencatat transaksi. Bendahara mencatat transaksi dan mengelola bukti keuangan.</span>
           </div>
 
           <div className="user-list">

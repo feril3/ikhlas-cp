@@ -7,8 +7,9 @@ async function request(path, options = {}) {
   }
 
   const response = await fetch(`${API_URL}${path}`, {
-    credentials: 'include',
     ...options,
+    credentials: 'include',
+    cache: 'no-store',
     headers
   });
 
@@ -83,7 +84,8 @@ export const api = {
   reportSummary: (from, to) => request(`/reports/summary${queryString({ from, to })}`),
   async downloadTransactionsCsv(from, to) {
     const response = await fetch(`${API_URL}/reports/transactions.csv${queryString({ from, to })}`, {
-      credentials: 'include'
+      credentials: 'include',
+      cache: 'no-store'
     });
     if (!response.ok) throw new Error('Laporan CSV gagal diunduh.');
 

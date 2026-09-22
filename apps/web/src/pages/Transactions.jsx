@@ -9,6 +9,7 @@ import { useAuth } from '../auth/AuthContext.jsx';
 
 export default function Transactions() {
   const { user } = useAuth();
+  const canCreateTransactions = ['ADMIN', 'TREASURER'].includes(user?.role);
   const [type, setType] = useState('');
   const [query, setQuery] = useState('');
   const [data, setData] = useState(null);
@@ -25,7 +26,7 @@ export default function Transactions() {
     <div className="page-stack">
       <header className="page-heading">
         <div><p className="eyebrow">Keuangan</p><h1>Riwayat Transaksi</h1><p className="page-subtitle">Pantau kas masuk dan keluar dalam satu tempat.</p></div>
-        {user?.role === 'TREASURER' && (
+        {canCreateTransactions && (
           <div className="heading-actions"><Link to="/transactions/income" className="button secondary"><ArrowDownToLine size={18} /> Kas Masuk</Link><Link to="/transactions/expense" className="button primary"><ArrowUpFromLine size={18} /> Kas Keluar</Link></div>
         )}
       </header>
