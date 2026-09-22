@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { Readable } from 'node:stream';
 import { google } from 'googleapis';
@@ -5,9 +6,11 @@ import { google } from 'googleapis';
 const DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const FOLDER_MIME = 'application/vnd.google-apps.folder';
 const DEFAULT_FOLDER_NAME = 'IKHLAS - Bukti Transaksi';
+const DEFAULT_BACKUP_FOLDER_NAME = 'IKHLAS - Backup Database';
 
 let driveClient;
 let storageFolderPromise;
+let backupFolderPromise;
 
 function getRequiredEnv(name) {
   const value = process.env[name]?.trim();
@@ -45,26 +48,35 @@ export function isGoogleDriveConfigured() {
   );
 }
 
-async function findOrCreateStorageFolder() {
+async function validateConfiguredFolder(folderId, envName) {
   const drive = getDrive();
-  const configuredFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID?.trim();
+  const result = await drive.files.get({
+    fileId: folderId,
+    fields: 'id,name,mimeType,trashed',
+    supportsAllDrives: true
+  });
+
+  if (result.data.trashed || result.data.mimeType !== FOLDER_MIME) {
+    throw new Error(`${envName} harus menunjuk ke folder Google Drive yang aktif.`);
+  }
+
+  return result.data.id;
+}
+
+async function findOrCreateTaggedFolder({
+  configuredFolderId,
+  configuredFolderEnv,
+  folderName,
+  appPropertyKey
+}) {
+  const drive = getDrive();
 
   if (configuredFolderId) {
-    const result = await drive.files.get({
-      fileId: configuredFolderId,
-      fields: 'id,name,mimeType,trashed',
-      supportsAllDrives: true
-    });
-
-    if (result.data.trashed || result.data.mimeType !== FOLDER_MIME) {
-      throw new Error('GOOGLE_DRIVE_FOLDER_ID harus menunjuk ke folder Google Drive yang aktif.');
-    }
-
-    return result.data.id;
+    return validateConfiguredFolder(configuredFolderId, configuredFolderEnv);
   }
 
   const list = await drive.files.list({
-    q: `mimeType='${FOLDER_MIME}' and trashed=false and appProperties has { key='ikhlasStorageRoot' and value='true' }`,
+    q: `mimeType='${FOLDER_MIME}' and trashed=false and appProperties has { key='${appPropertyKey}' and value='true' }`,
     spaces: 'drive',
     fields: 'files(id,name)',
     pageSize: 10
@@ -75,10 +87,10 @@ async function findOrCreateStorageFolder() {
 
   const created = await drive.files.create({
     requestBody: {
-      name: process.env.GOOGLE_DRIVE_FOLDER_NAME?.trim() || DEFAULT_FOLDER_NAME,
+      name: folderName,
       mimeType: FOLDER_MIME,
       appProperties: {
-        ikhlasStorageRoot: 'true',
+        [appPropertyKey]: 'true',
         source: 'IKHLAS'
       }
     },
@@ -92,6 +104,24 @@ async function findOrCreateStorageFolder() {
   return created.data.id;
 }
 
+async function findOrCreateStorageFolder() {
+  return findOrCreateTaggedFolder({
+    configuredFolderId: process.env.GOOGLE_DRIVE_FOLDER_ID?.trim(),
+    configuredFolderEnv: 'GOOGLE_DRIVE_FOLDER_ID',
+    folderName: process.env.GOOGLE_DRIVE_FOLDER_NAME?.trim() || DEFAULT_FOLDER_NAME,
+    appPropertyKey: 'ikhlasStorageRoot'
+  });
+}
+
+async function findOrCreateBackupFolder() {
+  return findOrCreateTaggedFolder({
+    configuredFolderId: process.env.GOOGLE_DRIVE_BACKUP_FOLDER_ID?.trim(),
+    configuredFolderEnv: 'GOOGLE_DRIVE_BACKUP_FOLDER_ID',
+    folderName: process.env.GOOGLE_DRIVE_BACKUP_FOLDER_NAME?.trim() || DEFAULT_BACKUP_FOLDER_NAME,
+    appPropertyKey: 'ikhlasBackupRoot'
+  });
+}
+
 export async function getStorageFolderId() {
   if (!storageFolderPromise) {
     storageFolderPromise = findOrCreateStorageFolder().catch((error) => {
@@ -101,6 +131,17 @@ export async function getStorageFolderId() {
   }
 
   return storageFolderPromise;
+}
+
+export async function getBackupFolderId() {
+  if (!backupFolderPromise) {
+    backupFolderPromise = findOrCreateBackupFolder().catch((error) => {
+      backupFolderPromise = undefined;
+      throw error;
+    });
+  }
+
+  return backupFolderPromise;
 }
 
 function sanitizeFilename(value) {
@@ -212,6 +253,99 @@ export async function deleteTransactionAttachment(fileId) {
     if (error?.code === 404) return;
     throw error;
   }
+}
+
+export async function uploadDatabaseBackup(filePath, {
+  filename,
+  createdAt = new Date().toISOString()
+} = {}) {
+  const drive = getDrive();
+  const parentId = await getBackupFolderId();
+  const stat = await fs.promises.stat(filePath);
+
+  if (!stat.isFile() || stat.size === 0) {
+    throw new Error('Snapshot SQLite tidak valid atau kosong.');
+  }
+
+  const response = await drive.files.create({
+    requestBody: {
+      name: filename || path.basename(filePath),
+      parents: [parentId],
+      appProperties: {
+        ikhlasDatabaseBackup: 'true',
+        ikhlasBackupCreatedAt: createdAt,
+        source: 'IKHLAS'
+      }
+    },
+    media: {
+      mimeType: 'application/x-sqlite3',
+      body: fs.createReadStream(filePath)
+    },
+    fields: 'id,name,mimeType,size,createdTime',
+    supportsAllDrives: true
+  });
+
+  if (!response.data.id) {
+    throw new Error('Google Drive tidak mengembalikan file ID backup.');
+  }
+
+  return {
+    id: response.data.id,
+    name: response.data.name,
+    size: Number(response.data.size || stat.size),
+    createdTime: response.data.createdTime || createdAt
+  };
+}
+
+export async function listDatabaseBackups() {
+  const drive = getDrive();
+  const parentId = await getBackupFolderId();
+  const files = [];
+  let pageToken;
+
+  do {
+    const response = await drive.files.list({
+      q: `'${parentId}' in parents and trashed=false and appProperties has { key='ikhlasDatabaseBackup' and value='true' }`,
+      spaces: 'drive',
+      fields: 'nextPageToken,files(id,name,size,createdTime,appProperties)',
+      orderBy: 'createdTime desc',
+      pageSize: 100,
+      pageToken,
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true
+    });
+
+    files.push(...(response.data.files ?? []));
+    pageToken = response.data.nextPageToken || undefined;
+  } while (pageToken);
+
+  return files;
+}
+
+export async function pruneDatabaseBackups(retentionCount = 30) {
+  const keep = Math.max(1, Math.min(Number(retentionCount) || 30, 365));
+  const drive = getDrive();
+  const backups = await listDatabaseBackups();
+  const stale = backups.slice(keep);
+
+  const deleted = [];
+  for (const file of stale) {
+    try {
+      await drive.files.delete({
+        fileId: file.id,
+        supportsAllDrives: true
+      });
+      deleted.push(file.id);
+    } catch (error) {
+      if (error?.code !== 404) throw error;
+    }
+  }
+
+  return {
+    kept: Math.min(backups.length, keep),
+    deleted: deleted.length,
+    totalBeforePrune: backups.length
+  };
 }
 
 export function getGoogleDriveScope() {
