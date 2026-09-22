@@ -9,7 +9,7 @@ const SheetClose = DialogPrimitive.Close;
 const SheetPortal = DialogPrimitive.Portal;
 
 function SheetOverlay({ className, ...props }) {
-  return <DialogPrimitive.Overlay className={cn('fixed inset-0 bg-black/40 backdrop-blur-[2px]', className)} {...props} />;
+  return <DialogPrimitive.Overlay className={cn('fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px]', className)} {...props} />;
 }
 
 const SheetContent = React.forwardRef(function SheetContent(
@@ -27,7 +27,7 @@ const SheetContent = React.forwardRef(function SheetContent(
       <SheetOverlay />
       <DialogPrimitive.Content
         ref={ref}
-        className={cn('fixed bg-card text-card-foreground shadow-xl outline-none', sideClasses[side], className)}
+        className={cn('fixed z-[60] bg-card text-card-foreground shadow-xl outline-none', sideClasses[side], className)}
         {...props}
       >
         {children}
