@@ -215,7 +215,7 @@ export default function PublicDisplay() {
 
   const location = data?.prayerSchedule?.source?.location ?? {
     name: 'RS Elizabeth Situbondo',
-    address: 'Patokan · Situbondo · Jawa Timur'
+    address: 'Jl. WR. Supratman No.2, Mulyautama, Patokan, Kec. Situbondo, Kabupaten Situbondo, Jawa Timur 68312'
   };
 
   const time = new Intl.DateTimeFormat('id-ID', {
@@ -248,7 +248,7 @@ export default function PublicDisplay() {
           <MapPin size={16} />
           <div>
             <strong>{location.name}</strong>
-            <span>Patokan · Situbondo · Jawa Timur</span>
+            <span>{location.address}</span>
           </div>
         </div>
 
