@@ -30,6 +30,7 @@ export default function Schedule() {
   const isAdmin = user?.role === 'ADMIN';
   const [date, setDate] = useState(toInputDate());
   const [schedule, setSchedule] = useState(null);
+  const [scheduleSource, setScheduleSource] = useState(null);
   const [activities, setActivities] = useState([]);
   const [activityForm, setActivityForm] = useState(emptyActivity);
   const [status, setStatus] = useState({ type: 'idle', message: '' });
@@ -44,6 +45,7 @@ export default function Schedule() {
         api.activities(date)
       ]);
       setSchedule(normalizeSchedule(scheduleData.items));
+      setScheduleSource(scheduleData.source ?? null);
       setActivities(activityData.data);
     } catch (error) {
       setStatus({ type: 'error', message: error.message });
@@ -63,7 +65,8 @@ export default function Schedule() {
     try {
       const result = await api.updatePrayerSchedule(date, schedule);
       setSchedule(normalizeSchedule(result.items));
-      setStatus({ type: 'success', message: 'Jadwal salat berhasil diperbarui.' });
+      setScheduleSource(result.source ?? scheduleSource);
+      setStatus({ type: 'success', message: 'Iqamah, imam, dan bilal berhasil diperbarui.' });
     } catch (error) {
       setStatus({ type: 'error', message: error.message });
     }
@@ -106,7 +109,7 @@ export default function Schedule() {
         <div>
           <p className="eyebrow">Informasi masjid</p>
           <h1>Jadwal & Kegiatan</h1>
-          <p className="page-subtitle">Kelola jadwal salat, imam, bilal, dan agenda yang akan tampil ke jamaah.</p>
+          <p className="page-subtitle">Waktu adzan otomatis dari API publik. Admin mengelola iqamah, imam, bilal, dan agenda masjid.</p>
         </div>
         <label className="compact-date-picker">
           <span>Tanggal</span>
@@ -121,7 +124,16 @@ export default function Schedule() {
         <>
           <section className="panel schedule-editor-panel">
             <div className="panel-heading">
-              <div><p className="section-kicker">{dateLabel}</p><h2>Jadwal salat</h2></div>
+              <div>
+                <p className="section-kicker">{dateLabel}</p>
+                <h2>Jadwal salat</h2>
+                {scheduleSource && (
+                  <p className="schedule-source-copy">
+                    Adzan: {scheduleSource.calculationMethodName} · {scheduleSource.location?.name}
+                    {scheduleSource.status === 'fallback' ? ' · fallback lokal' : ''}
+                  </p>
+                )}
+              </div>
               <Clock3 size={20} className="muted-icon" />
             </div>
 
@@ -129,7 +141,7 @@ export default function Schedule() {
               {schedule.map((item, index) => (
                 <article className="schedule-editor-row" key={item.prayerName}>
                   <strong>{item.prayerName}</strong>
-                  <label className="mini-field"><span>Adzan</span><input type="time" value={item.adhanTime} disabled={!isAdmin} onChange={(e) => updatePrayer(index, 'adhanTime', e.target.value)} /></label>
+                  <label className="mini-field"><span>Adzan · API</span><input type="time" value={item.adhanTime} disabled title="Waktu adzan otomatis dari API jadwal salat" /></label>
                   <label className="mini-field"><span>Iqamah</span><input type="time" value={item.iqamahTime ?? ''} disabled={!isAdmin} onChange={(e) => updatePrayer(index, 'iqamahTime', e.target.value)} /></label>
                   <label className="mini-field wide"><span>Imam</span><input value={item.imam ?? ''} disabled={!isAdmin} onChange={(e) => updatePrayer(index, 'imam', e.target.value)} placeholder="Nama imam" /></label>
                   <label className="mini-field wide"><span>Bilal</span><input value={item.bilal ?? ''} disabled={!isAdmin} onChange={(e) => updatePrayer(index, 'bilal', e.target.value)} placeholder="Nama bilal" /></label>
@@ -139,7 +151,7 @@ export default function Schedule() {
 
             {isAdmin && (
               <div className="panel-actions">
-                <button className="button primary" onClick={saveSchedule}><Save size={17} /> Simpan jadwal {date}</button>
+                <button className="button primary" onClick={saveSchedule}><Save size={17} /> Simpan iqamah & petugas {date}</button>
               </div>
             )}
           </section>
