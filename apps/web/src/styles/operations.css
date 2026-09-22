@@ -70,3 +70,11 @@
 .event-card h3 { margin: 0 0 8px; font-size: 13px; }
 .event-card p { display: flex; align-items: center; gap: 6px; margin: 4px 0; color: var(--muted); font-size: 10px; }
 
+
+
+.transaction-source {
+  margin-top: 4px;
+  color: var(--green-deep);
+  font-size: 10px;
+  font-weight: 650;
+}
