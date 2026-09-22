@@ -101,6 +101,10 @@ const settingsSchema = z.object({
   openingBalanceNote: z.string().trim().max(240).optional().default('')
 });
 
+const userStatusSchema = z.object({
+  isActive: z.boolean()
+});
+
 const categorySchema = z.object({
   type: z.enum(['INCOME', 'EXPENSE']),
   name: z.string().trim().min(2).max(80),
@@ -1377,6 +1381,45 @@ apiRouter.post('/users', requireAuth, requireRole('ADMIN'), (req, res) => {
     }
     throw error;
   }
+});
+
+apiRouter.put('/users/:id/status', requireAuth, requireRole('ADMIN'), (req, res) => {
+  const parsed = userStatusSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(422).json({ message: 'Status pengguna tidak valid.' });
+  }
+
+  const userId = Number(req.params.id);
+  const existing = db.prepare(`
+    SELECT id, name, email, is_active AS isActive
+    FROM users
+    WHERE id = ?
+  `).get(userId);
+
+  if (!existing) return res.status(404).json({ message: 'Pengguna tidak ditemukan.' });
+  if (userId === Number(req.user.id) && !parsed.data.isActive) {
+    return res.status(422).json({ message: 'Akun yang sedang digunakan tidak dapat dinonaktifkan.' });
+  }
+
+  db.prepare('UPDATE users SET is_active = ? WHERE id = ?')
+    .run(parsed.data.isActive ? 1 : 0, userId);
+
+  if (!parsed.data.isActive) {
+    db.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId);
+  }
+
+  logAudit(req, {
+    action: 'USER_STATUS_UPDATE',
+    entityType: 'USER',
+    entityId: userId,
+    details: {
+      email: existing.email,
+      before: { isActive: Boolean(existing.isActive) },
+      after: { isActive: parsed.data.isActive }
+    }
+  });
+
+  return res.json({ id: userId, isActive: parsed.data.isActive });
 });
 
 apiRouter.get('/transaction-categories', requireAuth, (req, res) => {
