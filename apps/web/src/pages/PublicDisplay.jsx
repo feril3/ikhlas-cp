@@ -257,7 +257,6 @@ export default function PublicDisplay() {
 
       <main className="media-signage-main">
         <section className="prayer-focus-panel" aria-label="Waktu dan adzan berikutnya">
-          <IslamicStar className="prayer-focus-star" />
           <div className="prayer-focus-clock">
             <span>Waktu sekarang</span>
             <time>{time}</time>
