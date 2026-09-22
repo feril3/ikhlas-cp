@@ -27,13 +27,17 @@ Aplikasi sengaja dibagi menjadi dua surface utama:
 - Audit trail untuk aktivitas penting.
 
 ### Operasional Masjid
-- Jadwal salat, imam, bilal, dan iqamah.
+- Waktu adzan otomatis dari public prayer-time API menggunakan metode Kementerian Agama RI untuk koordinat RS Elizabeth Situbondo.
+- Cache jadwal salat SQLite + last-known-good fallback ketika API/internet bermasalah.
+- Iqamah, imam, dan bilal tetap dikelola internal masjid.
 - Pengelolaan kegiatan.
 - Konfigurasi identitas masjid dan rekening donasi.
 - Live Masjid melalui YouTube embed.
-- Public Display dengan waktu real-time, countdown 5 menit menjelang adzan/iqamah, agenda, keuangan, donasi, dan live stream.
-- Recent transaksi publik yang disanitasi dan berotasi otomatis.
-- Footer Public Display untuk rotasi ayat/hadits terverifikasi, pengumuman, dan pesan masjid.
+- Public Display V2 khusus signage 16:9: fixed 100dvh, tanpa vertical/horizontal scroll.
+- Jam, next prayer, countdown, dan lima waktu salat selalu terlihat pada posisi konsisten.
+- Secondary-content carousel untuk kegiatan, live stream, transparansi keuangan, transaksi terbaru, pengumuman, dan donasi.
+- Recent transaksi publik yang disanitasi; detail sumber, bukti, mutasi, dan user pencatat tidak diekspos.
+- Footer/ticker untuk rotasi ayat/hadits terverifikasi, pengumuman, dan pesan masjid.
 
 ### Akses & Keamanan
 - Initial setup tanpa password bawaan.
@@ -81,6 +85,8 @@ Akses:
 - Web: `http://localhost:5173`
 - API health: `http://localhost:3001/api/health`
 - Public Display: `http://localhost:5173/public-display`
+
+Public Display ditargetkan untuk layar landscape 16:9 (1366×768 sampai 4K), bukan halaman web yang perlu di-scroll.
 
 Pada instalasi baru, buka Web. Karena belum ada pengguna, IKHLAS akan meminta membuat **akun Admin pertama**. Tidak ada username/password default yang ditanam di source code.
 
