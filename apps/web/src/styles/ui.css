@@ -23,6 +23,7 @@
   --color-ring: var(--ui-ring);
   --color-sidebar: var(--ui-sidebar);
   --color-sidebar-foreground: var(--ui-sidebar-foreground);
+  --color-sidebar-primary: var(--ui-sidebar-primary);
   --color-sidebar-accent: var(--ui-sidebar-accent);
   --color-sidebar-accent-foreground: var(--ui-sidebar-accent-foreground);
   --color-sidebar-border: var(--ui-sidebar-border);
@@ -56,6 +57,7 @@
   --ui-ring: #2b7a69;
   --ui-sidebar: #0b3f35;
   --ui-sidebar-foreground: #edf6f3;
+  --ui-sidebar-primary: #d2b878;
   --ui-sidebar-accent: #15594a;
   --ui-sidebar-accent-foreground: #ffffff;
   --ui-sidebar-border: rgba(255,255,255,.12);
@@ -77,14 +79,4 @@
 .dashboard-shell :focus-visible {
   outline: 2px solid color-mix(in srgb, var(--ui-ring) 75%, transparent);
   outline-offset: 2px;
-}
-
-.dashboard-shell .page-container {
-  max-width: none;
-}
-
-@media (min-width: 1024px) {
-  .dashboard-shell .page-container {
-    padding: 28px 32px 48px;
-  }
 }

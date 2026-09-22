@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 
-export function UserMenu({ compact = false }) {
+export function UserMenu({ compact = false, sidebar = false }) {
   const { user, logout } = useAuth();
   const initials = user?.name
     ?.split(/\s+/)
@@ -28,17 +28,23 @@ export function UserMenu({ compact = false }) {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className={compact
-            ? 'size-10 min-h-10 p-0 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-            : 'h-auto min-h-10 justify-start gap-3 px-2.5 py-2 text-left'}
+          className={
+            sidebar
+              ? compact
+                ? 'size-10 min-h-10 p-0 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                : 'h-auto min-h-10 w-full justify-start gap-3 px-2.5 py-2 text-left text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+              : compact
+                ? 'size-10 min-h-10 p-0'
+                : 'h-auto min-h-10 justify-start gap-3 px-2.5 py-2 text-left'
+          }
         >
           <Avatar className="size-8">
-            <AvatarFallback>{initials}</AvatarFallback>
+            <AvatarFallback className={sidebar ? 'bg-sidebar-accent text-sidebar-accent-foreground' : undefined}>{initials}</AvatarFallback>
           </Avatar>
           {!compact && (
             <span className="min-w-0 flex-1">
               <strong className="block truncate text-xs font-semibold">{user?.name}</strong>
-              <span className="block truncate text-[11px] font-normal text-muted-foreground">{role}</span>
+              <span className={sidebar ? 'block truncate text-[11px] font-normal text-sidebar-foreground/58' : 'block truncate text-[11px] font-normal text-muted-foreground'}>{role}</span>
             </span>
           )}
         </Button>

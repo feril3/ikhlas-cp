@@ -68,7 +68,7 @@ function NavigationPanel({ mobile = false }) {
             if (!items.length) return null;
             return (
               <SidebarGroup key={group.label}>
-                {expanded && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
+                {expanded && <SidebarGroupLabel forceVisible={mobile}>{group.label}</SidebarGroupLabel>}
                 <SidebarMenu>
                   {items.map(({ to, label, icon: Icon }) => {
                     const active = to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);
@@ -81,7 +81,7 @@ function NavigationPanel({ mobile = false }) {
                               end={to === '/'}
                               onClick={() => mobile && setOpenMobile(false)}
                             >
-                              <Icon className="size-[18px]" stroke={1.8} />
+                              <Icon aria-hidden="true" stroke={1.8} />
                               {expanded && <span className="truncate">{label}</span>}
                             </NavLink>
                           </SidebarMenuButton>
@@ -96,17 +96,17 @@ function NavigationPanel({ mobile = false }) {
           })}
 
           <SidebarGroup className="mt-auto">
-            {expanded && <SidebarGroupLabel>Lainnya</SidebarGroupLabel>}
+            {expanded && <SidebarGroupLabel forceVisible={mobile}>Lainnya</SidebarGroupLabel>}
             <SidebarMenu>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <SidebarMenuButton asChild>
                     <a href="/public-display" target="_blank" rel="noreferrer">
-                      <IconScreenShare className="size-[18px]" stroke={1.8} />
+                      <IconScreenShare aria-hidden="true" stroke={1.8} />
                       {expanded && (
                         <>
                           <span className="truncate">Tampilan Publik</span>
-                          <IconExternalLink className="ml-auto size-3.5 opacity-55" />
+                          <IconExternalLink aria-hidden="true" className="ml-auto opacity-55" />
                         </>
                       )}
                     </a>
@@ -120,8 +120,8 @@ function NavigationPanel({ mobile = false }) {
       </SidebarContent>
 
       <SidebarFooter>
-        <div className={expanded ? 'rounded-md bg-white/[0.04]' : 'flex justify-center'}>
-          <UserMenu compact={!expanded} />
+        <div className={expanded ? 'rounded-md bg-sidebar-accent/35' : 'flex justify-center'}>
+          <UserMenu compact={!expanded} sidebar />
         </div>
       </SidebarFooter>
     </>

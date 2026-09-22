@@ -1,7 +1,7 @@
-import { IconChevronRight } from '@tabler/icons-react';
+import { IconDeviceTv } from '@tabler/icons-react';
 import { Link, useLocation } from 'react-router-dom';
-import { AppBrand } from '@/components/app/AppBrand.jsx';
 import { UserMenu } from '@/components/app/UserMenu.jsx';
+import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import {
   Breadcrumb,
@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/breadcrumb';
 
 const routeMeta = {
-  '/': ['Dashboard'],
+  '/': ['Overview', 'Dashboard'],
   '/transactions': ['Keuangan', 'Transaksi'],
   '/transactions/income': ['Keuangan', 'Kas Masuk'],
   '/transactions/expense': ['Keuangan', 'Kas Keluar'],
@@ -22,42 +22,51 @@ const routeMeta = {
   '/settings': ['Administrasi', 'Pengaturan']
 };
 
+function sectionDestination(section) {
+  if (section === 'Keuangan') return '/transactions';
+  if (section === 'Operasional') return '/schedule';
+  if (section === 'Administrasi') return '/settings';
+  return '/';
+}
+
 export function AppHeader() {
   const location = useLocation();
   const trail = routeMeta[location.pathname] ?? ['IKHLAS'];
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center border-b bg-background/96 px-4 backdrop-blur md:px-6">
-      <div className="flex w-full items-center gap-3">
-        <div className="lg:hidden">
-          <SidebarTrigger mobile />
-        </div>
-        <div className="hidden lg:block">
-          <SidebarTrigger />
-        </div>
+    <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90">
+      <div className="flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
+        <SidebarTrigger mobile className="lg:hidden" />
+        <SidebarTrigger className="hidden lg:inline-flex" />
 
-        <div className="lg:hidden">
-          <AppBrand compact />
-        </div>
-
-        <Breadcrumb className="hidden min-w-0 sm:block">
-          <BreadcrumbList>
+        <Breadcrumb className="min-w-0 flex-1">
+          <BreadcrumbList className="flex-nowrap text-xs sm:text-sm">
             {trail.map((item, index) => (
               <span className="contents" key={item}>
-                {index > 0 && <BreadcrumbSeparator><IconChevronRight className="size-3.5" /></BreadcrumbSeparator>}
-                <BreadcrumbItem>
+                {index > 0 && <BreadcrumbSeparator />}
+                <BreadcrumbItem className={index === 0 ? 'hidden sm:inline-flex' : 'min-w-0'}>
                   {index === trail.length - 1
-                    ? <BreadcrumbPage>{item}</BreadcrumbPage>
-                    : <BreadcrumbLink asChild><Link to={location.pathname.startsWith('/transactions') || location.pathname === '/reports' ? '/transactions' : '/'}>{item}</Link></BreadcrumbLink>}
+                    ? <BreadcrumbPage className="truncate">{item}</BreadcrumbPage>
+                    : (
+                      <BreadcrumbLink asChild>
+                        <Link to={sectionDestination(item)}>{item}</Link>
+                      </BreadcrumbLink>
+                    )
+                  }
                 </BreadcrumbItem>
               </span>
             ))}
           </BreadcrumbList>
         </Breadcrumb>
 
-        <div className="ml-auto">
-          <UserMenu />
-        </div>
+        <Button variant="outline" size="sm" asChild className="hidden md:inline-flex">
+          <Link to="/public-display" target="_blank" rel="noreferrer">
+            <IconDeviceTv data-icon="inline-start" aria-hidden="true" />
+            Tampilan Publik
+          </Link>
+        </Button>
+
+        <UserMenu />
       </div>
     </header>
   );
