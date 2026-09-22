@@ -52,3 +52,35 @@ test('public display styles remain separate from the Tailwind dashboard foundati
   assert.match(uiCss, /tailwindcss\/utilities\.css/);
   assert.doesNotMatch(uiCss, /tailwindcss\/preflight/);
 });
+
+
+test('phase 2 dashboard uses real SQLite cashflow data and Recharts composition', async () => {
+  const routes = await source('apps/api/src/routes.js');
+  const dashboard = await source('apps/web/src/pages/Dashboard.jsx');
+
+  assert.match(routes, /function getCashflowSeries/);
+  assert.match(routes, /GROUP BY transaction_date/);
+  assert.match(routes, /cashflow: getCashflowSeries\(chartFrom, dashboardDate\)/);
+  assert.match(routes, /monthSummary: getPeriodSummary/);
+
+  assert.match(dashboard, /AreaChart/);
+  assert.match(dashboard, /ChartContainer/);
+  assert.match(dashboard, /Arus kas 30 hari terakhir/);
+  assert.match(dashboard, /Kas masuk bulan ini/);
+  assert.match(dashboard, /PageHeader/);
+  assert.doesNotMatch(dashboard, /CircleDollarSign/);
+  assert.doesNotMatch(dashboard, /section-kicker/);
+});
+
+test('phase 2 reports combines Recharts analysis with verifiable numeric tables', async () => {
+  const routes = await source('apps/api/src/routes.js');
+  const reports = await source('apps/web/src/pages/Reports.jsx');
+
+  assert.match(routes, /cashflow: getCashflowSeries\(range\.from, range\.to\)/);
+  assert.match(reports, /BarChart/);
+  assert.match(reports, /Distribusi kategori/);
+  assert.match(reports, /Rincian kategori/);
+  assert.match(reports, /TableHeader/);
+  assert.match(reports, /Unduh CSV/);
+  assert.doesNotMatch(reports, /section-kicker/);
+});

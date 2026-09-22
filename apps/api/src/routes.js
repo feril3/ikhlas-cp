@@ -165,6 +165,39 @@ function getPeriodSummary(from, to) {
   };
 }
 
+function getCashflowSeries(from, to) {
+  const rows = db.prepare(`
+    SELECT
+      transaction_date AS date,
+      COALESCE(SUM(CASE WHEN type = 'INCOME' THEN amount END), 0) AS income,
+      COALESCE(SUM(CASE WHEN type = 'EXPENSE' THEN amount END), 0) AS expense
+    FROM transactions
+    WHERE transaction_date BETWEEN ? AND ?
+    GROUP BY transaction_date
+    ORDER BY transaction_date ASC
+  `).all(from, to);
+
+  const byDate = new Map(rows.map((row) => [row.date, row]));
+  const series = [];
+  let cursor = from;
+
+  while (cursor <= to) {
+    const row = byDate.get(cursor);
+    const income = Number(row?.income ?? 0);
+    const expense = Number(row?.expense ?? 0);
+    series.push({
+      date: cursor,
+      income,
+      expense,
+      net: income - expense
+    });
+    cursor = addCalendarDays(cursor, 1);
+  }
+
+  return series;
+}
+
+
 function getPrayerSchedule(date) {
   let scheduleDate = date;
 
@@ -595,12 +628,17 @@ apiRouter.get('/dashboard', requireAuth, async (req, res) => {
     : todayIso();
   const schedule = await getProviderPrayerSchedule(dashboardDate);
   const activities = getUpcomingActivities(dashboardDate, 4);
+  const monthFrom = firstDayOfMonth(dashboardDate);
+  const chartFrom = addCalendarDays(dashboardDate, -29);
 
   res.json({
     summary: getSummary(),
+    monthSummary: getPeriodSummary(monthFrom, dashboardDate),
+    cashflow: getCashflowSeries(chartFrom, dashboardDate),
     recentTransactions,
     prayerSchedule: schedule.items,
     prayerScheduleDate: schedule.scheduleDate,
+    prayerHijriDate: schedule.hijriDate ?? null,
     activities
   });
 });
@@ -1082,7 +1120,8 @@ apiRouter.get('/reports/summary', requireAuth, (req, res) => {
 
   res.json({
     summary: getPeriodSummary(range.from, range.to),
-    categories
+    categories,
+    cashflow: getCashflowSeries(range.from, range.to)
   });
 });
 
