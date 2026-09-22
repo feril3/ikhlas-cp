@@ -1,0 +1,32 @@
+name: UI Phase 3 Dependency Cleanup
+
+on:
+  push:
+    branches:
+      - redesign/phase-3-transactions
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: "!contains(github.event.head_commit.message, '[ui-phase3-deps]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: redesign/phase-3-transactions
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm uninstall -w @ikhlas/web cn
+      - run: |
+          git config user.name "IKHLAS UI Cleanup"
+          git config user.email "actions@users.noreply.github.com"
+          git add package.json package-lock.json apps/web/package.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "chore: remove accidental cn dependency [ui-phase3-deps]"
+          git push origin HEAD:redesign/phase-3-transactions
