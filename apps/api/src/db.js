@@ -119,6 +119,17 @@ export function initializeDatabase() {
       bilal TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS prayer_time_cache (
+      prayer_date TEXT PRIMARY KEY,
+      provider TEXT NOT NULL,
+      latitude REAL NOT NULL,
+      longitude REAL NOT NULL,
+      calculation_method INTEGER NOT NULL,
+      timezone TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      fetched_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS activities (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
@@ -157,6 +168,8 @@ export function initializeDatabase() {
       ON public_messages(is_active, sort_order);
     CREATE INDEX IF NOT EXISTS idx_prayer_schedule_date
       ON prayer_schedules(prayer_date, adhan_time);
+    CREATE INDEX IF NOT EXISTS idx_prayer_cache_fetched
+      ON prayer_time_cache(fetched_at DESC);
     CREATE INDEX IF NOT EXISTS idx_activities_date
       ON activities(activity_date, start_time);
     CREATE INDEX IF NOT EXISTS idx_sessions_expiry
