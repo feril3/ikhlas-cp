@@ -78,9 +78,15 @@ function SidebarFooter({ className, ...props }) {
 function SidebarGroup({ className, ...props }) {
   return <div className={cn('flex flex-col gap-1', className)} {...props} />;
 }
-function SidebarGroupLabel({ className, ...props }) {
+function SidebarGroupLabel({ className, forceVisible = false, ...props }) {
   const { open } = useSidebar();
-  return <div className={cn('px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/55 data-[hidden=true]:sr-only', className)} data-hidden={!open} {...props} />;
+  return (
+    <div
+      className={cn('px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/55 data-[hidden=true]:sr-only', className)}
+      data-hidden={!forceVisible && !open}
+      {...props}
+    />
+  );
 }
 function SidebarMenu({ className, ...props }) {
   return <div className={cn('flex flex-col gap-1', className)} {...props} />;
