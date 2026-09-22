@@ -32,7 +32,8 @@ const transactionSchema = z.object({
   amount: z.coerce.number().int().positive().max(9_999_999_999),
   transactionDate: z.string().regex(datePattern),
   method: z.enum(['CASH', 'TRANSFER']),
-  category: z.string().trim().min(2).max(80),
+  categoryId: z.coerce.number().int().positive(),
+  sourceDetail: z.string().trim().max(120).optional().default(''),
   description: z.string().trim().max(300).optional().default('')
 });
 
@@ -81,7 +82,26 @@ const settingsSchema = z.object({
   bankAccountHolder: z.string().trim().max(120).optional().default(''),
   defaultYoutubeUrl: z.string().trim().url().or(z.literal('')).optional().default(''),
   activeLiveUrl: z.string().trim().url().or(z.literal('')).optional().default(''),
-  activeLiveTitle: z.string().trim().max(140).optional().default('')
+  activeLiveTitle: z.string().trim().max(140).optional().default(''),
+  openingBalance: z.coerce.number().int().min(0).max(9_999_999_999),
+  openingBalanceDate: z.string().regex(datePattern).or(z.literal('')).optional().default(''),
+  openingBalanceNote: z.string().trim().max(240).optional().default('')
+});
+
+const categorySchema = z.object({
+  type: z.enum(['INCOME', 'EXPENSE']),
+  name: z.string().trim().min(2).max(80),
+  sortOrder: z.coerce.number().int().min(0).max(999).optional().default(0),
+  isActive: z.boolean().optional().default(true)
+});
+
+const publicMessageSchema = z.object({
+  kind: z.enum(['VERSE', 'ANNOUNCEMENT', 'MESSAGE']),
+  title: z.string().trim().max(100).optional().default(''),
+  content: z.string().trim().min(2).max(400),
+  source: z.string().trim().max(120).optional().default(''),
+  sortOrder: z.coerce.number().int().min(0).max(999).optional().default(0),
+  isActive: z.boolean().optional().default(true)
 });
 
 function getSummary() {
@@ -241,6 +261,37 @@ function publicSettings() {
   };
 }
 
+function adminSettings() {
+  const publicValues = publicSettings();
+  const raw = getSettings([
+    'opening_balance',
+    'opening_balance_date',
+    'opening_balance_note'
+  ]);
+
+  return {
+    ...publicValues,
+    openingBalance: Number(raw.opening_balance || 0),
+    openingBalanceDate: raw.opening_balance_date || '',
+    openingBalanceNote: raw.opening_balance_note || ''
+  };
+}
+
+function getActivePublicMessages() {
+  return db.prepare(`
+    SELECT
+      id,
+      kind,
+      title,
+      content,
+      source,
+      sort_order AS sortOrder
+    FROM public_messages
+    WHERE is_active = 1
+    ORDER BY sort_order ASC, id ASC
+  `).all();
+}
+
 apiRouter.get('/health', (_req, res) => {
   res.json({
     status: 'ok',
@@ -371,6 +422,18 @@ apiRouter.get('/public/display', (req, res) => {
   const date = datePattern.test(String(req.query.date ?? '')) ? String(req.query.date) : todayIso();
   const period = getPeriodSummary(firstDayOfMonth(date), date);
 
+  const recentTransactions = db.prepare(`
+    SELECT
+      id,
+      type,
+      amount,
+      transaction_date AS transactionDate,
+      category
+    FROM transactions
+    ORDER BY transaction_date DESC, created_at DESC
+    LIMIT 12
+  `).all();
+
   res.json({
     settings: publicSettings(),
     finance: {
@@ -381,7 +444,9 @@ apiRouter.get('/public/display', (req, res) => {
       to: period.to
     },
     prayerSchedule: getPrayerSchedule(date),
-    activities: getUpcomingActivities(date, 4).filter((item) => item.isPublished)
+    activities: getUpcomingActivities(date, 4).filter((item) => item.isPublished),
+    recentTransactions,
+    messages: getActivePublicMessages()
   });
 });
 
@@ -394,6 +459,8 @@ apiRouter.get('/dashboard', requireAuth, (req, res) => {
       transaction_date AS transactionDate,
       method,
       category,
+      category_id AS categoryId,
+      source_detail AS sourceDetail,
       description,
       evidence_drive_file_id AS evidenceFileId,
       evidence_original_name AS evidenceOriginalName,
@@ -445,6 +512,8 @@ apiRouter.get('/transactions', requireAuth, (req, res) => {
       transaction_date AS transactionDate,
       method,
       category,
+      category_id AS categoryId,
+      source_detail AS sourceDetail,
       description,
       evidence_drive_file_id AS evidenceFileId,
       evidence_original_name AS evidenceOriginalName,
@@ -465,7 +534,7 @@ apiRouter.get('/transactions', requireAuth, (req, res) => {
 apiRouter.post(
   '/transactions',
   requireAuth,
-  requireRole('ADMIN', 'TREASURER'),
+  requireRole('TREASURER'),
   transactionUpload,
   async (req, res) => {
     const parsed = transactionSchema.safeParse(req.body);
@@ -477,6 +546,19 @@ apiRouter.post(
     }
 
     const input = parsed.data;
+    const category = db.prepare(`
+      SELECT id, type, name, is_active AS isActive
+      FROM transaction_categories
+      WHERE id = ?
+      LIMIT 1
+    `).get(input.categoryId);
+
+    if (!category || category.type !== input.type || !category.isActive) {
+      return res.status(422).json({
+        message: 'Kategori transaksi tidak valid atau sudah dinonaktifkan.'
+      });
+    }
+
     const evidence = req.files?.evidence?.[0] ?? null;
     const mutation = req.files?.mutation?.[0] ?? null;
 
@@ -488,12 +570,17 @@ apiRouter.post(
 
     const insert = db.prepare(`
       INSERT INTO transactions
-        (type, amount, transaction_date, method, category, description, created_by)
+        (type, amount, transaction_date, method, category, category_id, source_detail, description, created_by)
       VALUES
-        (@type, @amount, @transactionDate, @method, @category, @description, @createdBy)
+        (@type, @amount, @transactionDate, @method, @category, @categoryId, @sourceDetail, @description, @createdBy)
     `);
 
-    const created = insert.run({ ...input, createdBy: req.user.id });
+    const created = insert.run({
+      ...input,
+      category: category.name,
+      sourceDetail: input.type === 'INCOME' ? input.sourceDetail : '',
+      createdBy: req.user.id
+    });
     const transactionId = Number(created.lastInsertRowid);
     const uploaded = {};
 
@@ -577,6 +664,8 @@ apiRouter.post(
         type: transaction.type,
         amount: transaction.amount,
         category: transaction.category,
+        categoryId: transaction.categoryId,
+        sourceDetail: transaction.sourceDetail || null,
         evidenceOnGoogleDrive: Boolean(transaction.evidenceFileId),
         mutationOnGoogleDrive: Boolean(transaction.bankMutationFileId)
       }
@@ -596,7 +685,7 @@ apiRouter.post(
 apiRouter.post(
   '/transactions/:id/attachments',
   requireAuth,
-  requireRole('ADMIN', 'TREASURER'),
+  requireRole('TREASURER'),
   transactionUpload,
   async (req, res) => {
     const transaction = db.prepare(`
@@ -782,13 +871,14 @@ apiRouter.get('/reports/transactions.csv', requireAuth, (req, res) => {
       method,
       category,
       amount,
+      source_detail AS sourceDetail,
       description
     FROM transactions
     WHERE transaction_date BETWEEN ? AND ?
     ORDER BY transaction_date ASC, id ASC
   `).all(range.from, range.to);
 
-  const header = ['Tanggal', 'Jenis', 'Metode', 'Kategori', 'Nominal', 'Keterangan'];
+  const header = ['Tanggal', 'Jenis', 'Metode', 'Kategori', 'Nominal', 'Detail Sumber', 'Keterangan'];
   const lines = [
     header.map(escapeCsv).join(','),
     ...rows.map((row) => [
@@ -797,6 +887,7 @@ apiRouter.get('/reports/transactions.csv', requireAuth, (req, res) => {
       row.method === 'TRANSFER' ? 'Transfer' : 'Cash/Tunai',
       row.category,
       row.amount,
+      row.sourceDetail,
       row.description
     ].map(escapeCsv).join(','))
   ];
@@ -957,8 +1048,177 @@ apiRouter.post('/users', requireAuth, requireRole('ADMIN'), (req, res) => {
   }
 });
 
+apiRouter.get('/transaction-categories', requireAuth, (req, res) => {
+  const params = [];
+  let where = '';
+
+  if (req.query.type === 'INCOME' || req.query.type === 'EXPENSE') {
+    where = 'WHERE type = ?';
+    params.push(req.query.type);
+  }
+
+  const rows = db.prepare(`
+    SELECT
+      id,
+      type,
+      name,
+      is_active AS isActive,
+      sort_order AS sortOrder
+    FROM transaction_categories
+    ${where}
+    ORDER BY type ASC, sort_order ASC, name ASC
+  `).all(...params).map((row) => ({ ...row, isActive: Boolean(row.isActive) }));
+
+  res.json({
+    data: req.user.role === 'ADMIN'
+      ? rows
+      : rows.filter((row) => row.isActive)
+  });
+});
+
+apiRouter.post('/transaction-categories', requireAuth, requireRole('ADMIN'), (req, res) => {
+  const parsed = categorySchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(422).json({ message: 'Kategori belum valid.', errors: parsed.error.flatten().fieldErrors });
+  }
+
+  try {
+    const input = parsed.data;
+    const result = db.prepare(`
+      INSERT INTO transaction_categories (type, name, is_active, sort_order)
+      VALUES (?, ?, ?, ?)
+    `).run(input.type, input.name, input.isActive ? 1 : 0, input.sortOrder);
+
+    logAudit(req, {
+      action: 'TRANSACTION_CATEGORY_CREATE',
+      entityType: 'TRANSACTION_CATEGORY',
+      entityId: result.lastInsertRowid,
+      details: { type: input.type, name: input.name }
+    });
+
+    return res.status(201).json({ id: Number(result.lastInsertRowid) });
+  } catch (error) {
+    if (String(error.message).includes('UNIQUE')) {
+      return res.status(409).json({ message: 'Nama kategori tersebut sudah ada untuk jenis transaksi ini.' });
+    }
+    throw error;
+  }
+});
+
+apiRouter.put('/transaction-categories/:id', requireAuth, requireRole('ADMIN'), (req, res) => {
+  const parsed = categorySchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(422).json({ message: 'Kategori belum valid.', errors: parsed.error.flatten().fieldErrors });
+  }
+
+  const existing = db.prepare('SELECT id FROM transaction_categories WHERE id = ?').get(req.params.id);
+  if (!existing) return res.status(404).json({ message: 'Kategori tidak ditemukan.' });
+
+  try {
+    const input = parsed.data;
+    db.prepare(`
+      UPDATE transaction_categories
+      SET type = ?, name = ?, is_active = ?, sort_order = ?
+      WHERE id = ?
+    `).run(input.type, input.name, input.isActive ? 1 : 0, input.sortOrder, existing.id);
+
+    logAudit(req, {
+      action: 'TRANSACTION_CATEGORY_UPDATE',
+      entityType: 'TRANSACTION_CATEGORY',
+      entityId: existing.id,
+      details: { type: input.type, name: input.name, isActive: input.isActive }
+    });
+
+    return res.json({ id: existing.id });
+  } catch (error) {
+    if (String(error.message).includes('UNIQUE')) {
+      return res.status(409).json({ message: 'Nama kategori tersebut sudah ada untuk jenis transaksi ini.' });
+    }
+    throw error;
+  }
+});
+
+apiRouter.get('/public-messages', requireAuth, requireRole('ADMIN'), (_req, res) => {
+  const rows = db.prepare(`
+    SELECT
+      id,
+      kind,
+      title,
+      content,
+      source,
+      is_active AS isActive,
+      sort_order AS sortOrder
+    FROM public_messages
+    ORDER BY sort_order ASC, id ASC
+  `).all().map((row) => ({ ...row, isActive: Boolean(row.isActive) }));
+
+  res.json({ data: rows });
+});
+
+apiRouter.post('/public-messages', requireAuth, requireRole('ADMIN'), (req, res) => {
+  const parsed = publicMessageSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(422).json({ message: 'Konten Public Display belum valid.', errors: parsed.error.flatten().fieldErrors });
+  }
+
+  const input = parsed.data;
+  const result = db.prepare(`
+    INSERT INTO public_messages (kind, title, content, source, is_active, sort_order)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(input.kind, input.title, input.content, input.source, input.isActive ? 1 : 0, input.sortOrder);
+
+  logAudit(req, {
+    action: 'PUBLIC_MESSAGE_CREATE',
+    entityType: 'PUBLIC_MESSAGE',
+    entityId: result.lastInsertRowid,
+    details: { kind: input.kind, title: input.title }
+  });
+
+  res.status(201).json({ id: Number(result.lastInsertRowid) });
+});
+
+apiRouter.put('/public-messages/:id', requireAuth, requireRole('ADMIN'), (req, res) => {
+  const parsed = publicMessageSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(422).json({ message: 'Konten Public Display belum valid.', errors: parsed.error.flatten().fieldErrors });
+  }
+
+  const existing = db.prepare('SELECT id FROM public_messages WHERE id = ?').get(req.params.id);
+  if (!existing) return res.status(404).json({ message: 'Konten tidak ditemukan.' });
+
+  const input = parsed.data;
+  db.prepare(`
+    UPDATE public_messages
+    SET kind = ?, title = ?, content = ?, source = ?, is_active = ?, sort_order = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).run(input.kind, input.title, input.content, input.source, input.isActive ? 1 : 0, input.sortOrder, existing.id);
+
+  logAudit(req, {
+    action: 'PUBLIC_MESSAGE_UPDATE',
+    entityType: 'PUBLIC_MESSAGE',
+    entityId: existing.id,
+    details: { kind: input.kind, title: input.title, isActive: input.isActive }
+  });
+
+  res.json({ id: existing.id });
+});
+
+apiRouter.delete('/public-messages/:id', requireAuth, requireRole('ADMIN'), (req, res) => {
+  const existing = db.prepare('SELECT id FROM public_messages WHERE id = ?').get(req.params.id);
+  if (!existing) return res.status(404).json({ message: 'Konten tidak ditemukan.' });
+
+  db.prepare('DELETE FROM public_messages WHERE id = ?').run(existing.id);
+  logAudit(req, {
+    action: 'PUBLIC_MESSAGE_DELETE',
+    entityType: 'PUBLIC_MESSAGE',
+    entityId: existing.id
+  });
+
+  res.status(204).end();
+});
+
 apiRouter.get('/settings', requireAuth, requireRole('ADMIN'), (_req, res) => {
-  res.json(publicSettings());
+  res.json(adminSettings());
 });
 
 apiRouter.put('/settings', requireAuth, requireRole('ADMIN'), (req, res) => {
@@ -967,6 +1227,7 @@ apiRouter.put('/settings', requireAuth, requireRole('ADMIN'), (req, res) => {
     return res.status(422).json({ message: 'Pengaturan belum valid.', errors: parsed.error.flatten().fieldErrors });
   }
 
+  const before = adminSettings();
   const map = {
     mosqueName: 'mosque_name',
     mosqueTagline: 'mosque_tagline',
@@ -975,7 +1236,10 @@ apiRouter.put('/settings', requireAuth, requireRole('ADMIN'), (req, res) => {
     bankAccountHolder: 'bank_account_holder',
     defaultYoutubeUrl: 'default_youtube_url',
     activeLiveUrl: 'active_live_url',
-    activeLiveTitle: 'active_live_title'
+    activeLiveTitle: 'active_live_title',
+    openingBalance: 'opening_balance',
+    openingBalanceDate: 'opening_balance_date',
+    openingBalanceNote: 'opening_balance_note'
   };
 
   const update = db.prepare(`
@@ -994,10 +1258,14 @@ apiRouter.put('/settings', requireAuth, requireRole('ADMIN'), (req, res) => {
 
   logAudit(req, {
     action: 'SETTINGS_UPDATE',
-    entityType: 'SETTINGS'
+    entityType: 'SETTINGS',
+    details: {
+      openingBalanceChanged: before.openingBalance !== parsed.data.openingBalance,
+      openingBalanceDate: parsed.data.openingBalanceDate || null
+    }
   });
 
-  res.json(publicSettings());
+  res.json(adminSettings());
 });
 
 apiRouter.get('/audit-logs', requireAuth, requireRole('ADMIN'), (req, res) => {
