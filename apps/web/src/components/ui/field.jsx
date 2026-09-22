@@ -4,10 +4,10 @@ function FieldGroup({ className, ...props }) {
   return <div className={cn('flex flex-col gap-4', className)} {...props} />;
 }
 function Field({ className, ...props }) {
-  return <label className={cn('flex min-w-0 flex-col gap-1.5', className)} {...props} />;
+  return <div className={cn('flex min-w-0 flex-col gap-1.5', className)} {...props} />;
 }
 function FieldLabel({ className, ...props }) {
-  return <span className={cn('text-xs font-semibold text-foreground', className)} {...props} />;
+  return <label className={cn('text-xs font-semibold text-foreground', className)} {...props} />;
 }
 function FieldDescription({ className, ...props }) {
   return <span className={cn('text-[11px] leading-4 text-muted-foreground', className)} {...props} />;
