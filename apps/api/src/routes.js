@@ -793,7 +793,11 @@ apiRouter.put(
       LIMIT 1
     `).get(input.categoryId);
 
-    if (!category || category.type !== existing.type || !category.isActive) {
+    if (
+      !category ||
+      category.type !== existing.type ||
+      (!category.isActive && Number(category.id) !== Number(existing.categoryId))
+    ) {
       return res.status(422).json({
         message: 'Kategori transaksi tidak valid untuk jenis transaksi ini.'
       });
