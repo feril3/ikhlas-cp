@@ -18,13 +18,13 @@ web
 ## Users
 
 ### Admin / Pengurus Masjid
-Mengelola informasi masjid, jadwal salat, imam, bilal, kegiatan, konfigurasi sistem, dan memonitor kondisi keuangan.
+Mengelola informasi masjid, petugas Jumat (imam, khatib, bilal), kegiatan, konfigurasi sistem, dan memonitor kondisi keuangan. Waktu salat harian berasal dari provider dan tidak diedit manual.
 
 ### Bendahara
 Mencatat kas masuk dan kas keluar, membedakan penerimaan cash/kotak amal dan transfer, mengunggah bukti transaksi atau mutasi rekening, serta melihat saldo dan laporan transaksi.
 
 ### Jamaah
-Mengakses informasi yang dipublikasikan, khususnya ringkasan kondisi keuangan, jadwal ibadah, imam/bilal, kegiatan, kajian, dan informasi masjid melalui halaman publik atau TV/Public Display.
+Mengakses informasi yang dipublikasikan, khususnya ringkasan kondisi keuangan, jadwal ibadah, petugas Jumat, kegiatan, kajian, tanggal Masehi/Hijriah, dan informasi masjid melalui halaman publik atau TV/Public Display.
 
 ## Product Purpose
 
@@ -62,7 +62,7 @@ Produk menggabungkan tiga kebutuhan yang biasanya terpisah: pencatatan keuangan 
 - Upload bukti transaksi.
 - Upload mutasi rekening dan pengaitan mutasi dengan transaksi.
 - Perhitungan saldo otomatis.
-- Jadwal salat, imam, dan bilal.
+- Jadwal adzan otomatis dari provider, iqamah otomatis +8 menit, serta pengelolaan imam/khatib/bilal khusus Jumat mendatang.
 - Pengelolaan kajian serta kegiatan rutin atau periodik masjid.
 - Live Masjid dengan YouTube Embed / YouTube Live.
 - Public Display untuk jamaah.
