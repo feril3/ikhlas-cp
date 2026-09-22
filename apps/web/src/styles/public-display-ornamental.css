@@ -904,6 +904,7 @@
   display: grid;
   grid-template-columns: minmax(150px, .42fr) minmax(0, 1fr);
   align-items: center;
+  justify-items: stretch;
   gap: clamp(28px, 3vw, 54px);
   text-align: left;
 }
