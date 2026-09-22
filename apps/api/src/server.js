@@ -4,6 +4,7 @@ import cors from 'cors';
 import multer from 'multer';
 import { initializeDatabase } from './db.js';
 import { apiRouter } from './routes.js';
+import { startDatabaseBackupScheduler } from './driveBackup.js';
 
 initializeDatabase();
 
@@ -80,4 +81,10 @@ app.use((error, _req, res, _next) => {
 
 app.listen(port, () => {
   console.log(`IKHLAS API running at http://localhost:${port}`);
+
+  try {
+    startDatabaseBackupScheduler();
+  } catch (error) {
+    console.error('Google Drive database backup scheduler gagal diinisialisasi:', error);
+  }
 });
