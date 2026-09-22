@@ -1,6 +1,5 @@
 import {
   IconAdjustments,
-  IconBuildingMosque,
   IconChartBar,
   IconExternalLink,
   IconLayoutDashboard,
@@ -8,7 +7,7 @@ import {
   IconScreenShare,
   IconCalendarEvent
 } from '@tabler/icons-react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthContext.jsx';
 import { AppBrand } from '@/components/app/AppBrand.jsx';
 import { UserMenu } from '@/components/app/UserMenu.jsx';
@@ -50,6 +49,7 @@ const groups = [
 
 function NavigationPanel({ mobile = false }) {
   const { user } = useAuth();
+  const location = useLocation();
   const { open, setOpenMobile } = useSidebar();
   const expanded = mobile || open;
 
@@ -70,26 +70,26 @@ function NavigationPanel({ mobile = false }) {
               <SidebarGroup key={group.label}>
                 {expanded && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
                 <SidebarMenu>
-                  {items.map(({ to, label, icon: Icon }) => (
-                    <Tooltip key={to}>
-                      <TooltipTrigger asChild>
-                        <NavLink
-                          to={to}
-                          end={to === '/'}
-                          onClick={() => mobile && setOpenMobile(false)}
-                          className="block"
-                        >
-                          {({ isActive }) => (
-                            <SidebarMenuButton active={isActive}>
+                  {items.map(({ to, label, icon: Icon }) => {
+                    const active = to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);
+                    return (
+                      <Tooltip key={to}>
+                        <TooltipTrigger asChild>
+                          <SidebarMenuButton asChild active={active}>
+                            <NavLink
+                              to={to}
+                              end={to === '/'}
+                              onClick={() => mobile && setOpenMobile(false)}
+                            >
                               <Icon className="size-[18px]" stroke={1.8} />
                               {expanded && <span className="truncate">{label}</span>}
-                            </SidebarMenuButton>
-                          )}
-                        </NavLink>
-                      </TooltipTrigger>
-                      {!expanded && <TooltipContent side="right">{label}</TooltipContent>}
-                    </Tooltip>
-                  ))}
+                            </NavLink>
+                          </SidebarMenuButton>
+                        </TooltipTrigger>
+                        {!expanded && <TooltipContent side="right">{label}</TooltipContent>}
+                      </Tooltip>
+                    );
+                  })}
                 </SidebarMenu>
               </SidebarGroup>
             );
@@ -100,8 +100,8 @@ function NavigationPanel({ mobile = false }) {
             <SidebarMenu>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <a href="/public-display" target="_blank" rel="noreferrer" className="block">
-                    <SidebarMenuButton>
+                  <SidebarMenuButton asChild>
+                    <a href="/public-display" target="_blank" rel="noreferrer">
                       <IconScreenShare className="size-[18px]" stroke={1.8} />
                       {expanded && (
                         <>
@@ -109,8 +109,8 @@ function NavigationPanel({ mobile = false }) {
                           <IconExternalLink className="ml-auto size-3.5 opacity-55" />
                         </>
                       )}
-                    </SidebarMenuButton>
-                  </a>
+                    </a>
+                  </SidebarMenuButton>
                 </TooltipTrigger>
                 {!expanded && <TooltipContent side="right">Tampilan Publik</TooltipContent>}
               </Tooltip>
