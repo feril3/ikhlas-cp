@@ -1,4 +1,4 @@
-export const IQAMAH_DELAY_MINUTES = 5;
+export const IQAMAH_DELAY_MINUTES = 10;
 
 export function makePrayerDateTime(date, time) {
   if (!date || !time) return null;
@@ -90,11 +90,14 @@ export function getCountdownFocus(todaySchedule, nextDaySchedule, now) {
   const state = getPrayerDisplayState(todaySchedule, nextDaySchedule, now);
 
   if (state.activeIqamah) {
-    return {
-      kind: 'IQAMAH',
-      prayerName: state.activeIqamah.prayerName,
-      target: state.activeIqamah.target
-    };
+    const remaining = state.activeIqamah.target - now;
+    if (remaining > 0 && remaining <= 5 * 60_000) {
+      return {
+        kind: 'IQAMAH',
+        prayerName: state.activeIqamah.prayerName,
+        target: state.activeIqamah.target
+      };
+    }
   }
 
   if (state.nextAdhan) {
