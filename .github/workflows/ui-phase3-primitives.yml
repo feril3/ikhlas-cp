@@ -26,12 +26,10 @@ jobs:
       - run: npm ci --no-audit --no-fund
 
       - name: Inspect official shadcn component docs
-        working-directory: apps/web
-        run: npx shadcn@latest docs alert-dialog select textarea toggle-group checkbox field input-group empty spinner
+        run: npx shadcn@latest docs -c . -b radix alert-dialog select textarea toggle-group checkbox field input-group empty spinner
 
       - name: Add transaction-form primitives
-        working-directory: apps/web
-        run: npx shadcn@latest add -y alert-dialog select textarea toggle-group checkbox field input-group empty spinner
+        run: npx shadcn@latest add -y -c . -p apps/web/src/components/ui alert-dialog select textarea toggle-group checkbox field input-group empty spinner
 
       - name: Commit generated primitives
         run: |
