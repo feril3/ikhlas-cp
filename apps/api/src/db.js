@@ -270,11 +270,10 @@ function seedIfEmpty() {
   }
 
   const insertSeedMessage = db.prepare(`
-    INSERT INTO public_messages
+    INSERT OR IGNORE INTO public_messages
       (kind, title, content, source, seed_key, sort_order, is_active)
     VALUES
       ('VERSE', @title, @content, @source, @seedKey, @sortOrder, 1)
-    ON CONFLICT(seed_key) DO NOTHING
   `);
 
   const verifiedRunningTextSeeds = [
