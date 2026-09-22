@@ -167,9 +167,6 @@ export function initializeDatabase() {
       ON transaction_categories(type, is_active, sort_order);
     CREATE INDEX IF NOT EXISTS idx_public_messages_active
       ON public_messages(is_active, sort_order);
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_public_messages_seed_key
-      ON public_messages(seed_key)
-      WHERE seed_key IS NOT NULL;
     CREATE INDEX IF NOT EXISTS idx_prayer_schedule_date
       ON prayer_schedules(prayer_date, adhan_time);
     CREATE INDEX IF NOT EXISTS idx_prayer_cache_fetched
