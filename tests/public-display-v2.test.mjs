@@ -45,7 +45,7 @@ test('current time and next adhan stay in the upper-left prayer focus', async ()
   assert.match(jsx, /getPrayerDisplayState/);
 });
 
-test('iqamah is exactly five minutes after adhan while next adhan stays independent', () => {
+test('iqamah is exactly eight minutes after adhan while next adhan stays independent', () => {
   const today = {
     scheduleDate: '2026-09-22',
     items: [
@@ -62,7 +62,7 @@ test('iqamah is exactly five minutes after adhan while next adhan stays independ
     items: [{ prayerName: 'Subuh', adhanTime: '03:56' }]
   };
 
-  assert.equal(getIqamahTime('2026-09-22', '11:17'), '11:22');
+  assert.equal(getIqamahTime('2026-09-22', '11:17'), '11:25');
 
   const at1119 = getPrayerDisplayState(
     today,
@@ -75,17 +75,17 @@ test('iqamah is exactly five minutes after adhan while next adhan stays independ
   assert.equal(at1119.activeIqamah.prayerName, 'Dzuhur');
   assert.equal(
     at1119.activeIqamah.target.getTime(),
-    new Date('2026-09-22T11:22:00+07:00').getTime()
+    new Date('2026-09-22T11:25:00+07:00').getTime()
   );
 
-  const at1156 = getPrayerDisplayState(
+  const afterIqamah = getPrayerDisplayState(
     today,
     tomorrow,
-    new Date('2026-09-22T11:56:25+07:00')
+    new Date('2026-09-22T11:25:00+07:00')
   );
 
-  assert.equal(at1156.nextAdhan.prayerName, 'Ashar');
-  assert.equal(at1156.activeIqamah, null);
+  assert.equal(afterIqamah.nextAdhan.prayerName, 'Ashar');
+  assert.equal(afterIqamah.activeIqamah, null);
 });
 
 test('five-prayer schedule stays in its own full-width rail below the main display', async () => {
@@ -215,7 +215,7 @@ test('public display header shows the full RS Elizabeth Situbondo address', asyn
 });
 
 
-test('five-minute takeover shows only MM:SS before adhan and through iqamah window', () => {
+test('takeover uses five-minute countdowns, two-minute adhan message, and eight-minute iqamah gap', () => {
   const today = {
     scheduleDate: '2026-09-22',
     items: [
@@ -229,20 +229,41 @@ test('five-minute takeover shows only MM:SS before adhan and through iqamah wind
     items: [{ prayerName: 'Subuh', adhanTime: '03:56' }]
   };
 
-  const beforeWindow = getCountdownFocus(today, tomorrow, new Date('2026-09-22T14:23:59+07:00'));
-  assert.equal(beforeWindow, null);
+  assert.equal(getIqamahTime('2026-09-22', '14:29'), '14:37');
 
-  const adhanWindow = getCountdownFocus(today, tomorrow, new Date('2026-09-22T14:24:00+07:00'));
-  assert.equal(adhanWindow.kind, 'ADHAN');
-  assert.equal(adhanWindow.prayerName, 'Ashar');
-  assert.equal(formatMinuteSecondCountdown(adhanWindow.target - new Date('2026-09-22T14:24:00+07:00')), '05:00');
+  const beforeAdhanWindow = getCountdownFocus(today, tomorrow, new Date('2026-09-22T14:23:59+07:00'));
+  assert.equal(beforeAdhanWindow, null);
 
-  const iqamahWindow = getCountdownFocus(today, tomorrow, new Date('2026-09-22T14:29:01+07:00'));
-  assert.equal(iqamahWindow.kind, 'IQAMAH');
-  assert.equal(iqamahWindow.prayerName, 'Ashar');
-  assert.equal(formatMinuteSecondCountdown(iqamahWindow.target - new Date('2026-09-22T14:29:01+07:00')), '04:59');
+  const adhanCountdown = getCountdownFocus(today, tomorrow, new Date('2026-09-22T14:24:00+07:00'));
+  assert.equal(adhanCountdown.kind, 'ADHAN');
+  assert.equal(adhanCountdown.prayerName, 'Ashar');
+  assert.equal(
+    formatMinuteSecondCountdown(adhanCountdown.target - new Date('2026-09-22T14:24:00+07:00')),
+    '05:00'
+  );
 
-  const afterIqamah = getCountdownFocus(today, tomorrow, new Date('2026-09-22T14:34:00+07:00'));
+  const adhanNowStart = getCountdownFocus(today, tomorrow, new Date('2026-09-22T14:29:00+07:00'));
+  assert.equal(adhanNowStart.kind, 'ADHAN_NOW');
+  assert.equal(adhanNowStart.prayerName, 'Ashar');
+
+  const adhanNowEndEdge = getCountdownFocus(today, tomorrow, new Date('2026-09-22T14:30:59+07:00'));
+  assert.equal(adhanNowEndEdge.kind, 'ADHAN_NOW');
+
+  const oneMinuteNormalGap = getCountdownFocus(today, tomorrow, new Date('2026-09-22T14:31:00+07:00'));
+  assert.equal(oneMinuteNormalGap, null);
+
+  const iqamahCountdown = getCountdownFocus(today, tomorrow, new Date('2026-09-22T14:32:00+07:00'));
+  assert.equal(iqamahCountdown.kind, 'IQAMAH');
+  assert.equal(iqamahCountdown.prayerName, 'Ashar');
+  assert.equal(
+    formatMinuteSecondCountdown(iqamahCountdown.target - new Date('2026-09-22T14:32:00+07:00')),
+    '05:00'
+  );
+
+  const iqamahEndEdge = getCountdownFocus(today, tomorrow, new Date('2026-09-22T14:36:59+07:00'));
+  assert.equal(iqamahEndEdge.kind, 'IQAMAH');
+
+  const afterIqamah = getCountdownFocus(today, tomorrow, new Date('2026-09-22T14:37:00+07:00'));
   assert.equal(afterIqamah, null);
 });
 
@@ -252,9 +273,12 @@ test('public display takeover hides normal dashboard composition during five-min
 
   assert.match(jsx, /if \(countdownFocus\)/);
   assert.match(jsx, /className="public-display countdown-takeover"/);
+  assert.match(jsx, /ADHAN_NOW/);
+  assert.match(jsx, /Waktunya Adzan/);
   assert.match(jsx, /formatMinuteSecondCountdown/);
   assert.match(css, /\.countdown-takeover \{[\s\S]*position:\s*fixed/);
   assert.match(css, /\.countdown-takeover strong \{[\s\S]*font-size:\s*clamp\(120px, 21vw, 330px\)/);
+  assert.match(css, /\.adhan-now-message \{[\s\S]*font-size:\s*clamp\(58px, 7\.4vw, 128px\)/);
 });
 
 test('public display shows public agenda under prayer focus and Friday officers only from Friday payload', async () => {
@@ -270,20 +294,29 @@ test('public display shows public agenda under prayer focus and Friday officers 
   assert.match(routes, /fridaySchedule: getFridaySchedule\(date\)/);
 });
 
-test('Friday schedule is persisted and editable by Admin', async () => {
+test('schedule dashboard manages only upcoming Friday officers and hides past Fridays', async () => {
   const db = await source('apps/api/src/db.js');
   const routes = await source('apps/api/src/routes.js');
   const schedule = await source('apps/web/src/pages/Schedule.jsx');
   const api = await source('apps/web/src/lib/api.js');
 
   assert.match(db, /CREATE TABLE IF NOT EXISTS friday_schedules/);
+  assert.match(routes, /function upcomingFridayDates/);
+  assert.match(routes, /getUpcomingFridaySchedules/);
   assert.match(routes, /apiRouter\.put\('\/friday-schedules\/:date'/);
   assert.match(routes, /FRIDAY_SCHEDULE_UPDATE/);
-  assert.match(schedule, /Petugas Jumat/);
-  assert.match(schedule, /Imam Jumat/);
-  assert.match(schedule, /Khatib/);
-  assert.match(schedule, /Bilal/);
-  assert.match(api, /updateFridaySchedule/);
+  assert.doesNotMatch(routes, /apiRouter\.put\('\/prayer-schedules\/:date'/);
+
+  assert.match(schedule, /Jadwal Jumat & Agenda/);
+  assert.match(schedule, /api\.fridaySchedules\(today, 8\)/);
+  assert.match(schedule, /Jumat mendatang/);
+  assert.match(schedule, /Imam, Khatib & Bilal/);
+  assert.doesNotMatch(schedule, /api\.prayerSchedule/);
+  assert.doesNotMatch(schedule, /updatePrayerSchedule/);
+  assert.doesNotMatch(schedule, /Jadwal salat/);
+
+  assert.match(api, /fridaySchedules/);
+  assert.doesNotMatch(api, /updatePrayerSchedule/);
 });
 
 test('existing public agenda can be edited with an audited backend update', async () => {
