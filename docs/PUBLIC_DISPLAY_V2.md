@@ -39,7 +39,7 @@ Waktu **adzan** berasal dari AlAdhan public API dengan:
 - timezone: `Asia/Jakarta`;
 - lokasi: RS Elizabeth Situbondo.
 
-Data **iqamah, imam, dan bilal** tetap merupakan data internal masjid di SQLite.
+Waktu **iqamah** dihitung otomatis sebagai **adzan + 8 menit**. Dashboard tidak mengatur petugas salat harian; yang dikelola Admin hanya petugas Jumat (imam, khatib, bilal).
 
 Backend mengambil jadwal hari ini dan besok. Jadwal besok diperlukan agar setelah Isya Public Display dapat langsung menghitung countdown menuju Subuh berikutnya.
 
@@ -111,13 +111,14 @@ Referensi:
 
 Public Display V4 memprioritaskan konsumsi jamaah dari jarak jauh dengan komposisi tetap:
 
-- kiri ±21%: waktu sekarang, adzan berikutnya, countdown menuju adzan, dan countdown iqamah bila sedang dalam jendela 5 menit setelah adzan;
+- kiri ±19%: waktu sekarang, adzan berikutnya, countdown menuju adzan, agenda publik, dan informasi petugas Jumat pada hari Jumat;
+- header: hari + tanggal Masehi + tanggal Hijriah; tanggal Hijriah memakai metadata AlAdhan dan fallback Umm al-Qura bila metadata provider tidak tersedia;
 - tengah ±57%: YouTube sebagai media/focal terbesar;
 - kanan ±20%: saldo, kas masuk, kas keluar selalu berada di rail keuangan; area bawah rail berotasi hanya untuk transaksi terbaru dan rekening donasi;
 - bawah main: lima jadwal salat dalam satu rail penuh;
 - row paling bawah: running text khusus `VERSE` (ayat/hadits) yang dapat memiliki banyak item aktif.
 
-Iqamah pada Public Display selalu dihitung sebagai **adzan + 5 menit**. Nilai iqamah manual lama tidak dipakai untuk tampilan jamaah.
+Iqamah pada Public Display selalu dihitung sebagai **adzan + 8 menit**. Lima menit sebelum adzan dan lima menit sebelum iqamah, layar masuk countdown takeover. Tepat sejak waktu adzan selama 2 menit, takeover berubah menjadi teks **Waktunya Adzan <nama salat>** tanpa countdown.
 
 Running text dikelola Admin melalui `public_messages`. Item dapat ditambah, diedit, diurutkan, dinonaktifkan, dan dihapus. Seed awal menggunakan referensi:
 - QS. At-Taubah 9:18;
@@ -127,3 +128,10 @@ Running text dikelola Admin melalui `public_messages`. Item dapat ditambah, died
 - QS. Al-Baqarah 2:261.
 
 Seed menggunakan `seed_key` supaya idempotent dan tidak muncul berulang ketika database diinisialisasi kembali.
+
+
+## Dashboard jadwal Jumat
+
+Halaman Jadwal tidak lagi menyediakan editor petugas salat harian. Admin hanya mengelola imam, khatib, dan bilal Jumat.
+
+Dashboard meminta daftar Jumat mendatang dari `GET /friday-schedules?from=YYYY-MM-DD&limit=8`. Tanggal Jumat yang sudah lewat tidak dikirim ke UI, tetapi record lama tetap disimpan di SQLite untuk histori/audit.

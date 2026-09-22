@@ -247,6 +247,14 @@ export default function PublicDisplay() {
   }).format(now);
 
   if (countdownFocus) {
+    if (countdownFocus.kind === 'ADHAN_NOW') {
+      return (
+        <div className="public-display countdown-takeover adhan-now-takeover" aria-live="assertive">
+          <strong className="adhan-now-message">Waktunya Adzan {countdownFocus.prayerName}</strong>
+        </div>
+      );
+    }
+
     const label = countdownFocus.kind === 'ADHAN'
       ? `Menuju Adzan ${countdownFocus.prayerName}`
       : `Menuju Iqamah ${countdownFocus.prayerName}`;
@@ -280,6 +288,9 @@ export default function PublicDisplay() {
         <div className="signage-date-block">
           <strong>{weekday}</strong>
           <span>{masehiDate} Masehi</span>
+          <span className="signage-hijri-date">
+            {data?.prayerSchedule?.hijriDate?.formatted || 'Tanggal Hijriah memuat...'}
+          </span>
         </div>
       </header>
 

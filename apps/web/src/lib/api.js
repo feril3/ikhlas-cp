@@ -110,16 +110,13 @@ export const api = {
   },
 
   fridaySchedule: (date) => request(`/friday-schedules${queryString({ date })}`),
+  fridaySchedules: (from, limit = 8) => request(`/friday-schedules${queryString({ from, limit })}`),
   updateFridaySchedule: (date, input) => request(`/friday-schedules/${date}`, {
     method: 'PUT',
     body: JSON.stringify(input)
   }),
 
   prayerSchedule: (date) => request(`/prayer-schedules${queryString({ date })}`),
-  updatePrayerSchedule: (date, items) => request(`/prayer-schedules/${date}`, {
-    method: 'PUT',
-    body: JSON.stringify({ items })
-  }),
 
   activities: (from) => request(`/activities${queryString({ from })}`),
   createActivity: (input) => request('/activities', {

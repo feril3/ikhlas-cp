@@ -248,6 +248,38 @@ function getFridaySchedule(date) {
   `).get(date) ?? null;
 }
 
+function addCalendarDays(date, days) {
+  const [year, month, day] = date.split('-').map(Number);
+  const value = new Date(Date.UTC(year, month - 1, day + days));
+  return [
+    value.getUTCFullYear(),
+    String(value.getUTCMonth() + 1).padStart(2, '0'),
+    String(value.getUTCDate()).padStart(2, '0')
+  ].join('-');
+}
+
+function upcomingFridayDates(from, count = 8) {
+  const safeCount = Math.min(Math.max(Number(count) || 8, 1), 16);
+  const weekday = new Date(`${from}T12:00:00+07:00`).getUTCDay();
+  const daysUntilFriday = (5 - weekday + 7) % 7;
+  const firstFriday = addCalendarDays(from, daysUntilFriday);
+
+  return Array.from({ length: safeCount }, (_, index) => addCalendarDays(firstFriday, index * 7));
+}
+
+function getUpcomingFridaySchedules(from, count = 8) {
+  return upcomingFridayDates(from, count).map((scheduleDate) => {
+    const existing = getFridaySchedule(scheduleDate);
+    return existing ?? {
+      scheduleDate,
+      imam: '',
+      khatib: '',
+      bilal: '',
+      updatedAt: null
+    };
+  });
+}
+
 function getTransactionRecord(id) {
   return db.prepare(`
     SELECT
@@ -1098,11 +1130,21 @@ apiRouter.get('/reports/transactions.csv', requireAuth, (req, res) => {
 });
 
 apiRouter.get('/friday-schedules', requireAuth, (req, res) => {
-  const date = datePattern.test(String(req.query.date ?? '')) ? String(req.query.date) : todayIso();
-  res.json({
-    date,
-    isFriday: isFridayDate(date),
-    schedule: getFridaySchedule(date)
+  if (datePattern.test(String(req.query.date ?? ''))) {
+    const date = String(req.query.date);
+    return res.json({
+      date,
+      isFriday: isFridayDate(date),
+      schedule: getFridaySchedule(date)
+    });
+  }
+
+  const from = datePattern.test(String(req.query.from ?? '')) ? String(req.query.from) : todayIso();
+  const limit = Math.min(Math.max(Number(req.query.limit) || 8, 1), 16);
+
+  return res.json({
+    from,
+    data: getUpcomingFridaySchedules(from, limit)
   });
 });
 
@@ -1145,46 +1187,6 @@ apiRouter.get('/prayer-schedules', requireAuth, async (req, res) => {
   res.json(await getProviderPrayerSchedule(date));
 });
 
-apiRouter.put('/prayer-schedules/:date', requireAuth, requireRole('ADMIN'), async (req, res) => {
-  if (!datePattern.test(req.params.date)) {
-    return res.status(422).json({ message: 'Tanggal jadwal tidak valid.' });
-  }
-
-  const parsed = prayerScheduleSchema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(422).json({ message: 'Data jadwal belum valid.', errors: parsed.error.flatten().fieldErrors });
-  }
-
-  const replace = db.transaction((items) => {
-    db.prepare('DELETE FROM prayer_schedules WHERE prayer_date = ?').run(req.params.date);
-    const insert = db.prepare(`
-      INSERT INTO prayer_schedules
-        (prayer_date, prayer_name, adhan_time, iqamah_time, imam, bilal)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `);
-
-    for (const item of items) {
-      insert.run(
-        req.params.date,
-        item.prayerName,
-        item.adhanTime,
-        item.iqamahTime || null,
-        item.imam || null,
-        item.bilal || null
-      );
-    }
-  });
-
-  replace(parsed.data.items);
-  logAudit(req, {
-    action: 'PRAYER_SCHEDULE_UPDATE',
-    entityType: 'PRAYER_SCHEDULE',
-    entityId: req.params.date,
-    details: { itemCount: parsed.data.items.length }
-  });
-
-  res.json(await getProviderPrayerSchedule(req.params.date));
-});
 
 apiRouter.get('/activities', requireAuth, (req, res) => {
   const date = datePattern.test(String(req.query.from ?? '')) ? String(req.query.from) : todayIso();

@@ -29,12 +29,13 @@ Aplikasi sengaja dibagi menjadi dua surface utama:
 ### Operasional Masjid
 - Waktu adzan otomatis dari public prayer-time API menggunakan metode Kementerian Agama RI untuk koordinat RS Elizabeth Situbondo.
 - Cache jadwal salat SQLite + last-known-good fallback ketika API/internet bermasalah.
-- Iqamah, imam, dan bilal tetap dikelola internal masjid.
+- Iqamah dihitung otomatis 8 menit setelah adzan.
+- Dashboard hanya mengelola petugas Jumat (imam, khatib, bilal) untuk Jumat-Jumat mendatang; tanggal yang sudah lewat otomatis tidak tampil di UI.
 - Pengelolaan kegiatan.
 - Konfigurasi identitas masjid dan rekening donasi.
 - Live Masjid melalui YouTube embed.
 - Public Display V2 khusus signage 16:9: fixed 100dvh, tanpa vertical/horizontal scroll.
-- Jam, next prayer, countdown, dan lima waktu salat selalu terlihat pada posisi konsisten.
+- Jam, next prayer, countdown, tanggal Masehi + Hijriah, dan lima waktu salat selalu terlihat pada posisi konsisten.
 - Secondary-content carousel untuk kegiatan, live stream, transparansi keuangan, transaksi terbaru, pengumuman, dan donasi.
 - Recent transaksi publik yang disanitasi; detail sumber, bukti, mutasi, dan user pencatat tidak diekspos.
 - Footer/ticker untuk rotasi ayat/hadits terverifikasi, pengumuman, dan pesan masjid.

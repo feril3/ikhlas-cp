@@ -18,6 +18,65 @@ const PRAYER_MAP = Object.freeze([
   ['Isya', 'Isha']
 ]);
 
+const HIJRI_MONTHS_ID = Object.freeze([
+  'Muharram',
+  'Safar',
+  'Rabiul Awal',
+  'Rabiul Akhir',
+  'Jumadil Awal',
+  'Jumadil Akhir',
+  'Rajab',
+  'Syakban',
+  'Ramadan',
+  'Syawal',
+  'Zulkaidah',
+  'Zulhijah'
+]);
+
+function normalizeProviderHijriDate(value) {
+  const day = Number(value?.day);
+  const monthNumber = Number(value?.month?.number);
+  const year = Number(value?.year);
+  if (!day || !monthNumber || !year || monthNumber < 1 || monthNumber > 12) return null;
+
+  return {
+    day,
+    month: HIJRI_MONTHS_ID[monthNumber - 1],
+    monthNumber,
+    year,
+    formatted: `${day} ${HIJRI_MONTHS_ID[monthNumber - 1]} ${year} H`
+  };
+}
+
+function fallbackHijriDate(date) {
+  try {
+    const value = new Date(`${date}T12:00:00+07:00`);
+    const parts = new Intl.DateTimeFormat('id-ID-u-ca-islamic-umalqura', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      timeZone: PRAYER_LOCATION.timezone
+    }).formatToParts(value);
+
+    const mapped = Object.fromEntries(
+      parts
+        .filter((part) => part.type !== 'literal')
+        .map((part) => [part.type, part.value])
+    );
+
+    if (!mapped.day || !mapped.month || !mapped.year) return null;
+    return {
+      day: Number(mapped.day),
+      month: mapped.month,
+      monthNumber: null,
+      year: Number(String(mapped.year).replace(/\D/g, '')),
+      formatted: `${mapped.day} ${mapped.month} ${mapped.year.replace(/\s*H$/i, '')} H`
+    };
+  } catch {
+    return null;
+  }
+}
+
 function cleanPrayerTime(value) {
   const match = String(value ?? '').match(/(\d{1,2}:\d{2})/);
   if (!match) return '';
@@ -93,7 +152,8 @@ function readCachedSchedule(date) {
     return {
       items,
       provider: row.provider,
-      fetchedAt: row.fetchedAt
+      fetchedAt: row.fetchedAt,
+      hijriDate: normalizeProviderHijriDate(payload.date?.hijri) ?? fallbackHijriDate(date)
     };
   } catch {
     return null;
@@ -176,7 +236,8 @@ async function fetchProviderSchedule(date) {
     return {
       items,
       provider: 'aladhan',
-      fetchedAt: new Date().toISOString()
+      fetchedAt: new Date().toISOString(),
+      hijriDate: normalizeProviderHijriDate(body.data.date?.hijri) ?? fallbackHijriDate(date)
     };
   } finally {
     clearTimeout(timeout);
@@ -208,6 +269,7 @@ function fallbackSchedule(date, local, error) {
 
   return {
     scheduleDate: date,
+    hijriDate: fallbackHijriDate(date),
     localMetadataDate: local.sourceDate,
     items: ordered,
     source: {
@@ -231,6 +293,7 @@ export async function getPrayerSchedule(date, { forceRefresh = false } = {}) {
     if (cached) {
       return {
         scheduleDate: date,
+        hijriDate: cached.hijriDate ?? fallbackHijriDate(date),
         localMetadataDate: local.sourceDate,
         items: mergeLocalMetadata(cached.items, local),
         source: {
@@ -250,6 +313,7 @@ export async function getPrayerSchedule(date, { forceRefresh = false } = {}) {
     const remote = await fetchProviderSchedule(date);
     return {
       scheduleDate: date,
+      hijriDate: remote.hijriDate ?? fallbackHijriDate(date),
       localMetadataDate: local.sourceDate,
       items: mergeLocalMetadata(remote.items, local),
       source: {
@@ -267,6 +331,7 @@ export async function getPrayerSchedule(date, { forceRefresh = false } = {}) {
     if (cached) {
       return {
         scheduleDate: date,
+        hijriDate: cached.hijriDate ?? fallbackHijriDate(date),
         localMetadataDate: local.sourceDate,
         items: mergeLocalMetadata(cached.items, local),
         source: {
