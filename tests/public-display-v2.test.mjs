@@ -195,7 +195,7 @@ test('left prayer focus uses one alignment axis without centered mihrab collisio
 
   assert.doesNotMatch(jsx, /prayer-focus-star/);
   assert.match(css, /\.prayer-focus-panel \{[\s\S]*display:\s*flex/);
-  assert.match(css, /\.prayer-focus-next \{[\s\S]*margin-top:\s*clamp\(34px, 4\.4dvh, 50px\)/);
+  assert.match(css, /\.prayer-focus-next \{[\s\S]*margin-top:\s*clamp\(22px, 2\.8dvh, 34px\)/);
   assert.match(css, /\.prayer-focus-countdown \{[\s\S]*padding:\s*1\.15dvh 0/);
   assert.match(css, /\.prayer-focus-iqamah \{[\s\S]*padding:\s*\.8dvh 0/);
   assert.doesNotMatch(ornament, /\.prayer-focus-panel::after/);
