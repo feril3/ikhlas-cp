@@ -54,3 +54,19 @@ test('admin schedule editor treats adhan as API-managed', async () => {
   assert.match(schedule, /Adzan · API/);
   assert.match(schedule, /Waktu adzan otomatis dari API jadwal salat/);
 });
+
+
+test('public display includes a mosque-inspired ornament system', async () => {
+  const jsx = await source('apps/web/src/pages/PublicDisplay.jsx');
+  const css = await source('apps/web/src/styles/public-display-ornamental.css');
+
+  assert.match(jsx, /signage-mihrab-frame/);
+  assert.match(jsx, /signage-corner-ornament/);
+  assert.match(jsx, /signage-prayer-frieze/);
+  assert.match(jsx, /signage-mosque-seal/);
+
+  assert.match(css, /islamic/i);
+  assert.match(css, /signage-pattern-layer/);
+  assert.match(css, /ornament-brass/);
+  assert.match(css, /signage-prayer-frieze/);
+});
