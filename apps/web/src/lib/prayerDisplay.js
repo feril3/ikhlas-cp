@@ -86,6 +86,31 @@ export function getPrayerDisplayState(todaySchedule, nextDaySchedule, now) {
   };
 }
 
+export function getCountdownFocus(todaySchedule, nextDaySchedule, now) {
+  const state = getPrayerDisplayState(todaySchedule, nextDaySchedule, now);
+
+  if (state.activeIqamah) {
+    return {
+      kind: 'IQAMAH',
+      prayerName: state.activeIqamah.prayerName,
+      target: state.activeIqamah.target
+    };
+  }
+
+  if (state.nextAdhan) {
+    const remaining = state.nextAdhan.target - now;
+    if (remaining > 0 && remaining <= 5 * 60_000) {
+      return {
+        kind: 'ADHAN',
+        prayerName: state.nextAdhan.prayerName,
+        target: state.nextAdhan.target
+      };
+    }
+  }
+
+  return null;
+}
+
 // Compatibility helper for non-display consumers that only need the next adhan.
 export function getPrayerState(todaySchedule, nextDaySchedule, now) {
   return getNextAdhan(todaySchedule, nextDaySchedule, now);
@@ -99,6 +124,18 @@ export function formatCountdown(milliseconds) {
 
   return [
     String(hours).padStart(2, '0'),
+    String(minutes).padStart(2, '0'),
+    String(seconds).padStart(2, '0')
+  ].join(':');
+}
+
+
+export function formatMinuteSecondCountdown(milliseconds) {
+  const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return [
     String(minutes).padStart(2, '0'),
     String(seconds).padStart(2, '0')
   ].join(':');
