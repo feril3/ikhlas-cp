@@ -12,6 +12,8 @@ import { api } from '../lib/api.js';
 import { formatDate, formatRupiah } from '../lib/format.js';
 import {
   formatCountdown,
+  formatMinuteSecondCountdown,
+  getCountdownFocus,
   getIqamahTime,
   getPrayerDisplayState
 } from '../lib/prayerDisplay.js';
@@ -204,7 +206,13 @@ export default function PublicDisplay() {
   );
   const nextAdhan = prayerDisplay.nextAdhan;
   const activeIqamah = prayerDisplay.activeIqamah;
+  const countdownFocus = useMemo(
+    () => getCountdownFocus(data?.prayerSchedule, data?.nextDayPrayerSchedule, now),
+    [data?.prayerSchedule, data?.nextDayPrayerSchedule, now]
+  );
   const prayers = data?.prayerSchedule?.items ?? [];
+  const publicAgenda = data?.activities?.slice(0, 2) ?? [];
+  const fridaySchedule = data?.fridaySchedule ?? null;
 
   const tickerMessages = useMemo(
     () => (data?.messages ?? []).filter((message) => message.kind === 'VERSE'),
@@ -226,13 +234,30 @@ export default function PublicDisplay() {
     timeZone: DISPLAY_TIMEZONE
   }).format(now).replaceAll('.', ':');
 
-  const date = new Intl.DateTimeFormat('id-ID', {
+  const weekday = new Intl.DateTimeFormat('id-ID', {
     weekday: 'long',
+    timeZone: DISPLAY_TIMEZONE
+  }).format(now);
+
+  const masehiDate = new Intl.DateTimeFormat('id-ID', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
     timeZone: DISPLAY_TIMEZONE
   }).format(now);
+
+  if (countdownFocus) {
+    const label = countdownFocus.kind === 'ADHAN'
+      ? `Menuju Adzan ${countdownFocus.prayerName}`
+      : `Menuju Iqamah ${countdownFocus.prayerName}`;
+
+    return (
+      <div className="public-display countdown-takeover" aria-live="polite">
+        <span>{label}</span>
+        <strong>{formatMinuteSecondCountdown(countdownFocus.target - now)}</strong>
+      </div>
+    );
+  }
 
   return (
     <div className="public-display media-signage-shell">
@@ -252,7 +277,10 @@ export default function PublicDisplay() {
           </div>
         </div>
 
-        <time>{date}</time>
+        <div className="signage-date-block">
+          <strong>{weekday}</strong>
+          <span>{masehiDate} Masehi</span>
+        </div>
       </header>
 
       <main className="media-signage-main">
@@ -278,6 +306,30 @@ export default function PublicDisplay() {
               <strong>{formatCountdown(activeIqamah.target - now)}</strong>
             </div>
           )}
+
+          {fridaySchedule && (
+            <section className="friday-public-info" aria-label="Petugas salat Jumat">
+              <strong>Petugas Jumat</strong>
+              <div><span>Imam</span><b>{fridaySchedule.imam}</b></div>
+              <div><span>Khatib</span><b>{fridaySchedule.khatib}</b></div>
+              <div><span>Bilal</span><b>{fridaySchedule.bilal}</b></div>
+            </section>
+          )}
+
+          <section className="public-agenda" aria-label="Agenda masjid">
+            <strong>Agenda</strong>
+            <div className="public-agenda-list">
+              {publicAgenda.length ? publicAgenda.map((item) => (
+                <article key={item.id}>
+                  <time>{item.startTime || 'Waktu menyusul'}</time>
+                  <div>
+                    <b>{item.title}</b>
+                    <span>{formatDate(item.activityDate)}{item.speaker ? ` · ${item.speaker}` : ''}</span>
+                  </div>
+                </article>
+              )) : <span className="public-agenda-empty">Belum ada agenda terdekat.</span>}
+            </div>
+          </section>
 
         </section>
 
