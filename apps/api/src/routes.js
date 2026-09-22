@@ -248,6 +248,38 @@ function getFridaySchedule(date) {
   `).get(date) ?? null;
 }
 
+function addCalendarDays(date, days) {
+  const [year, month, day] = date.split('-').map(Number);
+  const value = new Date(Date.UTC(year, month - 1, day + days));
+  return [
+    value.getUTCFullYear(),
+    String(value.getUTCMonth() + 1).padStart(2, '0'),
+    String(value.getUTCDate()).padStart(2, '0')
+  ].join('-');
+}
+
+function upcomingFridayDates(from, count = 8) {
+  const safeCount = Math.min(Math.max(Number(count) || 8, 1), 16);
+  const weekday = new Date(`${from}T12:00:00+07:00`).getUTCDay();
+  const daysUntilFriday = (5 - weekday + 7) % 7;
+  const firstFriday = addCalendarDays(from, daysUntilFriday);
+
+  return Array.from({ length: safeCount }, (_, index) => addCalendarDays(firstFriday, index * 7));
+}
+
+function getUpcomingFridaySchedules(from, count = 8) {
+  return upcomingFridayDates(from, count).map((scheduleDate) => {
+    const existing = getFridaySchedule(scheduleDate);
+    return existing ?? {
+      scheduleDate,
+      imam: '',
+      khatib: '',
+      bilal: '',
+      updatedAt: null
+    };
+  });
+}
+
 function getTransactionRecord(id) {
   return db.prepare(`
     SELECT
@@ -1098,11 +1130,21 @@ apiRouter.get('/reports/transactions.csv', requireAuth, (req, res) => {
 });
 
 apiRouter.get('/friday-schedules', requireAuth, (req, res) => {
-  const date = datePattern.test(String(req.query.date ?? '')) ? String(req.query.date) : todayIso();
-  res.json({
-    date,
-    isFriday: isFridayDate(date),
-    schedule: getFridaySchedule(date)
+  if (datePattern.test(String(req.query.date ?? ''))) {
+    const date = String(req.query.date);
+    return res.json({
+      date,
+      isFriday: isFridayDate(date),
+      schedule: getFridaySchedule(date)
+    });
+  }
+
+  const from = datePattern.test(String(req.query.from ?? '')) ? String(req.query.from) : todayIso();
+  const limit = Math.min(Math.max(Number(req.query.limit) || 8, 1), 16);
+
+  return res.json({
+    from,
+    data: getUpcomingFridaySchedules(from, limit)
   });
 });
 
