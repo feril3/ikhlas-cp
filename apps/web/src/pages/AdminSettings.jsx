@@ -469,6 +469,7 @@ export default function AdminSettings() {
                 <div>
                   <strong>{log.action.replaceAll('_', ' ')}</strong>
                   <span>{log.userName ?? 'Sistem / anonim'} · {log.entityType}{log.entityId ? ` #${log.entityId}` : ''}</span>
+                  <AuditTransactionDetails log={log} />
                 </div>
                 <time>{new Date(log.createdAt.replace(' ', 'T') + 'Z').toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}</time>
               </div>
@@ -494,4 +495,63 @@ function CategoryList({ title, items, onToggle }) {
       {items.length === 0 && <div className="empty-state">Belum ada kategori.</div>}
     </div>
   );
+}
+
+
+function AuditTransactionDetails({ log }) {
+  if (log.entityType !== 'TRANSACTION' || !log.details) return null;
+
+  if (log.action === 'TRANSACTION_UPDATE' && log.details.before && log.details.after) {
+    const labels = {
+      amount: 'Nominal',
+      transactionDate: 'Tanggal',
+      method: 'Metode',
+      category: 'Kategori',
+      sourceDetail: 'Sumber',
+      description: 'Keterangan'
+    };
+
+    const changes = Object.entries(labels)
+      .filter(([key]) => String(log.details.before?.[key] ?? '') !== String(log.details.after?.[key] ?? ''))
+      .map(([key, label]) => ({
+        key,
+        label,
+        before: key === 'amount' ? formatRupiah(log.details.before[key]) : String(log.details.before[key] ?? '-'),
+        after: key === 'amount' ? formatRupiah(log.details.after[key]) : String(log.details.after[key] ?? '-')
+      }));
+
+    if (!changes.length) return <small className="audit-detail-note">Tidak ada perubahan nilai utama.</small>;
+
+    return (
+      <details className="audit-detail">
+        <summary>Lihat {changes.length} perubahan</summary>
+        <div className="audit-change-list">
+          {changes.map((change) => (
+            <div key={change.key}>
+              <strong>{change.label}</strong>
+              <span>{change.before}</span>
+              <b>→</b>
+              <span>{change.after}</span>
+            </div>
+          ))}
+        </div>
+      </details>
+    );
+  }
+
+  if (log.action === 'TRANSACTION_DELETE' && log.details.deleted) {
+    const deleted = log.details.deleted;
+    return (
+      <details className="audit-detail">
+        <summary>Lihat snapshot transaksi terhapus</summary>
+        <div className="audit-delete-snapshot">
+          <strong>{deleted.category} · {formatRupiah(deleted.amount)}</strong>
+          <span>{deleted.transactionDate} · {deleted.method}</span>
+          <span>Bukti Drive: {log.details.evidencePreservedOnGoogleDrive ? 'dipertahankan' : 'tidak ada'} · Mutasi: {log.details.mutationPreservedOnGoogleDrive ? 'dipertahankan' : 'tidak ada'}</span>
+        </div>
+      </details>
+    );
+  }
+
+  return null;
 }
