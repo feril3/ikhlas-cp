@@ -105,3 +105,25 @@ Referensi:
 - https://github.com/MosqueOS/Mosque-Prayer-Display-Screen
 - https://resources.metmuseum.org/resources/metpublications/pdf/Islamic_Art_and_Geometric_Design_Activities_for_Learning.pdf
 - https://islamicart.museumwnf.org/
+
+
+## Media-first layout V4
+
+Public Display V4 memprioritaskan konsumsi jamaah dari jarak jauh dengan komposisi tetap:
+
+- kiri ±21%: waktu sekarang, adzan berikutnya, countdown menuju adzan, dan countdown iqamah bila sedang dalam jendela 5 menit setelah adzan;
+- tengah ±57%: YouTube sebagai media/focal terbesar;
+- kanan ±20%: saldo, kas masuk, kas keluar selalu berada di rail keuangan; area bawah rail berotasi hanya untuk transaksi terbaru dan rekening donasi;
+- bawah main: lima jadwal salat dalam satu rail penuh;
+- row paling bawah: running text khusus `VERSE` (ayat/hadits) yang dapat memiliki banyak item aktif.
+
+Iqamah pada Public Display selalu dihitung sebagai **adzan + 5 menit**. Nilai iqamah manual lama tidak dipakai untuk tampilan jamaah.
+
+Running text dikelola Admin melalui `public_messages`. Item dapat ditambah, diedit, diurutkan, dinonaktifkan, dan dihapus. Seed awal menggunakan referensi:
+- QS. At-Taubah 9:18;
+- Sahih al-Bukhari 527;
+- Sahih al-Bukhari 645;
+- Sahih Muslim 2588;
+- QS. Al-Baqarah 2:261.
+
+Seed menggunakan `seed_key` supaya idempotent dan tidak muncul berulang ketika database diinisialisasi kembali.
