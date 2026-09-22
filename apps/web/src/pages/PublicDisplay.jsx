@@ -12,11 +12,29 @@ import {
   WalletCards
 } from 'lucide-react';
 import { api } from '../lib/api.js';
-import { formatDate, formatRupiah, toInputDate } from '../lib/format.js';
+import { formatDate, formatRupiah } from '../lib/format.js';
 
 const CAROUSEL_INTERVAL_MS = 9000;
 const MESSAGE_INTERVAL_MS = 12000;
 const TRANSACTION_LIMIT = 4;
+const DISPLAY_TIMEZONE = 'Asia/Jakarta';
+
+function displayDateIso(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: DISPLAY_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(date);
+
+  const values = Object.fromEntries(
+    parts
+      .filter((part) => part.type !== 'literal')
+      .map((part) => [part.type, part.value])
+  );
+
+  return `${values.year}-${values.month}-${values.day}`;
+}
 
 function toYouTubeEmbed(url) {
   if (!url) return '';
@@ -56,7 +74,7 @@ function toYouTubeEmbed(url) {
 
 function makePrayerDateTime(date, time) {
   if (!date || !time) return null;
-  const value = new Date(`${date}T${time}:00`);
+  const value = new Date(`${date}T${time}:00+07:00`);
   return Number.isNaN(value.getTime()) ? null : value;
 }
 
@@ -318,7 +336,7 @@ export default function PublicDisplay() {
 
   async function load() {
     try {
-      setData(await api.publicDisplay(toInputDate()));
+      setData(await api.publicDisplay(displayDateIso()));
     } catch {
       // Pertahankan last-known-good payload di TV ketika jaringan sementara putus.
     }
@@ -395,14 +413,16 @@ export default function PublicDisplay() {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
-    hour12: false
+    hour12: false,
+    timeZone: DISPLAY_TIMEZONE
   }).format(now).replaceAll('.', ':');
 
   const date = new Intl.DateTimeFormat('id-ID', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
-    year: 'numeric'
+    year: 'numeric',
+    timeZone: DISPLAY_TIMEZONE
   }).format(now);
 
   return (
