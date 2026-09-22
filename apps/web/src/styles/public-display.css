@@ -737,3 +737,17 @@
     animation: none;
   }
 }
+
+
+.adhan-now-takeover {
+  padding: 6vw;
+}
+
+.adhan-now-message {
+  max-width: 88vw;
+  font-size: clamp(58px, 7.4vw, 128px) !important;
+  line-height: 1.05 !important;
+  letter-spacing: -.035em !important;
+  text-align: center;
+  text-wrap: balance;
+}
