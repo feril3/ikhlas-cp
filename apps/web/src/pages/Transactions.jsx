@@ -16,7 +16,7 @@ export default function Transactions() {
 
   useEffect(() => {
     setData(null);
-    api.transactions(type || undefined).then(setData).catch((err) => setError(err.message));
+    api.transactions({ type: type || undefined }).then(setData).catch((err) => setError(err.message));
   }, [type]);
 
   const filtered = data?.data.filter((item) => `${item.category} ${item.sourceDetail ?? ''} ${item.description ?? ''}`.toLowerCase().includes(query.toLowerCase())) ?? [];
