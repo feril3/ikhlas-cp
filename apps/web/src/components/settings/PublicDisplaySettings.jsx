@@ -76,9 +76,9 @@ export function PublicDisplaySettings({ messages, api, reload }) {
 
   return (
     <section className="overflow-hidden rounded-xl border bg-card">
-      <div className="flex items-center justify-between gap-4 border-b p-5">
+      <div className="flex flex-col gap-3 border-b bg-muted/25 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
         <div><h2 className="text-lg font-semibold">Public Display</h2><p className="mt-1 text-sm text-muted-foreground">Kelola running text, pengumuman, dan pesan yang tampil ke jamaah.</p></div>
-        <Button onClick={add}><IconPlus />Tambah konten</Button>
+        <Button className="w-full sm:w-auto" onClick={add}><IconPlus />Tambah konten</Button>
       </div>
       <Table>
         <TableHeader><TableRow><TableHead>Judul</TableHead><TableHead>Isi singkat</TableHead><TableHead>Sumber</TableHead><TableHead>Urutan</TableHead><TableHead>Status</TableHead><TableHead className="w-16" /></TableRow></TableHeader>
