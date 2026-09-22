@@ -24,36 +24,35 @@ export function getIqamahTime(date, adhanTime) {
   }).format(iqamah).replace('.', ':');
 }
 
-export function getPrayerState(todaySchedule, nextDaySchedule, now) {
-  const todayItems = todaySchedule?.items ?? [];
-  const tomorrowItems = nextDaySchedule?.items ?? [];
+export function getActiveIqamah(todaySchedule, now) {
+  const items = todaySchedule?.items ?? [];
 
-  for (const prayer of todayItems) {
+  for (const prayer of items) {
     const adhan = makePrayerDateTime(todaySchedule?.scheduleDate, prayer.adhanTime);
     const iqamah = getIqamahDateTime(todaySchedule?.scheduleDate, prayer.adhanTime);
     if (!adhan || !iqamah) continue;
 
     if (now >= adhan && now < iqamah) {
       return {
-        kind: 'iqamah',
-        label: `Menuju iqamah ${prayer.prayerName}`,
         prayerName: prayer.prayerName,
-        target: iqamah,
         adhanTime: prayer.adhanTime,
         iqamahTime: getIqamahTime(todaySchedule.scheduleDate, prayer.adhanTime),
-        date: todaySchedule.scheduleDate,
-        today: true
+        target: iqamah
       };
     }
   }
 
+  return null;
+}
+
+export function getNextAdhan(todaySchedule, nextDaySchedule, now) {
   const candidates = [
-    ...todayItems.map((prayer) => ({
+    ...(todaySchedule?.items ?? []).map((prayer) => ({
       prayer,
       date: todaySchedule?.scheduleDate,
       today: true
     })),
-    ...tomorrowItems.map((prayer) => ({
+    ...(nextDaySchedule?.items ?? []).map((prayer) => ({
       prayer,
       date: nextDaySchedule?.scheduleDate,
       today: false
@@ -70,15 +69,26 @@ export function getPrayerState(todaySchedule, nextDaySchedule, now) {
   if (!next) return null;
 
   return {
-    kind: 'adhan',
-    label: next.today ? 'Salat berikutnya' : 'Salat berikutnya besok',
+    label: next.today ? 'Adzan berikutnya' : 'Adzan berikutnya besok',
     prayerName: next.prayer.prayerName,
-    target: next.target,
     adhanTime: next.prayer.adhanTime,
     iqamahTime: getIqamahTime(next.date, next.prayer.adhanTime),
+    target: next.target,
     date: next.date,
     today: next.today
   };
+}
+
+export function getPrayerDisplayState(todaySchedule, nextDaySchedule, now) {
+  return {
+    nextAdhan: getNextAdhan(todaySchedule, nextDaySchedule, now),
+    activeIqamah: getActiveIqamah(todaySchedule, now)
+  };
+}
+
+// Compatibility helper for non-display consumers that only need the next adhan.
+export function getPrayerState(todaySchedule, nextDaySchedule, now) {
+  return getNextAdhan(todaySchedule, nextDaySchedule, now);
 }
 
 export function formatCountdown(milliseconds) {
