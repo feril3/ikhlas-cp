@@ -19,8 +19,8 @@ import { useAuth } from '../auth/AuthContext.jsx';
 const navigation = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/transactions', label: 'Transaksi', icon: ReceiptText },
-  { to: '/transactions/income', label: 'Kas Masuk', icon: ArrowDownToLine },
-  { to: '/transactions/expense', label: 'Kas Keluar', icon: ArrowUpFromLine },
+  { to: '/transactions/income', label: 'Kas Masuk', icon: ArrowDownToLine, roles: ['TREASURER'] },
+  { to: '/transactions/expense', label: 'Kas Keluar', icon: ArrowUpFromLine, roles: ['TREASURER'] },
   { to: '/reports', label: 'Laporan', icon: FileBarChart },
   { to: '/schedule', label: 'Jadwal & Kegiatan', icon: CalendarDays },
   { to: '/settings', label: 'Pengaturan', icon: Settings, roles: ['ADMIN'] },
