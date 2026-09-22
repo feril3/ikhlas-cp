@@ -1,4 +1,4 @@
-export const IQAMAH_DELAY_MINUTES = 10;
+export const IQAMAH_DELAY_MINUTES = 8;
 
 export function makePrayerDateTime(date, time) {
   if (!date || !time) return null;
@@ -22,6 +22,27 @@ export function getIqamahTime(date, adhanTime) {
     hour12: false,
     timeZone: 'Asia/Jakarta'
   }).format(iqamah).replace('.', ':');
+}
+
+export function getActiveAdhanAnnouncement(todaySchedule, now) {
+  const items = todaySchedule?.items ?? [];
+
+  for (const prayer of items) {
+    const adhan = makePrayerDateTime(todaySchedule?.scheduleDate, prayer.adhanTime);
+    if (!adhan) continue;
+
+    const announcementEnds = new Date(adhan.getTime() + 2 * 60_000);
+    if (now >= adhan && now < announcementEnds) {
+      return {
+        prayerName: prayer.prayerName,
+        adhanTime: prayer.adhanTime,
+        startsAt: adhan,
+        endsAt: announcementEnds
+      };
+    }
+  }
+
+  return null;
 }
 
 export function getActiveIqamah(todaySchedule, now) {
@@ -87,6 +108,15 @@ export function getPrayerDisplayState(todaySchedule, nextDaySchedule, now) {
 }
 
 export function getCountdownFocus(todaySchedule, nextDaySchedule, now) {
+  const adhanAnnouncement = getActiveAdhanAnnouncement(todaySchedule, now);
+  if (adhanAnnouncement) {
+    return {
+      kind: 'ADHAN_NOW',
+      prayerName: adhanAnnouncement.prayerName,
+      endsAt: adhanAnnouncement.endsAt
+    };
+  }
+
   const state = getPrayerDisplayState(todaySchedule, nextDaySchedule, now);
 
   if (state.activeIqamah) {
