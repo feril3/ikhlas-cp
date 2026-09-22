@@ -1,21 +1,32 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  CalendarDays,
-  MapPin,
-  Pencil,
-  Plus,
-  Save,
-  Trash2,
-  UserRound,
-  Video,
-  X
-} from 'lucide-react';
+  IconCalendarEvent,
+  IconDots,
+  IconEdit,
+  IconMapPin,
+  IconPlus,
+  IconTrash,
+  IconUser,
+  IconVideo
+} from '@tabler/icons-react';
+import { toast } from 'sonner';
 import { api } from '../lib/api.js';
 import { toInputDate } from '../lib/format.js';
 import { LoadingState } from '../components/LoadingState.jsx';
+import { PageHeader } from '../components/app/PageHeader.jsx';
 import { useAuth } from '../auth/AuthContext.jsx';
+import { Badge } from '../components/ui/badge.jsx';
+import { Button } from '../components/ui/button.jsx';
+import { Checkbox } from '../components/ui/checkbox.jsx';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog.jsx';
+import { Input } from '../components/ui/input.jsx';
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '../components/ui/sheet.jsx';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table.jsx';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog.jsx';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu.jsx';
+import { Field, FieldGroup, FieldLabel } from '../components/ui/field.jsx';
 
-function newActivity(date = toInputDate()) {
+function emptyActivity(date = toInputDate()) {
   return {
     title: '',
     activityDate: date,
@@ -48,21 +59,131 @@ function formatFridayDate(date) {
   }).format(new Date(`${date}T12:00:00+07:00`));
 }
 
+function formatAgendaDate(date) {
+  return new Intl.DateTimeFormat('id-ID', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  }).format(new Date(`${date}T12:00:00+07:00`));
+}
+
+function FridayEditor({ open, onOpenChange, row, onSaved }) {
+  const [form, setForm] = useState({ imam: '', khatib: '', bilal: '' });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (row) setForm({ imam: row.imam ?? '', khatib: row.khatib ?? '', bilal: row.bilal ?? '' });
+  }, [row]);
+
+  async function submit(event) {
+    event.preventDefault();
+    if (!row) return;
+    setSaving(true);
+    try {
+      const result = await api.updateFridaySchedule(row.scheduleDate, form);
+      onSaved(result.schedule);
+      toast.success('Petugas Jumat berhasil diperbarui.');
+      onOpenChange(false);
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit petugas Jumat</DialogTitle>
+          <DialogDescription>{row ? formatFridayDate(row.scheduleDate) : ''}</DialogDescription>
+        </DialogHeader>
+        <form className="grid gap-5" onSubmit={submit}>
+          <FieldGroup>
+            <Field><FieldLabel>Imam</FieldLabel><Input value={form.imam} onChange={(e) => setForm((x) => ({ ...x, imam: e.target.value }))} placeholder="Nama imam" required /></Field>
+            <Field><FieldLabel>Khatib</FieldLabel><Input value={form.khatib} onChange={(e) => setForm((x) => ({ ...x, khatib: e.target.value }))} placeholder="Nama khatib" required /></Field>
+            <Field><FieldLabel>Bilal</FieldLabel><Input value={form.bilal} onChange={(e) => setForm((x) => ({ ...x, bilal: e.target.value }))} placeholder="Nama bilal" required /></Field>
+          </FieldGroup>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Batal</Button>
+            <Button disabled={saving}>{saving ? 'Menyimpan...' : 'Simpan petugas'}</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AgendaEditor({ open, onOpenChange, activity, today, onSaved }) {
+  const editing = Boolean(activity?.id);
+  const [form, setForm] = useState(() => emptyActivity(today));
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setForm(activity ? activityToForm(activity) : emptyActivity(today));
+  }, [activity, today, open]);
+
+  async function submit(event) {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      if (editing) await api.updateActivity(activity.id, form);
+      else await api.createActivity(form);
+      toast.success(editing ? 'Agenda berhasil diperbarui.' : 'Agenda berhasil ditambahkan.');
+      await onSaved();
+      onOpenChange(false);
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="flex flex-col overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>{editing ? 'Edit agenda' : 'Tambah agenda'}</SheetTitle>
+          <SheetDescription>Atur informasi kegiatan yang dapat ditampilkan pada Public Display.</SheetDescription>
+        </SheetHeader>
+        <form className="flex flex-1 flex-col gap-5 px-5 pb-5" onSubmit={submit}>
+          <FieldGroup>
+            <Field><FieldLabel>Nama kegiatan</FieldLabel><Input value={form.title} onChange={(e) => setForm((x) => ({ ...x, title: e.target.value }))} placeholder="Kajian Ba'da Maghrib" required /></Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field><FieldLabel>Tanggal</FieldLabel><Input type="date" min={today} value={form.activityDate} onChange={(e) => setForm((x) => ({ ...x, activityDate: e.target.value }))} required /></Field>
+              <Field><FieldLabel>Waktu</FieldLabel><Input type="time" value={form.startTime} onChange={(e) => setForm((x) => ({ ...x, startTime: e.target.value }))} /></Field>
+            </div>
+            <Field><FieldLabel>Pemateri</FieldLabel><Input value={form.speaker} onChange={(e) => setForm((x) => ({ ...x, speaker: e.target.value }))} placeholder="Nama pemateri" /></Field>
+            <Field><FieldLabel>Lokasi</FieldLabel><Input value={form.location} onChange={(e) => setForm((x) => ({ ...x, location: e.target.value }))} placeholder="Aula utama" /></Field>
+            <Field><FieldLabel>URL YouTube</FieldLabel><Input type="url" value={form.liveUrl} onChange={(e) => setForm((x) => ({ ...x, liveUrl: e.target.value }))} placeholder="https://www.youtube.com/watch?v=..." /></Field>
+            <label className="flex items-start gap-3 rounded-lg border p-3 text-sm">
+              <Checkbox checked={form.isPublished} onCheckedChange={(checked) => setForm((x) => ({ ...x, isPublished: Boolean(checked) }))} />
+              <span><strong className="block font-medium">Tampilkan di Public Display</strong><span className="text-muted-foreground">Agenda aktif akan ikut ditampilkan pada layar jamaah.</span></span>
+            </label>
+          </FieldGroup>
+          <SheetFooter className="mt-auto px-0 pb-0">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Batal</Button>
+            <Button disabled={saving}>{saving ? 'Menyimpan...' : editing ? 'Simpan perubahan' : 'Tambah agenda'}</Button>
+          </SheetFooter>
+        </form>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 export default function Schedule() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
-  const today = toInputDate();
-
+  const today = useMemo(() => toInputDate(), []);
   const [fridays, setFridays] = useState(null);
   const [activities, setActivities] = useState([]);
-  const [activityForm, setActivityForm] = useState(() => newActivity(today));
-  const [editingActivityId, setEditingActivityId] = useState(null);
-  const [editingActivity, setEditingActivity] = useState(() => newActivity(today));
-  const [savingFridayDate, setSavingFridayDate] = useState('');
-  const [status, setStatus] = useState({ type: 'idle', message: '' });
+  const [fridayToEdit, setFridayToEdit] = useState(null);
+  const [agendaToEdit, setAgendaToEdit] = useState(null);
+  const [agendaEditorOpen, setAgendaEditorOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [loadingError, setLoadingError] = useState('');
 
   async function load() {
-    setStatus({ type: 'idle', message: '' });
     try {
       const [fridayData, activityData] = await Promise.all([
         api.fridaySchedules(today, 8),
@@ -70,240 +191,133 @@ export default function Schedule() {
       ]);
       setFridays(fridayData.data);
       setActivities(activityData.data);
+      setLoadingError('');
     } catch (error) {
-      setStatus({ type: 'error', message: error.message });
+      setLoadingError(error.message);
     }
   }
 
-  useEffect(() => {
-    load();
-  }, []);
+  useEffect(() => { load(); }, []);
 
-  function updateFriday(scheduleDate, field, value) {
-    setFridays((current) => current.map((item) => (
-      item.scheduleDate === scheduleDate ? { ...item, [field]: value } : item
-    )));
+  function openNewAgenda() {
+    setAgendaToEdit(null);
+    setAgendaEditorOpen(true);
   }
 
-  async function saveFriday(row) {
-    setSavingFridayDate(row.scheduleDate);
-    setStatus({ type: 'loading', message: `Menyimpan petugas Jumat ${formatFridayDate(row.scheduleDate)}...` });
-    try {
-      const result = await api.updateFridaySchedule(row.scheduleDate, {
-        imam: row.imam,
-        khatib: row.khatib,
-        bilal: row.bilal
-      });
-      setFridays((current) => current.map((item) => (
-        item.scheduleDate === row.scheduleDate ? result.schedule : item
-      )));
-      setStatus({ type: 'success', message: 'Jadwal petugas Jumat berhasil disimpan.' });
-    } catch (error) {
-      setStatus({ type: 'error', message: error.message });
-    } finally {
-      setSavingFridayDate('');
-    }
+  function openEditAgenda(activity) {
+    setAgendaToEdit(activity);
+    setAgendaEditorOpen(true);
   }
 
-  async function createActivity(event) {
-    event.preventDefault();
-    setStatus({ type: 'loading', message: 'Menyimpan kegiatan...' });
+  async function togglePublished(activity) {
     try {
-      await api.createActivity(activityForm);
-      setActivityForm(newActivity(today));
-      setStatus({ type: 'success', message: 'Kegiatan berhasil ditambahkan.' });
+      await api.updateActivity(activity.id, { ...activityToForm(activity), isPublished: !activity.isPublished });
+      toast.success(activity.isPublished ? 'Agenda disembunyikan dari Public Display.' : 'Agenda dipublikasikan.');
       await load();
     } catch (error) {
-      setStatus({ type: 'error', message: error.message });
+      toast.error(error.message);
     }
   }
 
-  function startEditActivity(activity) {
-    setEditingActivityId(activity.id);
-    setEditingActivity(activityToForm(activity));
-  }
-
-  function cancelEditActivity() {
-    setEditingActivityId(null);
-    setEditingActivity(newActivity(today));
-  }
-
-  async function saveActivityEdit(event) {
-    event.preventDefault();
-    setStatus({ type: 'loading', message: 'Menyimpan perubahan agenda...' });
+  async function confirmDelete() {
+    if (!deleteTarget) return;
     try {
-      await api.updateActivity(editingActivityId, editingActivity);
-      setEditingActivityId(null);
-      setEditingActivity(newActivity(today));
-      setStatus({ type: 'success', message: 'Agenda publik berhasil diperbarui.' });
+      await api.deleteActivity(deleteTarget.id);
+      toast.success('Agenda berhasil dihapus.');
+      setDeleteTarget(null);
       await load();
     } catch (error) {
-      setStatus({ type: 'error', message: error.message });
-    }
-  }
-
-  async function deleteActivity(id) {
-    if (!window.confirm('Hapus kegiatan ini?')) return;
-    try {
-      await api.deleteActivity(id);
-      setActivities((current) => current.filter((item) => item.id !== id));
-      if (editingActivityId === id) cancelEditActivity();
-      setStatus({ type: 'success', message: 'Kegiatan berhasil dihapus.' });
-    } catch (error) {
-      setStatus({ type: 'error', message: error.message });
+      toast.error(error.message);
     }
   }
 
   return (
-    <div className="page-stack">
-      <header className="page-heading">
-        <div>
-          <p className="eyebrow">Informasi masjid</p>
-          <h1>Jadwal Jumat & Agenda</h1>
-          <p className="page-subtitle">Kelola petugas Jumat mendatang dan agenda publik. Waktu salat harian tetap otomatis dari provider jadwal salat.</p>
+    <div className="space-y-7">
+      <PageHeader
+        title="Jadwal Jumat & Agenda"
+        description="Kelola petugas Jumat mendatang dan agenda publik. Jadwal salat harian tetap otomatis dari provider."
+        actions={isAdmin ? <Button onClick={openNewAgenda}><IconPlus />Tambah agenda</Button> : null}
+      />
+
+      {loadingError && <div className="rounded-lg border border-destructive/25 bg-destructive/5 p-4 text-sm text-destructive">{loadingError}</div>}
+
+      <section className="overflow-hidden rounded-xl border bg-card">
+        <div className="flex items-start justify-between gap-4 border-b p-5">
+          <div><h2 className="text-lg font-semibold">Petugas Jumat mendatang</h2><p className="mt-1 text-sm text-muted-foreground">Tanggal Jumat yang sudah lewat otomatis tidak ditampilkan lagi.</p></div>
+          <IconUser className="mt-1 size-5 text-muted-foreground" />
         </div>
-      </header>
-
-      {status.message && <div className={`notice ${status.type}`}>{status.message}</div>}
-
-      <section className="panel friday-upcoming-panel">
-        <div className="panel-heading">
-          <div>
-            <p className="section-kicker">Jumat mendatang</p>
-            <h2>Imam, Khatib & Bilal</h2>
-            <p className="schedule-source-copy">Hanya tanggal Jumat yang belum lewat yang ditampilkan. Jadwal lama tetap tersimpan sebagai riwayat.</p>
-          </div>
-          <UserRound size={20} className="muted-icon" />
-        </div>
-
-        {!fridays && status.type !== 'error' && <LoadingState />}
-
-        {fridays && (
-          <div className="friday-upcoming-list">
-            {fridays.map((row) => {
-              const complete = row.imam.trim() && row.khatib.trim() && row.bilal.trim();
-              return (
-                <article className="friday-upcoming-row" key={row.scheduleDate}>
-                  <div className="friday-date-cell">
-                    <strong>{formatFridayDate(row.scheduleDate)}</strong>
-                    <span>{row.updatedAt ? 'Sudah diisi' : 'Belum diisi'}</span>
-                  </div>
-
-                  <label className="mini-field">
-                    <span>Imam</span>
-                    <input
-                      value={row.imam}
-                      disabled={!isAdmin}
-                      onChange={(event) => updateFriday(row.scheduleDate, 'imam', event.target.value)}
-                      placeholder="Nama imam"
-                    />
-                  </label>
-
-                  <label className="mini-field">
-                    <span>Khatib</span>
-                    <input
-                      value={row.khatib}
-                      disabled={!isAdmin}
-                      onChange={(event) => updateFriday(row.scheduleDate, 'khatib', event.target.value)}
-                      placeholder="Nama khatib"
-                    />
-                  </label>
-
-                  <label className="mini-field">
-                    <span>Bilal</span>
-                    <input
-                      value={row.bilal}
-                      disabled={!isAdmin}
-                      onChange={(event) => updateFriday(row.scheduleDate, 'bilal', event.target.value)}
-                      placeholder="Nama bilal"
-                    />
-                  </label>
-
-                  {isAdmin && (
-                    <button
-                      type="button"
-                      className="button primary friday-save-button"
-                      disabled={!complete || savingFridayDate === row.scheduleDate}
-                      onClick={() => saveFriday(row)}
-                    >
-                      <Save size={16} />
-                      {savingFridayDate === row.scheduleDate ? 'Menyimpan...' : 'Simpan'}
-                    </button>
-                  )}
-                </article>
-              );
-            })}
-          </div>
+        {!fridays ? <div className="p-5"><LoadingState /></div> : (
+          <>
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader><TableRow><TableHead>Tanggal</TableHead><TableHead>Imam</TableHead><TableHead>Khatib</TableHead><TableHead>Bilal</TableHead><TableHead>Status</TableHead><TableHead className="w-16" /></TableRow></TableHeader>
+                <TableBody>
+                  {fridays.map((row) => {
+                    const complete = Boolean(row.imam?.trim() && row.khatib?.trim() && row.bilal?.trim());
+                    return <TableRow key={row.scheduleDate}>
+                      <TableCell className="font-medium">{formatFridayDate(row.scheduleDate)}</TableCell>
+                      <TableCell>{row.imam || '—'}</TableCell><TableCell>{row.khatib || '—'}</TableCell><TableCell>{row.bilal || '—'}</TableCell>
+                      <TableCell><Badge variant={complete ? 'success' : 'outline'}>{complete ? 'Siap' : 'Belum lengkap'}</Badge></TableCell>
+                      <TableCell>{isAdmin && <Button variant="ghost" size="icon-sm" aria-label="Edit petugas Jumat" onClick={() => setFridayToEdit(row)}><IconEdit /></Button>}</TableCell>
+                    </TableRow>;
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="divide-y md:hidden">
+              {fridays.map((row) => {
+                const complete = Boolean(row.imam?.trim() && row.khatib?.trim() && row.bilal?.trim());
+                return <article key={row.scheduleDate} className="space-y-3 p-4">
+                  <div className="flex items-start justify-between gap-3"><div><strong className="text-sm">{formatFridayDate(row.scheduleDate)}</strong><div className="mt-1 text-xs text-muted-foreground">Imam {row.imam || '—'} · Khatib {row.khatib || '—'} · Bilal {row.bilal || '—'}</div></div><Badge variant={complete ? 'success' : 'outline'}>{complete ? 'Siap' : 'Belum lengkap'}</Badge></div>
+                  {isAdmin && <Button variant="outline" size="sm" onClick={() => setFridayToEdit(row)}><IconEdit />Edit petugas</Button>}
+                </article>;
+              })}
+            </div>
+          </>
         )}
       </section>
 
-      <div className="schedule-layout">
-        <section className="panel">
-          <div className="panel-heading">
-            <div><p className="section-kicker">Agenda publik</p><h2>Kegiatan mendatang</h2></div>
-            <CalendarDays size={20} className="muted-icon" />
-          </div>
-          <div className="event-cards">
-            {activities.map((item) => (
-              <article className="event-card activity-editable-card" key={item.id}>
-                <div className="date-block large"><strong>{item.activityDate.slice(-2)}</strong><span>{item.activityDate.slice(5, 7)}</span></div>
-                <div className="event-copy">
-                  <h3>{item.title}</h3>
-                  <p>{item.startTime || 'Waktu fleksibel'}</p>
-                  {item.speaker && <p><UserRound size={15} /> {item.speaker}</p>}
-                  {item.location && <p><MapPin size={15} /> {item.location}</p>}
-                  {item.liveUrl && <p><Video size={15} /> Live streaming tersedia</p>}
-                  <span className={item.isPublished ? 'publish-state' : 'publish-state unpublished'}>
-                    {item.isPublished ? 'Tampil di Public Display' : 'Tidak dipublikasikan'}
-                  </span>
-                </div>
+      <section className="overflow-hidden rounded-xl border bg-card">
+        <div className="flex items-start justify-between gap-4 border-b p-5">
+          <div><h2 className="text-lg font-semibold">Agenda mendatang</h2><p className="mt-1 text-sm text-muted-foreground">Kegiatan publik, pemateri, waktu, dan status tayang.</p></div>
+          <IconCalendarEvent className="mt-1 size-5 text-muted-foreground" />
+        </div>
+        <div className="hidden md:block">
+          <Table>
+            <TableHeader><TableRow><TableHead>Tanggal</TableHead><TableHead>Kegiatan</TableHead><TableHead>Pemateri</TableHead><TableHead>Waktu</TableHead><TableHead>Status publik</TableHead><TableHead className="w-16" /></TableRow></TableHeader>
+            <TableBody>
+              {activities.map((item) => <TableRow key={item.id}>
+                <TableCell className="whitespace-nowrap">{formatAgendaDate(item.activityDate)}</TableCell>
+                <TableCell><strong className="font-medium">{item.title}</strong>{item.location && <span className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><IconMapPin className="size-3.5" />{item.location}</span>}</TableCell>
+                <TableCell>{item.speaker || '—'}</TableCell>
+                <TableCell>{item.startTime || 'Fleksibel'}</TableCell>
+                <TableCell><Badge variant={item.isPublished ? 'success' : 'outline'}>{item.isPublished ? 'Tayang' : 'Disembunyikan'}</Badge></TableCell>
+                <TableCell>{isAdmin && <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon-sm" aria-label={`Aksi ${item.title}`}><IconDots /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onSelect={() => openEditAgenda(item)}><IconEdit />Edit</DropdownMenuItem><DropdownMenuItem onSelect={() => togglePublished(item)}>{item.isPublished ? 'Sembunyikan dari display' : 'Publikasikan'}</DropdownMenuItem><DropdownMenuItem className="text-destructive" onSelect={() => setDeleteTarget(item)}><IconTrash />Hapus</DropdownMenuItem></DropdownMenuContent></DropdownMenu>}</TableCell>
+              </TableRow>)}
+              {activities.length === 0 && <TableRow><TableCell colSpan={6} className="py-10 text-center text-muted-foreground">Belum ada agenda mendatang.</TableCell></TableRow>}
+            </TableBody>
+          </Table>
+        </div>
 
-                {isAdmin && (
-                  <div className="event-actions">
-                    <button className="icon-button" onClick={() => startEditActivity(item)} aria-label={`Edit ${item.title}`}><Pencil size={16} /></button>
-                    <button className="icon-button danger-icon-button" onClick={() => deleteActivity(item.id)} aria-label={`Hapus ${item.title}`}><Trash2 size={16} /></button>
-                  </div>
-                )}
+        <div className="divide-y md:hidden">
+          {activities.map((item) => <article key={item.id} className="space-y-3 p-4">
+            <div className="flex items-start justify-between gap-3"><div><strong>{item.title}</strong><p className="mt-1 text-xs text-muted-foreground">{formatAgendaDate(item.activityDate)} · {item.startTime || 'Waktu fleksibel'}</p></div><Badge variant={item.isPublished ? 'success' : 'outline'}>{item.isPublished ? 'Tayang' : 'Draft'}</Badge></div>
+            <div className="space-y-1 text-sm text-muted-foreground">{item.speaker && <p className="flex items-center gap-2"><IconUser className="size-4" />{item.speaker}</p>}{item.location && <p className="flex items-center gap-2"><IconMapPin className="size-4" />{item.location}</p>}{item.liveUrl && <p className="flex items-center gap-2"><IconVideo className="size-4" />Live tersedia</p>}</div>
+            {isAdmin && <div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => openEditAgenda(item)}><IconEdit />Edit</Button><Button variant="ghost" size="sm" onClick={() => togglePublished(item)}>{item.isPublished ? 'Sembunyikan' : 'Publikasikan'}</Button><Button variant="ghost" size="sm" className="text-destructive" onClick={() => setDeleteTarget(item)}><IconTrash />Hapus</Button></div>}
+          </article>)}
+          {activities.length === 0 && <div className="p-8 text-center text-sm text-muted-foreground">Belum ada agenda mendatang.</div>}
+        </div>
+      </section>
 
-                {editingActivityId === item.id && (
-                  <form className="activity-edit-form" onSubmit={saveActivityEdit}>
-                    <label className="field full-field"><span>Nama kegiatan</span><input value={editingActivity.title} onChange={(e) => setEditingActivity((current) => ({ ...current, title: e.target.value }))} required /></label>
-                    <label className="field"><span>Tanggal</span><input type="date" min={today} value={editingActivity.activityDate} onChange={(e) => setEditingActivity((current) => ({ ...current, activityDate: e.target.value }))} required /></label>
-                    <label className="field"><span>Jam mulai</span><input type="time" value={editingActivity.startTime} onChange={(e) => setEditingActivity((current) => ({ ...current, startTime: e.target.value }))} /></label>
-                    <label className="field"><span>Pemateri</span><input value={editingActivity.speaker} onChange={(e) => setEditingActivity((current) => ({ ...current, speaker: e.target.value }))} /></label>
-                    <label className="field"><span>Lokasi</span><input value={editingActivity.location} onChange={(e) => setEditingActivity((current) => ({ ...current, location: e.target.value }))} /></label>
-                    <label className="field full-field"><span>URL live YouTube</span><input type="url" value={editingActivity.liveUrl} onChange={(e) => setEditingActivity((current) => ({ ...current, liveUrl: e.target.value }))} /></label>
-                    <label className="checkbox-field full-field"><input type="checkbox" checked={editingActivity.isPublished} onChange={(e) => setEditingActivity((current) => ({ ...current, isPublished: e.target.checked }))} /><span>Tampilkan pada Public Display</span></label>
-                    <div className="inline-actions full-field">
-                      <button className="button primary"><Save size={16} /> Simpan perubahan</button>
-                      <button type="button" className="button ghost" onClick={cancelEditActivity}><X size={16} /> Batal</button>
-                    </div>
-                  </form>
-                )}
-              </article>
-            ))}
-            {activities.length === 0 && <div className="empty-state">Belum ada kegiatan mendatang.</div>}
-          </div>
-        </section>
+      <FridayEditor open={Boolean(fridayToEdit)} onOpenChange={(open) => !open && setFridayToEdit(null)} row={fridayToEdit} onSaved={(saved) => setFridays((rows) => rows.map((row) => row.scheduleDate === saved.scheduleDate ? saved : row))} />
+      <AgendaEditor open={agendaEditorOpen} onOpenChange={setAgendaEditorOpen} activity={agendaToEdit} today={today} onSaved={load} />
 
-        {isAdmin && (
-          <section className="panel settings-section">
-            <div className="panel-heading"><div><p className="section-kicker">Tambah agenda</p><h2>Kegiatan baru</h2></div><Plus size={20} className="muted-icon" /></div>
-            <form className="activity-form" onSubmit={createActivity}>
-              <label className="field"><span>Nama kegiatan</span><input value={activityForm.title} onChange={(e) => setActivityForm((current) => ({ ...current, title: e.target.value }))} required placeholder="Kajian Ba'da Maghrib" /></label>
-              <div className="form-grid two-columns">
-                <label className="field"><span>Tanggal</span><input type="date" min={today} value={activityForm.activityDate} onChange={(e) => setActivityForm((current) => ({ ...current, activityDate: e.target.value }))} required /></label>
-                <label className="field"><span>Jam mulai</span><input type="time" value={activityForm.startTime} onChange={(e) => setActivityForm((current) => ({ ...current, startTime: e.target.value }))} /></label>
-                <label className="field"><span>Pemateri</span><input value={activityForm.speaker} onChange={(e) => setActivityForm((current) => ({ ...current, speaker: e.target.value }))} /></label>
-                <label className="field"><span>Lokasi</span><input value={activityForm.location} onChange={(e) => setActivityForm((current) => ({ ...current, location: e.target.value }))} /></label>
-                <label className="field full-field"><span>URL live YouTube (opsional)</span><input type="url" value={activityForm.liveUrl} onChange={(e) => setActivityForm((current) => ({ ...current, liveUrl: e.target.value }))} placeholder="https://www.youtube.com/watch?v=..." /></label>
-              </div>
-              <label className="checkbox-field"><input type="checkbox" checked={activityForm.isPublished} onChange={(e) => setActivityForm((current) => ({ ...current, isPublished: e.target.checked }))} /><span>Tampilkan kegiatan pada Public Display</span></label>
-              <button className="button primary"><Plus size={17} /> Tambah kegiatan</button>
-            </form>
-          </section>
-        )}
-      </div>
+      <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader><AlertDialogTitle>Hapus agenda?</AlertDialogTitle><AlertDialogDescription>{deleteTarget ? `${deleteTarget.title} pada ${formatAgendaDate(deleteTarget.activityDate)} akan dihapus dari sistem dan Public Display.` : ''}</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>Batal</AlertDialogCancel><AlertDialogAction variant="destructive" onClick={confirmDelete}>Hapus agenda</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
