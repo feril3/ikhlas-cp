@@ -199,3 +199,15 @@ test('left prayer focus uses one alignment axis without centered mihrab collisio
   assert.doesNotMatch(ornament, /\.prayer-focus-panel::after/);
   assert.match(ornament, /\.prayer-focus-panel::before \{[\s\S]*right:\s*18px/);
 });
+
+
+test('public display header shows the full RS Elizabeth Situbondo address', async () => {
+  const jsx = await source('apps/web/src/pages/PublicDisplay.jsx');
+  const css = await source('apps/web/src/styles/public-display.css');
+
+  assert.match(jsx, /Jl\. WR\. Supratman No\.2, Mulyautama, Patokan, Kec\. Situbondo, Kabupaten Situbondo, Jawa Timur 68312/);
+  assert.match(jsx, /\{location\.address\}/);
+  assert.match(css, /grid-template-columns:\s*minmax\(250px, \.9fr\)\s+minmax\(420px, 1\.15fr\)\s+auto/);
+  assert.match(css, /-webkit-line-clamp:\s*2/);
+  assert.match(css, /white-space:\s*normal/);
+});
