@@ -35,7 +35,7 @@ function formatAxisAmount(value) {
   return new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(number);
 }
 
-function Metric({ label, value, tone = 'default', caption }) {
+function Metric({ label, value, tone = 'default', caption, featured = false }) {
   const valueClass = tone === 'income'
     ? 'text-primary'
     : tone === 'expense'
@@ -43,7 +43,7 @@ function Metric({ label, value, tone = 'default', caption }) {
       : 'text-foreground';
 
   return (
-    <div className="min-w-0 px-4 py-4 sm:px-5">
+    <div className={`min-w-0 px-4 py-4 sm:px-5 ${featured ? 'bg-secondary/65' : ''}`}>
       <div className="text-xs font-medium text-muted-foreground">{label}</div>
       <strong className={`mt-1.5 block truncate text-[clamp(1.25rem,2.5vw,1.8rem)] font-semibold tracking-[-0.035em] ${valueClass}`}>
         {value}
@@ -133,17 +133,17 @@ export default function Dashboard() {
       ) : (
         <>
           <Card className="overflow-hidden">
-            <div className="grid divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0 xl:grid-cols-4">
-              <Metric label="Saldo saat ini" value={formatRupiah(data.summary.currentBalance)} caption="Saldo berjalan seluruh periode" />
+            <div className="grid divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0 xl:grid-cols-[1.15fr_repeat(3,1fr)]">
+              <Metric label="Saldo saat ini" value={formatRupiah(data.summary.currentBalance)} caption="Saldo berjalan seluruh periode" featured />
               <Metric label="Kas masuk bulan ini" value={`+${formatRupiah(data.monthSummary.totalIncome)}`} tone="income" caption={`${data.monthSummary.transactionCount} transaksi periode berjalan`} />
               <Metric label="Kas keluar bulan ini" value={`-${formatRupiah(data.monthSummary.totalExpense)}`} tone="expense" caption={`Per ${formatDate(data.monthSummary.to)}`} />
               <Metric label="Saldo awal" value={formatRupiah(data.summary.openingBalance)} caption="Basis perhitungan kas" />
             </div>
           </Card>
 
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_330px]">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
             <Card className="min-w-0">
-              <CardHeader className="flex-row items-start justify-between gap-3">
+              <CardHeader className="flex-row items-start justify-between gap-3 border-b bg-muted/25">
                 <div>
                   <CardTitle>Arus kas 30 hari terakhir</CardTitle>
                   <CardDescription>Pergerakan kas masuk dan kas keluar harian.</CardDescription>
