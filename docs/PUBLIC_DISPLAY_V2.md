@@ -75,3 +75,33 @@ Referensi:
 - https://www.researchgate.net/publication/290894947_Design_Criteria_for_Public_Display_User_Interfaces
 - https://api.aladhan.com/v1/methods
 - https://aladhan.com/calculation-methods
+
+
+## Visual language V3
+
+Public Display tidak memakai pola visual dashboard admin. Versi ornamental mengambil referensi dari screen masjid yang benar-benar digunakan dan dari ornamentasi arsitektur Islam, tetapi tidak menyalin satu desain tertentu.
+
+Prinsip visual:
+- deep emerald / almost-black sebagai bidang utama;
+- muted brass sebagai accent, bukan warna dominan;
+- mihrab arch sebagai focal architecture untuk jam dan next prayer;
+- eight-point-star geometry untuk divider dan marker;
+- geometric lattice sangat halus sebagai background texture;
+- corner line ornament dan frieze tipis untuk framing;
+- prayer times menjadi satu continuous rail, bukan lima kartu SaaS;
+- secondary carousel tetap mudah dibaca dari jauh dan ornament tidak boleh mengalahkan konten.
+
+Ornamen dibuat sebagai SVG/CSS code-native agar tajam di TV 4K, ringan, dan tidak bergantung wallpaper atau gambar hasil generatif.
+
+Referensi visual dan historis:
+- MAWAQIT TV / mosque screens: penggunaan theme, wallpaper, prayer hierarchy, dan always-visible prayer information.
+- MosqueOS / East London Mosque: single-view prayer-time model.
+- The Metropolitan Museum of Art, *Islamic Art and Geometric Design*: kombinasi geometric, vegetal, dan architectural framing pada mihrab.
+- Discover Islamic Art: mihrab dengan layered borders, geometric networks, dan ornamental framing.
+
+Referensi:
+- https://www.mawaqit.net/
+- https://medium.com/mosque/design-concept-direction-for-mosque-screens-51c4f9bb82
+- https://github.com/MosqueOS/Mosque-Prayer-Display-Screen
+- https://resources.metmuseum.org/resources/metpublications/pdf/Islamic_Art_and_Geometric_Design_Activities_for_Learning.pdf
+- https://islamicart.museumwnf.org/
