@@ -184,3 +184,18 @@ test('screenshot QA pass reduces dead space and framing noise', async () => {
   assert.doesNotMatch(ornament, /border-radius: 50% 50% 0 0 \/ 45% 45% 0 0/);
   assert.match(ornament, /inset 0 2px 0/);
 });
+
+
+test('left prayer focus uses one alignment axis without centered mihrab collision', async () => {
+  const jsx = await source('apps/web/src/pages/PublicDisplay.jsx');
+  const css = await source('apps/web/src/styles/public-display.css');
+  const ornament = await source('apps/web/src/styles/public-display-ornamental.css');
+
+  assert.doesNotMatch(jsx, /prayer-focus-star/);
+  assert.match(css, /\.prayer-focus-panel \{[\s\S]*display:\s*flex/);
+  assert.match(css, /\.prayer-focus-next \{[\s\S]*margin-top:\s*clamp\(34px, 4\.4dvh, 50px\)/);
+  assert.match(css, /\.prayer-focus-countdown \{[\s\S]*padding:\s*1\.15dvh 0/);
+  assert.match(css, /\.prayer-focus-iqamah \{[\s\S]*padding:\s*\.8dvh 0/);
+  assert.doesNotMatch(ornament, /\.prayer-focus-panel::after/);
+  assert.match(ornament, /\.prayer-focus-panel::before \{[\s\S]*right:\s*18px/);
+});
