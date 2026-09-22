@@ -4,6 +4,8 @@ import { BrowserRouter } from 'react-router-dom';
 import '@fontsource-variable/ibm-plex-sans';
 import App from './App.jsx';
 import { AuthProvider } from './auth/AuthContext.jsx';
+import '@fontsource-variable/ibm-plex-sans';
+import './index.css';
 import './styles/ui.css';
 import './styles/base.css';
 import './styles/operations.css';
