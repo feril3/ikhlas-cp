@@ -133,15 +133,16 @@ test('database seeds verified Quran and sahih-hadith references without duplicat
 });
 
 test('admin can edit, reorder, activate, and delete multiple running-text entries', async () => {
-  const admin = await source('apps/web/src/pages/AdminSettings.jsx');
+  const displaySettings = await source('apps/web/src/components/settings/PublicDisplaySettings.jsx');
 
-  assert.match(admin, /startEditMessage/);
-  assert.match(admin, /saveEditedMessage/);
-  assert.match(admin, /Edit/);
-  assert.match(admin, /Simpan perubahan/);
-  assert.match(admin, /toggleMessage/);
-  assert.match(admin, /deleteMessage/);
-  assert.match(admin, /sortOrder/);
+  assert.match(displaySettings, /function edit/);
+  assert.match(displaySettings, /async function save/);
+  assert.match(displaySettings, /Edit/);
+  assert.match(displaySettings, /Simpan konten/);
+  assert.match(displaySettings, /async function toggle/);
+  assert.match(displaySettings, /async function remove/);
+  assert.match(displaySettings, /sortOrder/);
+  assert.match(displaySettings, /AlertDialogContent/);
 });
 
 test('Situbondo prayer provider remains configured with Kemenag RI method', async () => {
@@ -310,7 +311,7 @@ test('schedule dashboard manages only upcoming Friday officers and hides past Fr
   assert.match(schedule, /Jadwal Jumat & Agenda/);
   assert.match(schedule, /api\.fridaySchedules\(today, 8\)/);
   assert.match(schedule, /Jumat mendatang/);
-  assert.match(schedule, /Imam, Khatib & Bilal/);
+  assert.match(schedule, /Petugas Jumat mendatang/);
   assert.doesNotMatch(schedule, /api\.prayerSchedule/);
   assert.doesNotMatch(schedule, /updatePrayerSchedule/);
   assert.doesNotMatch(schedule, /Jadwal salat/);
@@ -327,8 +328,9 @@ test('existing public agenda can be edited with an audited backend update', asyn
   assert.match(routes, /apiRouter\.put\('\/activities\/:id'/);
   assert.match(routes, /ACTIVITY_UPDATE/);
   assert.match(routes, /details: \{ before:/);
-  assert.match(schedule, /startEditActivity/);
-  assert.match(schedule, /saveActivityEdit/);
+  assert.match(schedule, /openEditAgenda/);
+  assert.match(schedule, /AgendaEditor/);
+  assert.match(schedule, /api\.updateActivity/);
   assert.match(api, /updateActivity/);
 });
 
@@ -337,7 +339,7 @@ test('transactions support audited edit and delete while preserving Drive eviden
   const transactions = await source('apps/web/src/pages/Transactions.jsx');
   const editSheet = await source('apps/web/src/features/transactions/TransactionEditSheet.jsx');
   const table = await source('apps/web/src/features/transactions/TransactionTable.jsx');
-  const admin = await source('apps/web/src/pages/AdminSettings.jsx');
+  const audit = await source('apps/web/src/components/settings/AuditSettings.jsx');
 
   assert.match(routes, /apiRouter\.put\([\s\S]*'\/transactions\/:id'/);
   assert.match(routes, /TRANSACTION_UPDATE/);
@@ -353,8 +355,9 @@ test('transactions support audited edit and delete while preserving Drive eviden
   assert.match(editSheet, /SheetContent/);
   assert.match(table, /onEdit/);
   assert.match(table, /onDelete/);
-  assert.match(admin, /AuditTransactionDetails/);
-  assert.match(admin, /Lihat snapshot transaksi terhapus/);
+  assert.match(audit, /StructuredDetails/);
+  assert.match(audit, /transactionLabels/);
+  assert.match(audit, /JSON\.stringify\(log\.details/);
 });
 
 test('header includes Gregorian and Hijri dates while running text stays TV-readable', async () => {
