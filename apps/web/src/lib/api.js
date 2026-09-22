@@ -134,6 +134,10 @@ export const api = {
     method: 'POST',
     body: JSON.stringify(input)
   }),
+  updateUserStatus: (id, isActive) => request(`/users/${id}/status`, {
+    method: 'PUT',
+    body: JSON.stringify({ isActive })
+  }),
 
   settings: () => request('/settings'),
   updateSettings: (input) => request('/settings', {
