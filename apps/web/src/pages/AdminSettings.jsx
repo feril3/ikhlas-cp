@@ -5,6 +5,7 @@ import {
   CircleDollarSign,
   Landmark,
   Megaphone,
+  Pencil,
   Plus,
   Save,
   ShieldCheck,
@@ -12,6 +13,7 @@ import {
   Trash2,
   UserPlus,
   Users,
+  X,
   Youtube
 } from 'lucide-react';
 import { api } from '../lib/api.js';
@@ -49,7 +51,9 @@ export default function AdminSettings() {
   const [messages, setMessages] = useState([]);
   const [newUser, setNewUser] = useState(emptyUser);
   const [newCategory, setNewCategory] = useState(emptyCategory);
-  const [newMessage, setNewMessage] = useState(emptyMessage);
+  const [newMessage, setNewMessage] = useState({ ...emptyMessage, kind: 'VERSE' });
+  const [editingMessageId, setEditingMessageId] = useState(null);
+  const [editingMessage, setEditingMessage] = useState(emptyMessage);
   const [status, setStatus] = useState({ type: 'idle', message: '' });
 
   async function load() {
@@ -151,8 +155,41 @@ export default function AdminSettings() {
         ...newMessage,
         sortOrder: Number(newMessage.sortOrder || 0)
       });
-      setNewMessage(emptyMessage);
-      setStatus({ type: 'success', message: 'Konten Public Display berhasil ditambahkan.' });
+      setNewMessage({ ...emptyMessage, kind: 'VERSE' });
+      setStatus({ type: 'success', message: 'Running text berhasil ditambahkan.' });
+      await load();
+    } catch (error) {
+      setStatus({ type: 'error', message: error.message });
+    }
+  }
+
+  function startEditMessage(message) {
+    setEditingMessageId(message.id);
+    setEditingMessage({
+      kind: message.kind,
+      title: message.title ?? '',
+      content: message.content,
+      source: message.source ?? '',
+      sortOrder: message.sortOrder,
+      isActive: message.isActive
+    });
+  }
+
+  function cancelEditMessage() {
+    setEditingMessageId(null);
+    setEditingMessage(emptyMessage);
+  }
+
+  async function saveEditedMessage(event) {
+    event.preventDefault();
+    try {
+      await api.updatePublicMessage(editingMessageId, {
+        ...editingMessage,
+        sortOrder: Number(editingMessage.sortOrder || 0)
+      });
+      setEditingMessageId(null);
+      setEditingMessage(emptyMessage);
+      setStatus({ type: 'success', message: 'Running text berhasil diperbarui.' });
       await load();
     } catch (error) {
       setStatus({ type: 'error', message: error.message });
@@ -314,7 +351,7 @@ export default function AdminSettings() {
 
         <div className="panel settings-section">
           <div className="panel-heading">
-            <div><p className="section-kicker">Public Display</p><h2>Ayat, pengumuman & pesan</h2></div>
+            <div><p className="section-kicker">Public Display</p><h2>Running text ayat & hadits</h2></div>
             <Megaphone size={20} className="muted-icon" />
           </div>
 
@@ -330,22 +367,47 @@ export default function AdminSettings() {
                   {message.source && <span>{message.source}</span>}
                 </div>
                 <div className="row-actions">
+                  <button className="text-button" type="button" onClick={() => startEditMessage(message)}><Pencil size={13} /> Edit</button>
                   <button className="text-button" type="button" onClick={() => toggleMessage(message)}>{message.isActive ? 'Nonaktifkan' : 'Aktifkan'}</button>
                   <button className="icon-button danger-icon-button" type="button" onClick={() => deleteMessage(message.id)} aria-label="Hapus konten"><Trash2 size={15} /></button>
                 </div>
+
+                {editingMessageId === message.id && (
+                  <form className="edit-message-form" onSubmit={saveEditedMessage}>
+                    <label className="field">
+                      <span>Jenis</span>
+                      <select value={editingMessage.kind} onChange={(e) => setEditingMessage((current) => ({ ...current, kind: e.target.value }))}>
+                        <option value="VERSE">Ayat / Hadits</option>
+                        <option value="ANNOUNCEMENT">Pengumuman</option>
+                        <option value="MESSAGE">Pesan Masjid</option>
+                      </select>
+                    </label>
+                    <label className="field">
+                      <span>Urutan</span>
+                      <input type="number" min="0" max="999" value={editingMessage.sortOrder} onChange={(e) => setEditingMessage((current) => ({ ...current, sortOrder: e.target.value }))} />
+                    </label>
+                    <label className="field full-field"><span>Judul</span><input value={editingMessage.title} onChange={(e) => setEditingMessage((current) => ({ ...current, title: e.target.value }))} /></label>
+                    <label className="field full-field"><span>Isi running text</span><textarea rows="4" maxLength="400" value={editingMessage.content} onChange={(e) => setEditingMessage((current) => ({ ...current, content: e.target.value }))} required /></label>
+                    <label className="field full-field"><span>Sumber / referensi</span><input value={editingMessage.source} onChange={(e) => setEditingMessage((current) => ({ ...current, source: e.target.value }))} /></label>
+                    <div className="inline-actions full-field">
+                      <button className="button primary"><Save size={15} /> Simpan perubahan</button>
+                      <button className="button ghost" type="button" onClick={cancelEditMessage}><X size={15} /> Batal</button>
+                    </div>
+                  </form>
+                )}
               </article>
             ))}
           </div>
 
           <form className="create-user-form" onSubmit={createMessage}>
-            <div className="settings-subheading"><Plus size={18} /><div><strong>Tambah konten rotasi</strong><span>Untuk ayat/hadits, verifikasi teks dan sumber sebelum dipublikasikan.</span></div></div>
+            <div className="settings-subheading"><Plus size={18} /><div><strong>Tambah running text</strong><span>Ayat/hadits aktif tampil bergulir pada bagian bawah Public Display. Pastikan sumbernya terverifikasi.</span></div></div>
             <div className="form-grid settings-grid">
               <label className="field">
                 <span>Jenis</span>
                 <select value={newMessage.kind} onChange={(e) => setNewMessage((current) => ({ ...current, kind: e.target.value }))}>
+                  <option value="VERSE">Ayat / Hadits</option>
                   <option value="ANNOUNCEMENT">Pengumuman</option>
                   <option value="MESSAGE">Pesan Masjid</option>
-                  <option value="VERSE">Ayat / Hadits</option>
                 </select>
               </label>
               <label className="field">
@@ -353,10 +415,10 @@ export default function AdminSettings() {
                 <input type="number" min="0" max="999" value={newMessage.sortOrder} onChange={(e) => setNewMessage((current) => ({ ...current, sortOrder: e.target.value }))} />
               </label>
               <label className="field full-field"><span>Judul</span><input value={newMessage.title} onChange={(e) => setNewMessage((current) => ({ ...current, title: e.target.value }))} placeholder="Contoh: Kajian Malam Jumat" /></label>
-              <label className="field full-field"><span>Isi</span><textarea rows="4" maxLength="400" value={newMessage.content} onChange={(e) => setNewMessage((current) => ({ ...current, content: e.target.value }))} required /></label>
+              <label className="field full-field"><span>Isi running text</span><textarea rows="4" maxLength="400" value={newMessage.content} onChange={(e) => setNewMessage((current) => ({ ...current, content: e.target.value }))} required /></label>
               <label className="field full-field"><span>Sumber / referensi</span><input value={newMessage.source} onChange={(e) => setNewMessage((current) => ({ ...current, source: e.target.value }))} placeholder="Contoh: QS. ... / HR. ... (setelah diverifikasi)" /></label>
             </div>
-            <button className="button secondary"><Plus size={17} /> Tambah konten</button>
+            <button className="button secondary"><Plus size={17} /> Tambah running text</button>
           </form>
         </div>
       </section>
