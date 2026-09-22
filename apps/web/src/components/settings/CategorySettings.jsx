@@ -50,9 +50,9 @@ export function CategorySettings({ categories, api, reload }) {
 
   return (
     <section className="overflow-hidden rounded-xl border bg-card">
-      <div className="flex items-center justify-between gap-4 border-b p-5">
+      <div className="flex flex-col gap-3 border-b bg-muted/25 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
         <div><h2 className="text-lg font-semibold">Kategori</h2><p className="mt-1 text-sm text-muted-foreground">Kelola kategori kas masuk dan kas keluar.</p></div>
-        <Button onClick={() => setOpen(true)}><IconPlus />Tambah kategori</Button>
+        <Button className="w-full sm:w-auto" onClick={() => setOpen(true)}><IconPlus />Tambah kategori</Button>
       </div>
       <Table>
         <TableHeader><TableRow><TableHead>Nama</TableHead><TableHead>Jenis</TableHead><TableHead>Urutan</TableHead><TableHead>Status</TableHead><TableHead className="w-16" /></TableRow></TableHeader>

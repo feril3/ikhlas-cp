@@ -133,7 +133,7 @@ export default function Reports() {
 
       <Card>
         <CardContent className="pt-5">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] xl:items-end">
             <label className="flex min-w-0 flex-1 flex-col gap-1.5 text-xs font-medium text-muted-foreground">
               Dari tanggal
               <Input type="date" value={range.from} onChange={(event) => setRange((current) => ({ ...current, from: event.target.value }))} />
@@ -142,7 +142,7 @@ export default function Reports() {
               Sampai tanggal
               <Input type="date" value={range.to} onChange={(event) => setRange((current) => ({ ...current, to: event.target.value }))} />
             </label>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-1 rounded-lg bg-muted/55 p-1 md:col-span-2 xl:col-span-1">
               <Button variant="ghost" size="sm" onClick={() => applyPreset('month')}>Bulan ini</Button>
               <Button variant="ghost" size="sm" onClick={() => applyPreset('30d')}>30 hari</Button>
               <Button variant="ghost" size="sm" onClick={() => applyPreset('90d')}>90 hari</Button>
@@ -163,7 +163,7 @@ export default function Reports() {
       {data && (
         <>
           <Card className="overflow-hidden">
-            <div className="grid divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0 xl:grid-cols-4">
+            <div className="grid divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0 xl:grid-cols-[1fr_1fr_1fr_1.15fr]">
               <Metric icon={IconWallet} label="Saldo awal periode" value={formatRupiah(data.summary.openingBalance)} caption={formatDate(data.summary.from)} />
               <Metric icon={IconTrendingUp} label="Kas masuk" value={`+${formatRupiah(data.summary.totalIncome)}`} tone="income" caption={`${data.summary.transactionCount} transaksi total`} />
               <Metric icon={IconTrendingDown} label="Kas keluar" value={`-${formatRupiah(data.summary.totalExpense)}`} tone="expense" caption={`Net ${formatRupiah(data.summary.netChange)}`} />
@@ -173,12 +173,12 @@ export default function Reports() {
 
           <div className="grid gap-4 xl:grid-cols-2">
             <Card className="min-w-0">
-              <CardHeader>
+              <CardHeader className="border-b bg-muted/25">
                 <CardTitle>Arus kas periode</CardTitle>
                 <CardDescription>Kas masuk dan keluar per hari pada rentang yang dipilih.</CardDescription>
               </CardHeader>
               <CardContent>
-                <ChartContainer config={cashflowConfig} className="h-[310px] min-h-[280px]">
+                <ChartContainer config={cashflowConfig} className="h-[290px] min-h-[270px]">
                   <BarChart data={data.cashflow} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
                     <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--ui-border)" />
                     <XAxis
@@ -204,13 +204,13 @@ export default function Reports() {
             </Card>
 
             <Card className="min-w-0">
-              <CardHeader>
+              <CardHeader className="border-b bg-muted/25">
                 <CardTitle>Distribusi kategori</CardTitle>
                 <CardDescription>Delapan kategori dengan nominal terbesar pada periode ini.</CardDescription>
               </CardHeader>
               <CardContent>
                 {categoryData.length ? (
-                  <ChartContainer config={categoryConfig} className="h-[310px] min-h-[280px]">
+                  <ChartContainer config={categoryConfig} className="h-[290px] min-h-[270px]">
                     <BarChart data={categoryData} layout="vertical" margin={{ left: 8, right: 24, top: 8, bottom: 0 }}>
                       <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="var(--ui-border)" />
                       <XAxis type="number" axisLine={false} tickLine={false} tickMargin={8} tick={{ fontSize: 11 }} tickFormatter={formatAxisAmount} />

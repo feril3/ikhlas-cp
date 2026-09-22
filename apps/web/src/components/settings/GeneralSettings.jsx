@@ -4,17 +4,19 @@ import { Input } from '@/components/ui/input';
 
 export function GeneralSettings({ settings, setSettings, onSave, saving }) {
   return (
-    <section className="rounded-xl border bg-card p-5">
-      <div className="mb-6">
+    <section className="overflow-hidden rounded-xl border bg-card">
+      <div className="border-b bg-muted/25 px-5 py-4">
         <h2 className="text-lg font-semibold">Umum</h2>
         <p className="mt-1 text-sm text-muted-foreground">Identitas masjid, rekening donasi, dan media live.</p>
       </div>
-      <form className="space-y-7" onSubmit={onSave}>
+      <form className="space-y-7 p-5" onSubmit={onSave}>
         <div>
           <h3 className="mb-4 text-sm font-semibold">Identitas</h3>
           <FieldGroup>
-            <Field><FieldLabel>Nama masjid</FieldLabel><Input value={settings.mosqueName} onChange={(e) => setSettings((x) => ({ ...x, mosqueName: e.target.value }))} required /></Field>
-            <Field><FieldLabel>Tagline</FieldLabel><Input value={settings.mosqueTagline} onChange={(e) => setSettings((x) => ({ ...x, mosqueTagline: e.target.value }))} /></Field>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field><FieldLabel>Nama masjid</FieldLabel><Input value={settings.mosqueName} onChange={(e) => setSettings((x) => ({ ...x, mosqueName: e.target.value }))} required /></Field>
+              <Field><FieldLabel>Tagline</FieldLabel><Input value={settings.mosqueTagline} onChange={(e) => setSettings((x) => ({ ...x, mosqueTagline: e.target.value }))} /></Field>
+            </div>
           </FieldGroup>
         </div>
 

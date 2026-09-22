@@ -233,7 +233,7 @@ export default function Transactions() {
 
           <Card>
             <CardContent className="p-4 sm:p-5">
-              <div className="grid gap-3 lg:grid-cols-[minmax(220px,1.4fr)_repeat(4,minmax(135px,.7fr))]">
+              <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
                 <InputGroup className="h-10">
                   <InputGroupAddon>
                     <IconSearch aria-hidden="true" />
@@ -246,64 +246,61 @@ export default function Transactions() {
                   />
                 </InputGroup>
 
-                <Select value={method} onValueChange={setMethod}>
-                  <SelectTrigger className="h-10 w-full">
-                    <SelectValue placeholder="Metode" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">Semua metode</SelectItem>
-                    <SelectItem value="CASH">Tunai</SelectItem>
-                    <SelectItem value="TRANSFER">Transfer</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger className="h-10 w-full">
-                    <SelectValue placeholder="Kategori" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">Semua kategori</SelectItem>
-                    {categories.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-
-                <Input
-                  type="date"
-                  value={from}
-                  onChange={(event) => setFrom(event.target.value)}
-                  className="h-10"
-                  aria-label="Tanggal mulai"
-                />
-                <Input
-                  type="date"
-                  value={to}
-                  onChange={(event) => setTo(event.target.value)}
-                  className="h-10"
-                  aria-label="Tanggal selesai"
-                />
-              </div>
-
-              <div className="mt-3 flex flex-col gap-3 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
                 <ToggleGroup
                   type="single"
                   value={type}
                   onValueChange={(value) => value && setType(value)}
                   variant="outline"
                   spacing={0}
-                  className="grid w-full grid-cols-3 sm:w-auto"
+                  className="grid w-full grid-cols-3 xl:w-auto"
                 >
-                  <ToggleGroupItem value="ALL" className="w-full rounded-r-none sm:w-auto">Semua</ToggleGroupItem>
-                  <ToggleGroupItem value="INCOME" className="w-full rounded-none sm:w-auto">Kas Masuk</ToggleGroupItem>
-                  <ToggleGroupItem value="EXPENSE" className="w-full rounded-l-none sm:w-auto">Kas Keluar</ToggleGroupItem>
+                  <ToggleGroupItem value="ALL" className="w-full rounded-r-none xl:w-auto">Semua</ToggleGroupItem>
+                  <ToggleGroupItem value="INCOME" className="w-full rounded-none xl:w-auto">Kas Masuk</ToggleGroupItem>
+                  <ToggleGroupItem value="EXPENSE" className="w-full rounded-l-none xl:w-auto">Kas Keluar</ToggleGroupItem>
                 </ToggleGroup>
+              </div>
 
-                <div className="flex items-center justify-between gap-3 sm:justify-end">
-                  <span className="text-xs text-muted-foreground">{filtered.length} hasil</span>
-                  {hasFilters && (
-                    <Button variant="ghost" size="sm" onClick={resetFilters}>
-                      Reset filter
-                    </Button>
-                  )}
+              <div className="mt-4 grid gap-3 border-t pt-4 md:grid-cols-2 xl:grid-cols-[minmax(150px,.8fr)_minmax(180px,1fr)_minmax(150px,.75fr)_minmax(150px,.75fr)_auto] xl:items-end">
+                <label className="grid gap-1.5 text-xs font-medium text-muted-foreground">
+                  Metode
+                  <Select value={method} onValueChange={setMethod}>
+                    <SelectTrigger className="h-10 w-full">
+                      <SelectValue placeholder="Metode" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">Semua metode</SelectItem>
+                      <SelectItem value="CASH">Tunai</SelectItem>
+                      <SelectItem value="TRANSFER">Transfer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </label>
+
+                <label className="grid gap-1.5 text-xs font-medium text-muted-foreground">
+                  Kategori
+                  <Select value={category} onValueChange={setCategory}>
+                    <SelectTrigger className="h-10 w-full">
+                      <SelectValue placeholder="Kategori" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">Semua kategori</SelectItem>
+                      {categories.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </label>
+
+                <label className="grid gap-1.5 text-xs font-medium text-muted-foreground">
+                  Dari
+                  <Input type="date" value={from} onChange={(event) => setFrom(event.target.value)} className="h-10" />
+                </label>
+
+                <label className="grid gap-1.5 text-xs font-medium text-muted-foreground">
+                  Sampai
+                  <Input type="date" value={to} onChange={(event) => setTo(event.target.value)} className="h-10" />
+                </label>
+
+                <div className="flex min-h-10 items-center justify-between gap-3 md:col-span-2 xl:col-span-1 xl:justify-end">
+                  <span className="text-xs font-medium text-muted-foreground">{filtered.length} hasil</span>
+                  {hasFilters && <Button variant="ghost" size="sm" onClick={resetFilters}>Reset</Button>}
                 </div>
               </div>
             </CardContent>

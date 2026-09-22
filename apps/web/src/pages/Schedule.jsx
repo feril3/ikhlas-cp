@@ -232,7 +232,7 @@ export default function Schedule() {
   }
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-5">
       <PageHeader
         title="Jadwal Jumat & Agenda"
         description="Kelola petugas Jumat mendatang dan agenda publik. Jadwal salat harian tetap otomatis dari provider."
@@ -242,7 +242,7 @@ export default function Schedule() {
       {loadingError && <div className="rounded-lg border border-destructive/25 bg-destructive/5 p-4 text-sm text-destructive">{loadingError}</div>}
 
       <section className="overflow-hidden rounded-xl border bg-card">
-        <div className="flex items-start justify-between gap-4 border-b p-5">
+        <div className="flex items-start justify-between gap-4 border-b bg-muted/25 px-4 py-4 sm:px-5">
           <div><h2 className="text-lg font-semibold">Petugas Jumat mendatang</h2><p className="mt-1 text-sm text-muted-foreground">Tanggal Jumat yang sudah lewat otomatis tidak ditampilkan lagi.</p></div>
           <IconUser className="mt-1 size-5 text-muted-foreground" />
         </div>
@@ -257,7 +257,10 @@ export default function Schedule() {
                     return <TableRow key={row.scheduleDate}>
                       <TableCell className="font-medium">{formatFridayDate(row.scheduleDate)}</TableCell>
                       <TableCell>{row.imam || '—'}</TableCell><TableCell>{row.khatib || '—'}</TableCell><TableCell>{row.bilal || '—'}</TableCell>
-                      <TableCell><Badge variant={complete ? 'success' : 'outline'}>{complete ? 'Siap' : 'Belum lengkap'}</Badge></TableCell>
+                      <TableCell>{complete
+                        ? <Badge variant="success">Siap</Badge>
+                        : <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><span className="size-1.5 rounded-full bg-muted-foreground/55" />Belum lengkap</span>
+                      }</TableCell>
                       <TableCell>{isAdmin && <Button variant="ghost" size="icon-sm" aria-label="Edit petugas Jumat" onClick={() => setFridayToEdit(row)}><IconEdit /></Button>}</TableCell>
                     </TableRow>;
                   })}
@@ -268,7 +271,7 @@ export default function Schedule() {
               {fridays.map((row) => {
                 const complete = Boolean(row.imam?.trim() && row.khatib?.trim() && row.bilal?.trim());
                 return <article key={row.scheduleDate} className="space-y-3 p-4">
-                  <div className="flex items-start justify-between gap-3"><div><strong className="text-sm">{formatFridayDate(row.scheduleDate)}</strong><div className="mt-1 text-xs text-muted-foreground">Imam {row.imam || '—'} · Khatib {row.khatib || '—'} · Bilal {row.bilal || '—'}</div></div><Badge variant={complete ? 'success' : 'outline'}>{complete ? 'Siap' : 'Belum lengkap'}</Badge></div>
+                  <div className="flex items-start justify-between gap-3"><div><strong className="text-sm">{formatFridayDate(row.scheduleDate)}</strong><div className="mt-1 text-xs leading-5 text-muted-foreground">Imam {row.imam || '—'} · Khatib {row.khatib || '—'} · Bilal {row.bilal || '—'}</div></div>{complete ? <Badge variant="success">Siap</Badge> : <span className="mt-0.5 inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium text-muted-foreground"><span className="size-1.5 rounded-full bg-muted-foreground/55" />Belum lengkap</span>}</div>
                   {isAdmin && <Button variant="outline" size="sm" onClick={() => setFridayToEdit(row)}><IconEdit />Edit petugas</Button>}
                 </article>;
               })}
@@ -278,7 +281,7 @@ export default function Schedule() {
       </section>
 
       <section className="overflow-hidden rounded-xl border bg-card">
-        <div className="flex items-start justify-between gap-4 border-b p-5">
+        <div className="flex items-start justify-between gap-4 border-b bg-muted/25 px-4 py-4 sm:px-5">
           <div><h2 className="text-lg font-semibold">Agenda mendatang</h2><p className="mt-1 text-sm text-muted-foreground">Kegiatan publik, pemateri, waktu, dan status tayang.</p></div>
           <IconCalendarEvent className="mt-1 size-5 text-muted-foreground" />
         </div>
@@ -291,7 +294,10 @@ export default function Schedule() {
                 <TableCell><strong className="font-medium">{item.title}</strong>{item.location && <span className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><IconMapPin className="size-3.5" />{item.location}</span>}</TableCell>
                 <TableCell>{item.speaker || '—'}</TableCell>
                 <TableCell>{item.startTime || 'Fleksibel'}</TableCell>
-                <TableCell><Badge variant={item.isPublished ? 'success' : 'outline'}>{item.isPublished ? 'Tayang' : 'Disembunyikan'}</Badge></TableCell>
+                <TableCell>{item.isPublished
+                  ? <Badge variant="success">Tayang</Badge>
+                  : <span className="text-xs font-medium text-muted-foreground">Disembunyikan</span>
+                }</TableCell>
                 <TableCell>{isAdmin && <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon-sm" aria-label={`Aksi ${item.title}`}><IconDots /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onSelect={() => openEditAgenda(item)}><IconEdit />Edit</DropdownMenuItem><DropdownMenuItem onSelect={() => togglePublished(item)}>{item.isPublished ? 'Sembunyikan dari display' : 'Publikasikan'}</DropdownMenuItem><DropdownMenuItem className="text-destructive" onSelect={() => setDeleteTarget(item)}><IconTrash />Hapus</DropdownMenuItem></DropdownMenuContent></DropdownMenu>}</TableCell>
               </TableRow>)}
               {activities.length === 0 && <TableRow><TableCell colSpan={6} className="py-10 text-center text-muted-foreground">Belum ada agenda mendatang.</TableCell></TableRow>}
@@ -301,7 +307,7 @@ export default function Schedule() {
 
         <div className="divide-y md:hidden">
           {activities.map((item) => <article key={item.id} className="space-y-3 p-4">
-            <div className="flex items-start justify-between gap-3"><div><strong>{item.title}</strong><p className="mt-1 text-xs text-muted-foreground">{formatAgendaDate(item.activityDate)} · {item.startTime || 'Waktu fleksibel'}</p></div><Badge variant={item.isPublished ? 'success' : 'outline'}>{item.isPublished ? 'Tayang' : 'Draft'}</Badge></div>
+            <div className="flex items-start justify-between gap-3"><div><strong>{item.title}</strong><p className="mt-1 text-xs text-muted-foreground">{formatAgendaDate(item.activityDate)} · {item.startTime || 'Waktu fleksibel'}</p></div>{item.isPublished ? <Badge variant="success">Tayang</Badge> : <span className="text-xs font-medium text-muted-foreground">Draft</span>}</div>
             <div className="space-y-1 text-sm text-muted-foreground">{item.speaker && <p className="flex items-center gap-2"><IconUser className="size-4" />{item.speaker}</p>}{item.location && <p className="flex items-center gap-2"><IconMapPin className="size-4" />{item.location}</p>}{item.liveUrl && <p className="flex items-center gap-2"><IconVideo className="size-4" />Live tersedia</p>}</div>
             {isAdmin && <div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => openEditAgenda(item)}><IconEdit />Edit</Button><Button variant="ghost" size="sm" onClick={() => togglePublished(item)}>{item.isPublished ? 'Sembunyikan' : 'Publikasikan'}</Button><Button variant="ghost" size="sm" className="text-destructive" onClick={() => setDeleteTarget(item)}><IconTrash />Hapus</Button></div>}
           </article>)}

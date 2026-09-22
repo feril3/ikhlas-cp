@@ -45,9 +45,9 @@ export function UserSettings({ users, currentUser, api, reload }) {
 
   return (
     <section className="overflow-hidden rounded-xl border bg-card">
-      <div className="flex items-center justify-between gap-4 border-b p-5">
+      <div className="flex flex-col gap-3 border-b bg-muted/25 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
         <div><h2 className="text-lg font-semibold">Pengguna</h2><p className="mt-1 text-sm text-muted-foreground">Kelola akun Admin dan Bendahara serta status aksesnya.</p></div>
-        <Button onClick={() => setOpen(true)}><IconPlus />Tambah pengguna</Button>
+        <Button className="w-full sm:w-auto" onClick={() => setOpen(true)}><IconPlus />Tambah pengguna</Button>
       </div>
       <Table>
         <TableHeader><TableRow><TableHead>Nama</TableHead><TableHead>Email</TableHead><TableHead>Role</TableHead><TableHead>Status</TableHead><TableHead className="w-24">Akses</TableHead></TableRow></TableHeader>

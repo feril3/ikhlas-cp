@@ -43,7 +43,7 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 function TransactionFormSkeleton() {
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
       <Skeleton className="h-12 w-32" />
       <Skeleton className="h-24 w-full" />
       <Skeleton className="h-[520px] w-full" />
@@ -193,7 +193,7 @@ export default function TransactionForm({ type }) {
   if (loadingCategories) return <TransactionFormSkeleton />;
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
       <div>
         <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="-ml-2">
           <IconArrowLeft data-icon="inline-start" aria-hidden="true" />
@@ -234,9 +234,10 @@ export default function TransactionForm({ type }) {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle>Informasi transaksi</CardTitle>
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,.65fr)] lg:items-start">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle>Informasi transaksi</CardTitle>
           </CardHeader>
           <CardContent>
             <FieldGroup>
@@ -322,9 +323,9 @@ export default function TransactionForm({ type }) {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle>Bukti pendukung</CardTitle>
+          <Card className="lg:sticky lg:top-20">
+            <CardHeader className="pb-3">
+              <CardTitle>Bukti pendukung</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             <FileUploadField
@@ -354,7 +355,8 @@ export default function TransactionForm({ type }) {
               </p>
             </div>
           </CardContent>
-        </Card>
+          </Card>
+        </div>
 
         {status.type === 'error' && (
           <Alert variant="destructive">

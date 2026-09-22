@@ -403,3 +403,76 @@ test('phase 6b primitives expose clear borders, focus and selected states', asyn
   assert.doesNotMatch(alert, /opacity-90/);
   assert.match(settingsNav, /inset_3px_0_0_var\(--ui-primary\)/);
 });
+
+
+test('phase 6c page layouts use desktop space without sacrificing mobile composition', async () => {
+  const dashboard = await source('apps/web/src/pages/Dashboard.jsx');
+  const transactions = await source('apps/web/src/pages/Transactions.jsx');
+  const form = await source('apps/web/src/pages/TransactionForm.jsx');
+  const reports = await source('apps/web/src/pages/Reports.jsx');
+
+  assert.match(dashboard, /featured/);
+  assert.match(dashboard, /xl:grid-cols-\[1\.15fr_repeat\(3,1fr\)\]/);
+  assert.match(dashboard, /xl:grid-cols-\[minmax\(0,1fr\)_360px\]/);
+  assert.match(dashboard, /border-b bg-muted\/25/);
+
+  assert.match(transactions, /xl:grid-cols-\[minmax\(0,1fr\)_auto\]/);
+  assert.match(transactions, /Metode/);
+  assert.match(transactions, /<Select value={method}/);
+  assert.match(transactions, /Kategori/);
+  assert.match(transactions, /<Select value={category}/);
+  assert.match(transactions, /Dari/);
+  assert.match(transactions, /Sampai/);
+  assert.match(transactions, /md:grid-cols-2/);
+
+  assert.match(form, /max-w-6xl/);
+  assert.match(form, /lg:grid-cols-\[minmax\(0,1\.35fr\)_minmax\(320px,\.65fr\)\]/);
+  assert.match(form, /lg:sticky lg:top-20/);
+  assert.match(form, /sticky bottom-0/);
+
+  assert.match(reports, /md:grid-cols-2 xl:grid-cols-\[minmax\(0,1fr\)_minmax\(0,1fr\)_auto\]/);
+  assert.match(reports, /bg-muted\/55 p-1/);
+  assert.match(reports, /h-\[290px\]/);
+});
+
+test('phase 6c schedule reduces repeated status chrome while preserving responsive tables and cards', async () => {
+  const schedule = await source('apps/web/src/pages/Schedule.jsx');
+
+  assert.match(schedule, /space-y-5/);
+  assert.match(schedule, /border-b bg-muted\/25/);
+  assert.match(schedule, /bg-muted-foreground\/55/);
+  assert.match(schedule, /Disembunyikan/);
+  assert.match(schedule, /hidden md:block/);
+  assert.match(schedule, /md:hidden/);
+  assert.doesNotMatch(schedule, /variant=\{complete \? 'success' : 'outline'\}/);
+});
+
+test('phase 6c settings favor readable content width and responsive internal navigation', async () => {
+  const page = await source('apps/web/src/pages/AdminSettings.jsx');
+  const nav = await source('apps/web/src/components/settings/SettingsNav.jsx');
+  const general = await source('apps/web/src/components/settings/GeneralSettings.jsx');
+  const finance = await source('apps/web/src/components/settings/FinanceSettings.jsx');
+  const categories = await source('apps/web/src/components/settings/CategorySettings.jsx');
+  const display = await source('apps/web/src/components/settings/PublicDisplaySettings.jsx');
+  const users = await source('apps/web/src/components/settings/UserSettings.jsx');
+  const audit = await source('apps/web/src/components/settings/AuditSettings.jsx');
+
+  assert.match(page, /lg:grid-cols-\[190px_minmax\(0,1fr\)\]/);
+  assert.match(page, /max-w-5xl/);
+  assert.match(nav, /lg:hidden/);
+  assert.match(nav, /lg:sticky lg:top-20 lg:block/);
+  assert.doesNotMatch(nav, /rounded-xl border bg-card p-2/);
+
+  assert.match(general, /border-b bg-muted\/25/);
+  assert.match(general, /md:grid-cols-2/);
+  assert.match(finance, /md:grid-cols-2/);
+  assert.match(finance, /space-y-5 p-5/);
+
+  for (const content of [categories, display, users]) {
+    assert.match(content, /flex flex-col gap-3 border-b bg-muted\/25/);
+    assert.match(content, /w-full sm:w-auto/);
+  }
+
+  assert.match(audit, /bg-muted\/25/);
+  assert.match(audit, /sm:grid-cols-2 xl:grid-cols-4/);
+});
