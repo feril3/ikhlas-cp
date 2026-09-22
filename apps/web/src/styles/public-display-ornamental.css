@@ -96,6 +96,10 @@
   color: #9db0a9;
 }
 
+.signage-date-block .signage-hijri-date {
+  color: #cfb879;
+}
+
 .prayer-focus-panel {
   position: relative;
   border: 1px solid rgba(213, 183, 122, .3);
