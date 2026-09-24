@@ -508,7 +508,7 @@ test('visual hotfix flattens buttons and fixes breadcrumb composition', async ()
   assert.doesNotMatch(header, /className="contents"/);
 
   assert.match(settingsNav, /border-l-2 bg-transparent/);
-  assert.match(settingsNav, /border-primary font-semibold text-foreground/);
+  assert.match(settingsNav, /border-primary bg-accent\/35 font-semibold text-foreground/);
   assert.doesNotMatch(settingsNav, /shadow-\[/);
 });
 
