@@ -315,7 +315,7 @@ test('phase 6a collapsed sidebar becomes a true icon rail with a stable account 
   const sidebar = await source('apps/web/src/components/app/AppSidebar.jsx');
   const userMenu = await source('apps/web/src/components/app/UserMenu.jsx');
 
-  assert.match(sidebarUi, /lg:data-\[state=collapsed\]:w-\[72px\]/);
+  assert.match(sidebarUi, /open \? 'lg:w-64' : 'lg:w-\[72px\]'/);
   assert.match(sidebarUi, /IconLayoutSidebarLeftExpand/);
   assert.match(sidebarUi, /Lebarkan navigasi/);
   assert.match(sidebar, /justify-center px-0/);
@@ -403,7 +403,7 @@ test('phase 6b primitives expose clear borders, focus and selected states', asyn
   assert.match(alert, /ui-danger-border/);
   assert.doesNotMatch(alert, /opacity-90/);
   assert.match(settingsNav, /border-l-2 bg-transparent/);
-  assert.match(settingsNav, /border-primary font-semibold text-foreground/);
+  assert.match(settingsNav, /border-primary bg-accent\/35 font-semibold text-foreground/);
 });
 
 
@@ -510,4 +510,90 @@ test('visual hotfix flattens buttons and fixes breadcrumb composition', async ()
   assert.match(settingsNav, /border-l-2 bg-transparent/);
   assert.match(settingsNav, /border-primary font-semibold text-foreground/);
   assert.doesNotMatch(settingsNav, /shadow-\[/);
+});
+
+
+test('final visual QA fixes browser chrome, control surfaces and deterministic sidebar width', async () => {
+  const sidebar = await source('apps/web/src/components/ui/sidebar.jsx');
+  const button = await source('apps/web/src/components/ui/button.jsx');
+  const input = await source('apps/web/src/components/ui/input.jsx');
+  const inputGroup = await source('apps/web/src/components/ui/input-group.jsx');
+  const select = await source('apps/web/src/components/ui/select.jsx');
+  const textarea = await source('apps/web/src/components/ui/textarea.jsx');
+  const settingsNav = await source('apps/web/src/components/settings/SettingsNav.jsx');
+  const reports = await source('apps/web/src/pages/Reports.jsx');
+  const dashboard = await source('apps/web/src/pages/Dashboard.jsx');
+
+  assert.match(sidebar, /open \? 'lg:w-64' : 'lg:w-\[72px\]'/);
+  assert.doesNotMatch(sidebar, /lg:data-\[state=collapsed\]:w-\[72px\]/);
+  assert.match(sidebar, /appearance-none/);
+  assert.match(sidebar, /border-0 bg-transparent/);
+
+  assert.match(button, /ghost: 'bg-transparent/);
+  assert.match(button, /link: 'bg-transparent/);
+
+  assert.doesNotMatch(input, /shadow-\[/);
+  assert.doesNotMatch(inputGroup, /shadow-\[/);
+  assert.match(select, /appearance-none/);
+  assert.doesNotMatch(select, /shadow-\[/);
+  assert.doesNotMatch(textarea, /shadow-\[/);
+
+  assert.match(settingsNav, /border-primary bg-accent\/35 font-semibold text-foreground/);
+
+  assert.match(dashboard, /function CashflowDot/);
+  assert.match(dashboard, /payload\[dataKey\]/);
+  assert.match(reports, /minPointSize=\{4\}/);
+  assert.match(reports, /minPointSize=\{5\}/);
+});
+
+test('transaction summary cards use requested cash accounting labels', async () => {
+  const transactions = await source('apps/web/src/pages/Transactions.jsx');
+
+  assert.match(transactions, /label="Saldo awal"/);
+  assert.match(transactions, /data\.summary\.openingBalance/);
+  assert.match(transactions, /label="Masuk"/);
+  assert.match(transactions, /data\.summary\.totalIncome/);
+  assert.match(transactions, /label="Keluar"/);
+  assert.match(transactions, /data\.summary\.totalExpense/);
+  assert.match(transactions, /label="Sisa saldo"/);
+  assert.match(transactions, /data\.summary\.currentBalance/);
+  assert.doesNotMatch(transactions, /label="Transaksi tampil"/);
+});
+
+test('Friday editor can keep Imam and Khatib synchronized as one officer', async () => {
+  const schedule = await source('apps/web/src/pages/Schedule.jsx');
+
+  assert.match(schedule, /sameImamKhatib/);
+  assert.match(schedule, /Imam juga menjadi Khatib/);
+  assert.match(schedule, /Aktifkan jika satu orang bertugas sebagai imam sekaligus khatib/);
+  assert.match(schedule, /aria-pressed=\{sameImamKhatib\}/);
+  assert.match(schedule, /disabled=\{sameImamKhatib\}/);
+  assert.match(schedule, /khatib: sameImamKhatib \? value : current\.khatib/);
+  assert.match(schedule, /if \(next\) setForm\(\(value\) => \(\{ \.\.\.value, khatib: value\.imam \}\)\)/);
+});
+
+test('inactive transaction categories stay auditable but are excluded from new transaction entry', async () => {
+  const routes = await source('apps/api/src/routes.js');
+  const settings = await source('apps/web/src/components/settings/CategorySettings.jsx');
+  const createForm = await source('apps/web/src/pages/TransactionForm.jsx');
+  const editSheet = await source('apps/web/src/features/transactions/TransactionEditSheet.jsx');
+
+  assert.match(routes, /AS transactionCount/);
+  assert.match(routes, /transactions\.category_id = transaction_categories\.id/);
+  assert.match(routes, /!category\.isActive/);
+  assert.match(routes, /Kategori transaksi tidak valid atau sudah dinonaktifkan/);
+  assert.match(routes, /!category\.isActive && Number\(category\.id\) !== Number\(existing\.categoryId\)/);
+  assert.match(routes, /TRANSACTION_CATEGORY_UPDATE/);
+  assert.match(routes, /before: \{/);
+  assert.match(routes, /after: \{/);
+
+  assert.match(settings, /Transaksi lama tetap tersimpan dan tetap dapat diaudit/);
+  assert.match(settings, /transactionCount/);
+  assert.match(settings, /Nonaktifkan/);
+  assert.match(settings, /Aktifkan/);
+  assert.doesNotMatch(settings, /DropdownMenuTrigger/);
+
+  assert.match(createForm, /result\.data\.filter\(\(item\) => item\.isActive\)/);
+  assert.match(editSheet, /item\.isActive \|\| Number\(item\.id\) === Number\(transaction\.categoryId\)/);
+  assert.match(editSheet, /nonaktif, transaksi lama/);
 });
