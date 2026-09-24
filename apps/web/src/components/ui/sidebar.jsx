@@ -45,7 +45,8 @@ function Sidebar({ className, children }) {
     <aside
       data-state={open ? 'expanded' : 'collapsed'}
       className={cn(
-        'hidden min-h-screen shrink-0 border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 lg:flex lg:w-64 lg:flex-col lg:data-[state=collapsed]:w-[72px]',
+        'hidden min-h-screen shrink-0 border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 lg:flex lg:flex-col',
+        open ? 'lg:w-64' : 'lg:w-[72px]',
         className
       )}
     >
@@ -97,7 +98,7 @@ function SidebarMenuButton({ className, active = false, asChild = false, ...prop
   return (
     <Comp
       className={cn(
-        'flex min-h-10 w-full items-center gap-3 rounded-md px-3 text-left text-[13px] font-medium text-sidebar-foreground/78 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground [&_svg]:size-[18px] [&_svg]:shrink-0',
+        'flex min-h-10 w-full appearance-none items-center gap-3 rounded-md border-0 bg-transparent px-3 text-left text-[13px] font-medium text-sidebar-foreground/78 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground [&_svg]:size-[18px] [&_svg]:shrink-0',
         active && 'bg-sidebar-accent text-sidebar-accent-foreground',
         className
       )}
