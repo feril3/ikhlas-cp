@@ -207,26 +207,26 @@ export default function Transactions() {
           <Card className="overflow-hidden">
             <div className="grid divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0 xl:grid-cols-4">
               <Metric
-                label="Saldo saat ini"
-                value={formatRupiah(data.summary.currentBalance)}
-                caption="Saldo berjalan seluruh periode"
+                label="Saldo awal"
+                value={formatRupiah(data.summary.openingBalance)}
+                caption="Basis awal perhitungan kas"
               />
               <Metric
-                label="Total kas masuk"
+                label="Masuk"
                 value={'+' + formatRupiah(data.summary.totalIncome)}
                 tone="income"
-                caption="Akumulasi seluruh transaksi masuk"
+                caption="Total seluruh kas masuk"
               />
               <Metric
-                label="Total kas keluar"
+                label="Keluar"
                 value={'-' + formatRupiah(data.summary.totalExpense)}
                 tone="expense"
-                caption="Akumulasi seluruh transaksi keluar"
+                caption="Total seluruh kas keluar"
               />
               <Metric
-                label="Transaksi tampil"
-                value={String(filtered.length)}
-                caption={hasFilters ? 'Hasil filter aktif' : 'Maks. 500 transaksi terbaru'}
+                label="Sisa saldo"
+                value={formatRupiah(data.summary.currentBalance)}
+                caption="Saldo berjalan saat ini"
               />
             </div>
           </Card>

@@ -395,3 +395,15 @@ test('adhan phase lasts two minutes and iqamah stays eight minutes after adhan',
   assert.match(helper, /kind: 'ADHAN_NOW'/);
   assert.match(display, /Waktunya Adzan \{countdownFocus\.prayerName\}/);
 });
+
+
+test('public finance rail uses compact amounts instead of clipping billion-scale totals', async () => {
+  const jsx = await source('apps/web/src/pages/PublicDisplay.jsx');
+
+  assert.match(jsx, /function formatCompactRupiah/);
+  assert.match(jsx, /1_000_000_000/);
+  assert.match(jsx, /maximumFractionDigits: 2/);
+  assert.match(jsx, /formatCompactRupiah\(data\?\.finance\?\.currentBalance/);
+  assert.match(jsx, /formatCompactRupiah\(data\?\.finance\?\.totalIncome/);
+  assert.match(jsx, /formatCompactRupiah\(data\?\.finance\?\.totalExpense/);
+});

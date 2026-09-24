@@ -26,7 +26,7 @@ export function SettingsNav({ value, onChange }) {
             key={id}
             type="button"
             onClick={() => onChange(id)}
-            className={`flex w-full appearance-none items-center rounded-r-md border-0 border-l-2 bg-transparent px-3 py-2.5 text-left text-sm transition-colors ${value === id ? 'border-primary font-semibold text-foreground' : 'border-transparent font-medium text-muted-foreground hover:border-border hover:bg-muted/60 hover:text-foreground'}`}
+            className={`flex w-full appearance-none items-center rounded-r-md border-0 border-l-2 bg-transparent px-3 py-2.5 text-left text-sm transition-colors ${value === id ? 'border-primary bg-accent/35 font-semibold text-foreground' : 'border-transparent font-medium text-muted-foreground hover:border-border hover:bg-muted/60 hover:text-foreground'}`}
           >
             {label}
           </button>

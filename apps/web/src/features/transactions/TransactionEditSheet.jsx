@@ -163,7 +163,9 @@ export function TransactionEditSheet({ transaction, open, onOpenChange, onSaved 
                   </SelectTrigger>
                   <SelectContent>
                     {categories.map((category) => (
-                      <SelectItem key={category.id} value={String(category.id)}>{category.name}</SelectItem>
+                      <SelectItem key={category.id} value={String(category.id)}>
+                        {category.name}{category.isActive ? '' : ' (nonaktif, transaksi lama)'}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

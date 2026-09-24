@@ -35,6 +35,11 @@ function formatAxisAmount(value) {
   return new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(number);
 }
 
+function CashflowDot({ cx, cy, payload, dataKey, color }) {
+  if (!payload || Number(payload[dataKey] ?? 0) <= 0) return null;
+  return <circle cx={cx} cy={cy} r="3" fill={color} stroke="var(--ui-card)" strokeWidth="1.5" />;
+}
+
 function Metric({ label, value, tone = 'default', caption, featured = false }) {
   const valueClass = tone === 'income'
     ? 'text-primary'
@@ -188,8 +193,8 @@ export default function Dashboard() {
                         formatter={(value) => formatRupiah(value)}
                       />}
                     />
-                    <Area type="monotone" dataKey="income" stroke="var(--color-income)" strokeWidth={2.5} fill="url(#incomeFill)" dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
-                    <Area type="monotone" dataKey="expense" stroke="var(--color-expense)" strokeWidth={2.5} fill="url(#expenseFill)" dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
+                    <Area type="monotone" dataKey="income" stroke="var(--color-income)" strokeWidth={2.5} fill="url(#incomeFill)" dot={(props) => <CashflowDot {...props} dataKey="income" color="var(--color-income)" />} activeDot={{ r: 4 }} isAnimationActive={false} />
+                    <Area type="monotone" dataKey="expense" stroke="var(--color-expense)" strokeWidth={2.5} fill="url(#expenseFill)" dot={(props) => <CashflowDot {...props} dataKey="expense" color="var(--color-expense)" />} activeDot={{ r: 4 }} isAnimationActive={false} />
                   </AreaChart>
                 </ChartContainer>
               </CardContent>

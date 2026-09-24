@@ -22,6 +22,16 @@ const FINANCE_CAROUSEL_INTERVAL_MS = 8500;
 const DISPLAY_TIMEZONE = 'Asia/Jakarta';
 const RECENT_TRANSACTION_LIMIT = 4;
 
+function formatCompactRupiah(value) {
+  const amount = Number(value ?? 0);
+  const compact = (number, suffix) => `Rp ${new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format(number)} ${suffix}`;
+
+  if (Math.abs(amount) >= 1_000_000_000) return compact(amount / 1_000_000_000, 'M');
+  if (Math.abs(amount) >= 1_000_000) return compact(amount / 1_000_000, 'jt');
+  if (Math.abs(amount) >= 1_000) return compact(amount / 1_000, 'rb');
+  return formatRupiah(amount);
+}
+
 function displayDateIso(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: DISPLAY_TIMEZONE,
@@ -371,17 +381,17 @@ export default function PublicDisplay() {
 
           <div className="finance-balance">
             <span>Saldo saat ini</span>
-            <strong>{formatRupiah(data?.finance?.currentBalance ?? 0)}</strong>
+            <strong title={formatRupiah(data?.finance?.currentBalance ?? 0)}>{formatCompactRupiah(data?.finance?.currentBalance ?? 0)}</strong>
           </div>
 
           <div className="finance-flow-summary">
             <div>
               <span>Kas masuk</span>
-              <strong className="finance-income">+{formatRupiah(data?.finance?.totalIncome ?? 0)}</strong>
+              <strong className="finance-income" title={formatRupiah(data?.finance?.totalIncome ?? 0)}>+{formatCompactRupiah(data?.finance?.totalIncome ?? 0)}</strong>
             </div>
             <div>
               <span>Kas keluar</span>
-              <strong className="finance-expense">-{formatRupiah(data?.finance?.totalExpense ?? 0)}</strong>
+              <strong className="finance-expense" title={formatRupiah(data?.finance?.totalExpense ?? 0)}>-{formatCompactRupiah(data?.finance?.totalExpense ?? 0)}</strong>
             </div>
           </div>
 

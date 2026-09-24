@@ -69,11 +69,30 @@ function formatAgendaDate(date) {
 
 function FridayEditor({ open, onOpenChange, row, onSaved }) {
   const [form, setForm] = useState({ imam: '', khatib: '', bilal: '' });
+  const [sameImamKhatib, setSameImamKhatib] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (row) setForm({ imam: row.imam ?? '', khatib: row.khatib ?? '', bilal: row.bilal ?? '' });
+    if (!row) return;
+    const imam = row.imam ?? '';
+    const khatib = row.khatib ?? '';
+    setForm({ imam, khatib, bilal: row.bilal ?? '' });
+    setSameImamKhatib(Boolean(imam.trim()) && imam.trim() === khatib.trim());
   }, [row]);
+
+  function updateImam(value) {
+    setForm((current) => ({
+      ...current,
+      imam: value,
+      khatib: sameImamKhatib ? value : current.khatib
+    }));
+  }
+
+  function toggleSameImamKhatib() {
+    const next = !sameImamKhatib;
+    setSameImamKhatib(next);
+    if (next) setForm((value) => ({ ...value, khatib: value.imam }));
+  }
 
   async function submit(event) {
     event.preventDefault();
@@ -100,8 +119,35 @@ function FridayEditor({ open, onOpenChange, row, onSaved }) {
         </DialogHeader>
         <form className="grid gap-5" onSubmit={submit}>
           <FieldGroup>
-            <Field><FieldLabel>Imam</FieldLabel><Input value={form.imam} onChange={(e) => setForm((x) => ({ ...x, imam: e.target.value }))} placeholder="Nama imam" required /></Field>
-            <Field><FieldLabel>Khatib</FieldLabel><Input value={form.khatib} onChange={(e) => setForm((x) => ({ ...x, khatib: e.target.value }))} placeholder="Nama khatib" required /></Field>
+            <Field>
+              <FieldLabel>Imam</FieldLabel>
+              <Input value={form.imam} onChange={(e) => updateImam(e.target.value)} placeholder="Nama imam" required />
+            </Field>
+            <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/25 p-3">
+              <div>
+                <strong className="block text-sm font-medium">Imam juga menjadi Khatib</strong>
+                <span className="text-xs text-muted-foreground">Aktifkan jika satu orang bertugas sebagai imam sekaligus khatib.</span>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant={sameImamKhatib ? 'secondary' : 'outline'}
+                aria-pressed={sameImamKhatib}
+                onClick={toggleSameImamKhatib}
+              >
+                {sameImamKhatib ? 'Sama' : 'Samakan'}
+              </Button>
+            </div>
+            <Field>
+              <FieldLabel>Khatib</FieldLabel>
+              <Input
+                value={form.khatib}
+                onChange={(e) => setForm((x) => ({ ...x, khatib: e.target.value }))}
+                placeholder="Nama khatib"
+                disabled={sameImamKhatib}
+                required
+              />
+            </Field>
             <Field><FieldLabel>Bilal</FieldLabel><Input value={form.bilal} onChange={(e) => setForm((x) => ({ ...x, bilal: e.target.value }))} placeholder="Nama bilal" required /></Field>
           </FieldGroup>
           <DialogFooter>
