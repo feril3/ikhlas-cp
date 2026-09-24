@@ -89,11 +89,9 @@ function FridayEditor({ open, onOpenChange, row, onSaved }) {
   }
 
   function toggleSameImamKhatib() {
-    setSameImamKhatib((current) => {
-      const next = !current;
-      if (next) setForm((value) => ({ ...value, khatib: value.imam }));
-      return next;
-    });
+    const next = !sameImamKhatib;
+    setSameImamKhatib(next);
+    if (next) setForm((value) => ({ ...value, khatib: value.imam }));
   }
 
   async function submit(event) {
