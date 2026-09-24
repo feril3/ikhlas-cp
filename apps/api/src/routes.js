@@ -1437,7 +1437,12 @@ apiRouter.get('/transaction-categories', requireAuth, (req, res) => {
       type,
       name,
       is_active AS isActive,
-      sort_order AS sortOrder
+      sort_order AS sortOrder,
+      (
+        SELECT COUNT(*)
+        FROM transactions
+        WHERE transactions.category_id = transaction_categories.id
+      ) AS transactionCount
     FROM transaction_categories
     ${where}
     ORDER BY type ASC, sort_order ASC, name ASC
@@ -1485,7 +1490,16 @@ apiRouter.put('/transaction-categories/:id', requireAuth, requireRole('ADMIN'), 
     return res.status(422).json({ message: 'Kategori belum valid.', errors: parsed.error.flatten().fieldErrors });
   }
 
-  const existing = db.prepare('SELECT id FROM transaction_categories WHERE id = ?').get(req.params.id);
+  const existing = db.prepare(`
+    SELECT
+      id,
+      type,
+      name,
+      is_active AS isActive,
+      sort_order AS sortOrder
+    FROM transaction_categories
+    WHERE id = ?
+  `).get(req.params.id);
   if (!existing) return res.status(404).json({ message: 'Kategori tidak ditemukan.' });
 
   try {
@@ -1500,7 +1514,20 @@ apiRouter.put('/transaction-categories/:id', requireAuth, requireRole('ADMIN'), 
       action: 'TRANSACTION_CATEGORY_UPDATE',
       entityType: 'TRANSACTION_CATEGORY',
       entityId: existing.id,
-      details: { type: input.type, name: input.name, isActive: input.isActive }
+      details: {
+        before: {
+          type: existing.type,
+          name: existing.name,
+          isActive: Boolean(existing.isActive),
+          sortOrder: existing.sortOrder
+        },
+        after: {
+          type: input.type,
+          name: input.name,
+          isActive: input.isActive,
+          sortOrder: input.sortOrder
+        }
+      }
     });
 
     return res.json({ id: existing.id });
