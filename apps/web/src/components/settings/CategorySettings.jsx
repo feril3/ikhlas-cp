@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { IconDots, IconPlus } from '@tabler/icons-react';
+import { IconPlus } from '@tabler/icons-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -51,25 +50,33 @@ export function CategorySettings({ categories, api, reload }) {
   return (
     <section className="overflow-hidden rounded-xl border bg-card">
       <div className="flex flex-col gap-3 border-b bg-muted/25 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-        <div><h2 className="text-lg font-semibold">Kategori</h2><p className="mt-1 text-sm text-muted-foreground">Kelola kategori kas masuk dan kas keluar.</p></div>
+        <div><h2 className="text-lg font-semibold">Kategori</h2><p className="mt-1 text-sm text-muted-foreground">Nonaktifkan kategori yang tidak dipakai lagi. Transaksi lama tetap tersimpan dan tetap dapat diaudit.</p></div>
         <Button className="w-full sm:w-auto" onClick={() => setOpen(true)}><IconPlus />Tambah kategori</Button>
       </div>
       <Table>
-        <TableHeader><TableRow><TableHead>Nama</TableHead><TableHead>Jenis</TableHead><TableHead>Urutan</TableHead><TableHead>Status</TableHead><TableHead className="w-16" /></TableRow></TableHeader>
+        <TableHeader><TableRow><TableHead>Nama</TableHead><TableHead>Jenis</TableHead><TableHead>Urutan</TableHead><TableHead>Transaksi</TableHead><TableHead>Status</TableHead><TableHead className="w-32">Aksi</TableHead></TableRow></TableHeader>
         <TableBody>
           {categories.map((category) => <TableRow key={category.id}>
             <TableCell className="font-medium">{category.name}</TableCell>
             <TableCell>{category.type === 'INCOME' ? 'Kas Masuk' : 'Kas Keluar'}</TableCell>
             <TableCell>{category.sortOrder}</TableCell>
+            <TableCell>
+              <span className="text-sm font-medium">{category.transactionCount ?? 0}</span>
+              <span className="ml-1 text-xs text-muted-foreground">tercatat</span>
+            </TableCell>
             <TableCell><Badge variant={category.isActive ? 'success' : 'outline'}>{category.isActive ? 'Aktif' : 'Nonaktif'}</Badge></TableCell>
             <TableCell>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild><Button variant="ghost" size="icon-sm" aria-label={`Aksi ${category.name}`}><IconDots /></Button></DropdownMenuTrigger>
-                <DropdownMenuContent align="end"><DropdownMenuItem onSelect={() => toggle(category)}>{category.isActive ? 'Nonaktifkan' : 'Aktifkan'}</DropdownMenuItem></DropdownMenuContent>
-              </DropdownMenu>
+              <Button
+                type="button"
+                variant={category.isActive ? 'outline' : 'secondary'}
+                size="sm"
+                onClick={() => toggle(category)}
+              >
+                {category.isActive ? 'Nonaktifkan' : 'Aktifkan'}
+              </Button>
             </TableCell>
           </TableRow>)}
-          {categories.length === 0 && <TableRow><TableCell colSpan={5} className="py-10 text-center text-muted-foreground">Belum ada kategori.</TableCell></TableRow>}
+          {categories.length === 0 && <TableRow><TableCell colSpan={6} className="py-10 text-center text-muted-foreground">Belum ada kategori.</TableCell></TableRow>}
         </TableBody>
       </Table>
 
