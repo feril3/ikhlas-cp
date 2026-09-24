@@ -196,8 +196,8 @@ export default function Reports() {
                         formatter={(value) => formatRupiah(value)}
                       />}
                     />
-                    <Bar dataKey="income" fill="var(--color-income)" radius={[4, 4, 0, 0]} maxBarSize={22} isAnimationActive={false} />
-                    <Bar dataKey="expense" fill="var(--color-expense)" radius={[4, 4, 0, 0]} maxBarSize={22} isAnimationActive={false} />
+                    <Bar dataKey="income" fill="var(--color-income)" radius={[4, 4, 0, 0]} maxBarSize={22} minPointSize={4} isAnimationActive={false} />
+                    <Bar dataKey="expense" fill="var(--color-expense)" radius={[4, 4, 0, 0]} maxBarSize={22} minPointSize={4} isAnimationActive={false} />
                   </BarChart>
                 </ChartContainer>
               </CardContent>
@@ -221,7 +221,7 @@ export default function Reports() {
                           formatter={(value) => formatRupiah(value)}
                         />}
                       />
-                      <Bar dataKey="total" radius={[0, 4, 4, 0]} maxBarSize={22} isAnimationActive={false}>
+                      <Bar dataKey="total" radius={[0, 4, 4, 0]} maxBarSize={22} minPointSize={5} isAnimationActive={false}>
                         {categoryData.map((item) => (
                           <Cell key={`${item.type}-${item.category}`} fill={item.type === 'INCOME' ? 'var(--ui-chart-1)' : 'var(--ui-chart-2)'} />
                         ))}
