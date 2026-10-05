@@ -178,7 +178,7 @@ export function initializeDatabase() {
       submitted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       reviewed_at TEXT,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (transaction_id) REFERENCES transactions(id),
+      FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE SET NULL,
       FOREIGN KEY (submitted_by) REFERENCES users(id),
       FOREIGN KEY (reviewed_by) REFERENCES users(id)
     );
