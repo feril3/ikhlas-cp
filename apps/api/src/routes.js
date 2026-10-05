@@ -1657,6 +1657,17 @@ apiRouter.put(
       }
     });
 
+    if (request.action === 'UPDATE' && before && after) {
+      await Promise.allSettled([
+        before.evidenceFileId && before.evidenceFileId !== after.evidenceFileId
+          ? deleteTransactionAttachment(before.evidenceFileId)
+          : Promise.resolve(),
+        before.bankMutationFileId && before.bankMutationFileId !== after.bankMutationFileId
+          ? deleteTransactionAttachment(before.bankMutationFileId)
+          : Promise.resolve()
+      ]);
+    }
+
     if (request.action === 'CREATE' && after) {
       await sendTransactionNotification(after, getSummary());
     }
