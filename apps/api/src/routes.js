@@ -824,6 +824,95 @@ apiRouter.post(
       });
     }
 
+    if (req.user.role === 'TREASURER') {
+      let request;
+      const uploaded = {};
+
+      try {
+        request = createApprovalRequest({
+          action: 'CREATE',
+          payload: transactionPayload({
+            type: input.type,
+            input,
+            category
+          }),
+          submittedBy: req.user.id
+        });
+
+        if (evidence) {
+          uploaded.evidence = await uploadTransactionAttachment(evidence, {
+            transactionId: `approval-${request.id}`,
+            transactionDate: input.transactionDate,
+            type: input.type,
+            kind: 'evidence'
+          });
+        }
+
+        if (mutation) {
+          uploaded.mutation = await uploadTransactionAttachment(mutation, {
+            transactionId: `approval-${request.id}`,
+            transactionDate: input.transactionDate,
+            type: input.type,
+            kind: 'mutation'
+          });
+        }
+
+        const proposal = transactionPayload({
+          type: input.type,
+          input,
+          category,
+          attachments: {
+            evidenceFileId: uploaded.evidence?.id ?? null,
+            evidenceOriginalName: uploaded.evidence?.originalName ?? null,
+            evidenceMimeType: uploaded.evidence?.mimeType ?? null,
+            bankMutationFileId: uploaded.mutation?.id ?? null,
+            bankMutationOriginalName: uploaded.mutation?.originalName ?? null,
+            bankMutationMimeType: uploaded.mutation?.mimeType ?? null
+          }
+        });
+
+        db.prepare(`
+          UPDATE transaction_approval_requests
+          SET payload_json = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `).run(serializeApprovalPayload(proposal), request.id);
+
+        request = getApprovalRequestRecord(request.id);
+      } catch (error) {
+        await Promise.allSettled([
+          deleteTransactionAttachment(uploaded.evidence?.id),
+          deleteTransactionAttachment(uploaded.mutation?.id)
+        ]);
+        if (request?.id) {
+          db.prepare('DELETE FROM transaction_approval_requests WHERE id = ?').run(request.id);
+        }
+
+        console.error('Transaction approval submission failed:', error);
+        return res.status(error?.code === 'ACTIVE_APPROVAL_EXISTS' ? 409 : 502).json({
+          message: error?.code === 'ACTIVE_APPROVAL_EXISTS'
+            ? error.message
+            : 'Pengajuan transaksi gagal dibuat. Periksa upload dokumen dan coba lagi.'
+        });
+      }
+
+      logAudit(req, {
+        action: 'TRANSACTION_APPROVAL_SUBMITTED',
+        entityType: 'TRANSACTION_APPROVAL',
+        entityId: request.id,
+        details: {
+          action: request.action,
+          status: request.status,
+          proposal: request.proposal
+        }
+      });
+
+      return res.status(202).json({
+        message: 'Pengajuan transaksi dikirim ke Ketua untuk direview.',
+        approvalRequired: true,
+        approvalRequest: approvalRequestResponse(request)
+      });
+    }
+
     const insert = db.prepare(`
       INSERT INTO transactions
         (type, amount, transaction_date, method, category, category_id, source_detail, description, created_by)
