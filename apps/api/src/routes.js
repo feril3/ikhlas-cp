@@ -1442,6 +1442,107 @@ apiRouter.get('/transactions/:id/attachments/:kind', requireAuth, async (req, re
 });
 
 
+apiRouter.post(
+  '/transaction-approvals/:id/attachments',
+  requireAuth,
+  requireRole('TREASURER'),
+  transactionUpload,
+  async (req, res) => {
+    const request = getApprovalRequestRecord(req.params.id);
+    if (!request) return res.status(404).json({ message: 'Pengajuan tidak ditemukan.' });
+    if (Number(request.submittedBy) !== Number(req.user.id)) {
+      return res.status(403).json({ message: 'Pengajuan ini bukan milik akun Bendahara yang sedang digunakan.' });
+    }
+    if (request.status !== 'REVISION_REQUIRED') {
+      return res.status(409).json({ message: 'Dokumen hanya dapat diganti saat pengajuan meminta revisi.' });
+    }
+
+    const evidence = req.files?.evidence?.[0] ?? null;
+    const mutation = req.files?.mutation?.[0] ?? null;
+    if (!evidence && !mutation) {
+      return res.status(422).json({ message: 'Tidak ada dokumen revisi yang dipilih.' });
+    }
+
+    const uploaded = {};
+    try {
+      if (evidence) {
+        uploaded.evidence = await uploadTransactionAttachment(evidence, {
+          transactionId: `approval-${request.id}`,
+          transactionDate: request.proposal.transactionDate,
+          type: request.proposal.type,
+          kind: 'evidence'
+        });
+      }
+      if (mutation) {
+        uploaded.mutation = await uploadTransactionAttachment(mutation, {
+          transactionId: `approval-${request.id}`,
+          transactionDate: request.proposal.transactionDate,
+          type: request.proposal.type,
+          kind: 'mutation'
+        });
+      }
+    } catch (error) {
+      await Promise.allSettled([
+        deleteTransactionAttachment(uploaded.evidence?.id),
+        deleteTransactionAttachment(uploaded.mutation?.id)
+      ]);
+      console.error('Approval revision attachment upload failed:', error);
+      return res.status(502).json({ message: 'Upload dokumen revisi ke Google Drive gagal.' });
+    }
+
+    const currentTransaction = request.transactionId
+      ? getTransactionRecord(request.transactionId)
+      : null;
+    const previous = request.proposal;
+    const proposal = {
+      ...previous,
+      evidenceFileId: uploaded.evidence?.id ?? previous.evidenceFileId ?? null,
+      evidenceOriginalName: uploaded.evidence?.originalName ?? previous.evidenceOriginalName ?? null,
+      evidenceMimeType: uploaded.evidence?.mimeType ?? previous.evidenceMimeType ?? null,
+      bankMutationFileId: uploaded.mutation?.id ?? previous.bankMutationFileId ?? null,
+      bankMutationOriginalName: uploaded.mutation?.originalName ?? previous.bankMutationOriginalName ?? null,
+      bankMutationMimeType: uploaded.mutation?.mimeType ?? previous.bankMutationMimeType ?? null
+    };
+
+    db.prepare(`
+      UPDATE transaction_approval_requests
+      SET payload_json = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(serializeApprovalPayload(proposal), request.id);
+
+    await Promise.allSettled([
+      evidence
+        && previous.evidenceFileId
+        && previous.evidenceFileId !== currentTransaction?.evidenceFileId
+        && previous.evidenceFileId !== uploaded.evidence?.id
+        ? deleteTransactionAttachment(previous.evidenceFileId)
+        : Promise.resolve(),
+      mutation
+        && previous.bankMutationFileId
+        && previous.bankMutationFileId !== currentTransaction?.bankMutationFileId
+        && previous.bankMutationFileId !== uploaded.mutation?.id
+        ? deleteTransactionAttachment(previous.bankMutationFileId)
+        : Promise.resolve()
+    ]);
+
+    const updated = getApprovalRequestRecord(request.id);
+    logAudit(req, {
+      action: 'TRANSACTION_APPROVAL_DOCUMENTS_UPDATED',
+      entityType: 'TRANSACTION_APPROVAL',
+      entityId: request.id,
+      details: {
+        evidenceUpdated: Boolean(evidence),
+        mutationUpdated: Boolean(mutation)
+      }
+    });
+
+    return res.json({
+      message: 'Dokumen revisi berhasil diperbarui.',
+      approvalRequest: approvalRequestResponse(updated)
+    });
+  }
+);
+
 apiRouter.get(
   '/transaction-approvals/:id/attachments/:kind',
   requireAuth,
