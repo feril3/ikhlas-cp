@@ -9,6 +9,7 @@ import {
 } from '@tabler/icons-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api.js';
+import { useAuth } from '@/auth/AuthContext.jsx';
 import { formatRupiah, toInputDate } from '@/lib/format.js';
 import { PageHeader } from '@/components/app/PageHeader.jsx';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -54,6 +55,8 @@ function TransactionFormSkeleton() {
 export default function TransactionForm({ type }) {
   const income = type === 'INCOME';
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const requiresApproval = user?.role === 'TREASURER';
   const [categories, setCategories] = useState([]);
   const [amountInput, setAmountInput] = useState('');
   const [form, setForm] = useState({
@@ -207,7 +210,9 @@ export default function TransactionForm({ type }) {
 
       <PageHeader
         title={income ? 'Kas Masuk' : 'Kas Keluar'}
-        description="Catat transaksi dengan kategori dan bukti yang mudah diverifikasi. Pengajuan Bendahara akan direview Ketua sebelum posting."
+        description={requiresApproval
+          ? 'Catat transaksi dengan kategori dan bukti yang mudah diverifikasi. Pengajuan Bendahara akan direview Ketua sebelum posting.'
+          : 'Catat transaksi dengan kategori dan bukti yang mudah diverifikasi pengurus.'}
       />
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -397,7 +402,7 @@ export default function TransactionForm({ type }) {
             disabled={status.type === 'loading' || categories.length === 0}
           >
             {status.type === 'loading' ? <Spinner /> : <IconDeviceFloppy data-icon="inline-start" aria-hidden="true" />}
-            {status.type === 'loading' ? 'Memproses...' : 'Ajukan transaksi'}
+            {status.type === 'loading' ? 'Memproses...' : requiresApproval ? 'Ajukan untuk review' : 'Simpan transaksi'}
           </Button>
         </div>
       </form>
