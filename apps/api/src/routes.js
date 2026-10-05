@@ -1441,6 +1441,59 @@ apiRouter.get('/transactions/:id/attachments/:kind', requireAuth, async (req, re
 
 
 apiRouter.get(
+  '/transaction-approvals/:id/attachments/:kind',
+  requireAuth,
+  requireRole('ADMIN', 'TREASURER'),
+  async (req, res) => {
+    const request = getApprovalRequestRecord(req.params.id);
+    if (!request) return res.status(404).json({ message: 'Pengajuan tidak ditemukan.' });
+
+    if (req.user.role === 'TREASURER' && Number(request.submittedBy) !== Number(req.user.id)) {
+      return res.status(403).json({ message: 'Dokumen pengajuan ini tidak dapat diakses.' });
+    }
+
+    const isEvidence = req.params.kind === 'evidence';
+    const isMutation = req.params.kind === 'mutation';
+    if (!isEvidence && !isMutation) {
+      return res.status(404).json({ message: 'Jenis dokumen tidak dikenal.' });
+    }
+
+    const proposal = request.proposal ?? {};
+    const fileId = isEvidence ? proposal.evidenceFileId : proposal.bankMutationFileId;
+    const originalName = isEvidence ? proposal.evidenceOriginalName : proposal.bankMutationOriginalName;
+    const storedMimeType = isEvidence ? proposal.evidenceMimeType : proposal.bankMutationMimeType;
+
+    if (!fileId) {
+      return res.status(404).json({ message: 'Dokumen pengajuan tidak tersedia.' });
+    }
+
+    try {
+      const file = await getTransactionAttachment(fileId);
+      const mimeType = file.metadata.mimeType || storedMimeType || 'application/octet-stream';
+      const fileName = originalName || file.metadata.name || 'attachment';
+
+      res.setHeader('Content-Type', mimeType);
+      res.setHeader('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(fileName)}`);
+      res.setHeader('Cache-Control', 'private, no-store');
+
+      file.stream.on('error', (error) => {
+        console.error('Approval attachment stream failed:', error);
+        if (!res.headersSent) {
+          res.status(502).json({ message: 'Dokumen pengajuan gagal dibaca.' });
+        } else {
+          res.destroy(error);
+        }
+      });
+
+      file.stream.pipe(res);
+    } catch (error) {
+      console.error('Approval attachment download failed:', error);
+      return res.status(502).json({ message: 'Dokumen pengajuan gagal diambil.' });
+    }
+  }
+);
+
+apiRouter.get(
   '/transaction-approvals',
   requireAuth,
   requireRole('ADMIN', 'TREASURER'),
