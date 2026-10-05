@@ -77,6 +77,7 @@ export const api = {
   attachmentUrl: (id, kind) => `${API_URL}/transactions/${id}/attachments/${kind}`,
 
   transactionApprovals: () => request('/transaction-approvals'),
+  approvalAttachmentUrl: (id, kind) => `${API_URL}/transaction-approvals/${id}/attachments/${kind}`,
   reviewTransactionApproval: (id, input) => request(`/transaction-approvals/${id}/review`, {
     method: 'PUT',
     body: JSON.stringify(input)
