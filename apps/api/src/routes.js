@@ -1637,7 +1637,7 @@ apiRouter.put(
             reviewed_at = CURRENT_TIMESTAMP,
             updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
-        `).run(transactionId, req.user.id, note || null, request.id);
+        `).run(request.action === 'DELETE' ? null : transactionId, req.user.id, note || null, request.id);
       })();
     } catch (error) {
       console.error('Transaction approval apply failed:', error);
