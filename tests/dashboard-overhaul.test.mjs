@@ -623,10 +623,15 @@ test('treasurer approval workflow stages financial changes until Ketua review', 
   assert.match(routes, /req\.user\.role === 'TREASURER'/);
   assert.match(routes, /approvalRequired: true/);
   assert.match(routes, /status = 'APPROVED'/);
+  assert.match(routes, /TRANSACTION_APPROVAL_DOCUMENTS_UPDATED/);
+  assert.match(routes, /baseUpdatedAt/);
+  assert.match(routes, /Transaksi berubah setelah pengajuan dibuat/);
 
   assert.match(api, /transactionApprovals/);
   assert.match(api, /reviewTransactionApproval/);
   assert.match(api, /resubmitTransactionApproval/);
+  assert.match(api, /approvalAttachmentUrl/);
+  assert.match(api, /uploadApprovalAttachments/);
 
   assert.match(panel, /Review Transaksi/);
   assert.match(panel, /Pengajuan Saya/);
@@ -634,6 +639,11 @@ test('treasurer approval workflow stages financial changes until Ketua review', 
   assert.match(panel, /Minta revisi/);
   assert.match(panel, /Perbaiki pengajuan/);
   assert.match(panel, /Catatan Ketua/);
+  assert.match(panel, /TransactionComparison/);
+  assert.match(panel, /Saat ini/);
+  assert.match(panel, /Usulan/);
+  assert.match(panel, /Buka bukti/);
+  assert.match(panel, /Ganti bukti/);
 
   assert.match(transactions, /TransactionApprovalPanel/);
   assert.match(transactions, /Penghapusan dikirim ke Ketua/);
