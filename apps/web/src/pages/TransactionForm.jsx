@@ -175,7 +175,11 @@ export default function TransactionForm({ type }) {
         }
       );
 
-      if (created.notification?.status === 'failed') {
+      if (created.approvalRequired) {
+        toast.success('Pengajuan dikirim ke Ketua untuk direview.', {
+          description: 'Transaksi belum masuk saldo, laporan, atau Public Display sebelum disetujui.'
+        });
+      } else if (created.notification?.status === 'failed') {
         toast.warning(income ? 'Kas masuk tersimpan.' : 'Kas keluar tersimpan.', {
           description: 'Notifikasi Telegram gagal dikirim.'
         });
@@ -203,7 +207,7 @@ export default function TransactionForm({ type }) {
 
       <PageHeader
         title={income ? 'Kas Masuk' : 'Kas Keluar'}
-        description="Catat transaksi dengan kategori dan bukti yang mudah diverifikasi pengurus."
+        description="Catat transaksi dengan kategori dan bukti yang mudah diverifikasi. Pengajuan Bendahara akan direview Ketua sebelum posting."
       />
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -393,7 +397,7 @@ export default function TransactionForm({ type }) {
             disabled={status.type === 'loading' || categories.length === 0}
           >
             {status.type === 'loading' ? <Spinner /> : <IconDeviceFloppy data-icon="inline-start" aria-hidden="true" />}
-            {status.type === 'loading' ? 'Memproses...' : 'Simpan transaksi'}
+            {status.type === 'loading' ? 'Memproses...' : 'Ajukan transaksi'}
           </Button>
         </div>
       </form>
