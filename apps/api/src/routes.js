@@ -1153,6 +1153,40 @@ apiRouter.delete(
     const existing = getTransactionRecord(req.params.id);
     if (!existing) return res.status(404).json({ message: 'Transaksi tidak ditemukan.' });
 
+    if (req.user.role === 'TREASURER') {
+      let request;
+      try {
+        request = createApprovalRequest({
+          action: 'DELETE',
+          transactionId: existing.id,
+          payload: existing,
+          submittedBy: req.user.id
+        });
+      } catch (error) {
+        if (error?.code === 'ACTIVE_APPROVAL_EXISTS') {
+          return res.status(409).json({ message: error.message });
+        }
+        throw error;
+      }
+
+      logAudit(req, {
+        action: 'TRANSACTION_APPROVAL_SUBMITTED',
+        entityType: 'TRANSACTION_APPROVAL',
+        entityId: request.id,
+        details: {
+          action: request.action,
+          transactionId: existing.id,
+          snapshot: existing
+        }
+      });
+
+      return res.status(202).json({
+        message: 'Penghapusan transaksi dikirim ke Ketua untuk direview.',
+        approvalRequired: true,
+        approvalRequest: approvalRequestResponse(request)
+      });
+    }
+
     db.prepare('DELETE FROM transactions WHERE id = ?').run(existing.id);
 
     logAudit(req, {
