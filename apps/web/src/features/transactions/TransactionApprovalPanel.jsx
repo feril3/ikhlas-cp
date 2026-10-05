@@ -3,6 +3,7 @@ import {
   IconCheck,
   IconClockHour4,
   IconEdit,
+  IconFileText,
   IconRefresh,
   IconTrash,
   IconX
@@ -63,6 +64,59 @@ function ProposalSummary({ request }) {
       <div><span className="block text-xs text-muted-foreground">Kategori</span><strong>{proposal.category ?? '—'}</strong></div>
       <div><span className="block text-xs text-muted-foreground">Metode</span><strong>{proposal.method === 'TRANSFER' ? 'Transfer' : 'Tunai'}</strong></div>
       <div><span className="block text-xs text-muted-foreground">Keterangan</span><strong>{proposal.description || '—'}</strong></div>
+      {(proposal.evidenceFileId || proposal.bankMutationFileId) && (
+        <div className="flex flex-wrap gap-3 pt-1 sm:col-span-2">
+          {proposal.evidenceFileId && (
+            <a
+              href={api.approvalAttachmentUrl(request.id, 'evidence')}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+            >
+              <IconFileText className="size-4" /> Buka bukti
+            </a>
+          )}
+          {proposal.bankMutationFileId && (
+            <a
+              href={api.approvalAttachmentUrl(request.id, 'mutation')}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+            >
+              <IconFileText className="size-4" /> Buka mutasi
+            </a>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TransactionComparison({ request }) {
+  const before = request.currentTransaction ?? {};
+  const after = request.proposal ?? {};
+  const rows = [
+    ['Nominal', formatRupiah(before.amount ?? 0), formatRupiah(after.amount ?? 0)],
+    ['Tanggal', before.transactionDate ?? '—', after.transactionDate ?? '—'],
+    ['Kategori', before.category ?? '—', after.category ?? '—'],
+    ['Metode', before.method === 'TRANSFER' ? 'Transfer' : 'Tunai', after.method === 'TRANSFER' ? 'Transfer' : 'Tunai'],
+    ['Keterangan', before.description || '—', after.description || '—']
+  ].filter(([, current, proposed]) => String(current) !== String(proposed));
+
+  return (
+    <div className="space-y-3">
+      {rows.length > 0 && (
+        <div className="space-y-2">
+          {rows.map(([label, current, proposed]) => (
+            <div key={label} className="grid gap-2 rounded-lg border p-3 text-sm sm:grid-cols-[100px_1fr_1fr]">
+              <strong>{label}</strong>
+              <div><span className="block text-xs text-muted-foreground">Saat ini</span>{current}</div>
+              <div><span className="block text-xs text-muted-foreground">Usulan</span>{proposed}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      <ProposalSummary request={request} />
     </div>
   );
 }
@@ -109,7 +163,11 @@ function ReviewDialog({ request, open, onOpenChange, onDone }) {
           </DialogDescription>
         </DialogHeader>
 
-        {request && <ProposalSummary request={request} />}
+        {request && (
+          request.action === 'UPDATE' && request.currentTransaction
+            ? <TransactionComparison request={request} />
+            : <ProposalSummary request={request} />
+        )}
 
         <Field>
           <FieldLabel>Catatan Ketua</FieldLabel>
