@@ -434,7 +434,12 @@ function transactionPayload({ type, input, category, existing = null, attachment
 function approvalRequestResponse(request) {
   if (!request) return null;
   const { payloadJson, ...rest } = request;
-  return rest;
+  return {
+    ...rest,
+    currentTransaction: request.transactionId
+      ? getTransactionRecord(request.transactionId)
+      : null
+  };
 }
 
 function todayIso(timeZone = PRAYER_LOCATION.timezone) {
