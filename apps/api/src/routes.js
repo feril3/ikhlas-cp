@@ -1213,16 +1213,7 @@ apiRouter.post(
   requireRole('ADMIN', 'TREASURER'),
   transactionUpload,
   async (req, res) => {
-    const transaction = db.prepare(`
-      SELECT
-        id,
-        type,
-        transaction_date AS transactionDate,
-        evidence_drive_file_id AS evidenceFileId,
-        mutation_drive_file_id AS bankMutationFileId
-      FROM transactions
-      WHERE id = ?
-    `).get(req.params.id);
+    const transaction = getTransactionRecord(req.params.id);
 
     if (!transaction) {
       return res.status(404).json({ message: 'Transaksi tidak ditemukan.' });
@@ -1233,6 +1224,86 @@ apiRouter.post(
 
     if (!evidence && !mutation) {
       return res.status(422).json({ message: 'Tidak ada dokumen yang dipilih.' });
+    }
+
+    if (req.user.role === 'TREASURER') {
+      let request;
+      const uploaded = {};
+
+      try {
+        request = createApprovalRequest({
+          action: 'UPDATE',
+          transactionId: transaction.id,
+          payload: transaction,
+          submittedBy: req.user.id
+        });
+
+        if (evidence) {
+          uploaded.evidence = await uploadTransactionAttachment(evidence, {
+            transactionId: `approval-${request.id}`,
+            transactionDate: transaction.transactionDate,
+            type: transaction.type,
+            kind: 'evidence'
+          });
+        }
+
+        if (mutation) {
+          uploaded.mutation = await uploadTransactionAttachment(mutation, {
+            transactionId: `approval-${request.id}`,
+            transactionDate: transaction.transactionDate,
+            type: transaction.type,
+            kind: 'mutation'
+          });
+        }
+
+        const proposal = {
+          ...transaction,
+          evidenceFileId: uploaded.evidence?.id ?? transaction.evidenceFileId,
+          evidenceOriginalName: uploaded.evidence?.originalName ?? transaction.evidenceOriginalName,
+          evidenceMimeType: uploaded.evidence?.mimeType ?? transaction.evidenceMimeType,
+          bankMutationFileId: uploaded.mutation?.id ?? transaction.bankMutationFileId,
+          bankMutationOriginalName: uploaded.mutation?.originalName ?? transaction.bankMutationOriginalName,
+          bankMutationMimeType: uploaded.mutation?.mimeType ?? transaction.bankMutationMimeType
+        };
+
+        db.prepare(`
+          UPDATE transaction_approval_requests
+          SET payload_json = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `).run(serializeApprovalPayload(proposal), request.id);
+
+        request = getApprovalRequestRecord(request.id);
+      } catch (error) {
+        await Promise.allSettled([
+          deleteTransactionAttachment(uploaded.evidence?.id),
+          deleteTransactionAttachment(uploaded.mutation?.id)
+        ]);
+        if (request?.id) {
+          db.prepare('DELETE FROM transaction_approval_requests WHERE id = ?').run(request.id);
+        }
+        if (error?.code === 'ACTIVE_APPROVAL_EXISTS') {
+          return res.status(409).json({ message: error.message });
+        }
+        console.error('Transaction attachment approval submission failed:', error);
+        return res.status(502).json({ message: 'Pengajuan perubahan dokumen gagal dibuat.' });
+      }
+
+      logAudit(req, {
+        action: 'TRANSACTION_APPROVAL_SUBMITTED',
+        entityType: 'TRANSACTION_APPROVAL',
+        entityId: request.id,
+        details: {
+          action: request.action,
+          transactionId: transaction.id,
+          documentUpdate: true
+        }
+      });
+
+      return res.status(202).json({
+        message: 'Perubahan dokumen dikirim ke Ketua untuk direview.',
+        approvalRequired: true,
+        approvalRequest: approvalRequestResponse(request)
+      });
     }
 
     const uploaded = {};
