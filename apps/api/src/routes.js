@@ -44,6 +44,11 @@ const transactionSchema = z.object({
 
 const transactionEditSchema = transactionSchema.omit({ type: true });
 
+const transactionApprovalReviewSchema = z.object({
+  decision: z.enum(['APPROVE', 'REVISION_REQUIRED']),
+  note: z.string().trim().max(500).optional().default('')
+});
+
 const fridayScheduleSchema = z.object({
   imam: z.string().trim().min(2).max(120),
   khatib: z.string().trim().min(2).max(120),
@@ -341,6 +346,95 @@ function getTransactionRecord(id) {
     FROM transactions
     WHERE id = ?
   `).get(id) ?? null;
+}
+
+
+function serializeApprovalPayload(payload) {
+  return JSON.stringify(payload);
+}
+
+function parseApprovalPayload(value) {
+  try {
+    return JSON.parse(value || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function getApprovalRequestRecord(id) {
+  const row = db.prepare(`
+    SELECT
+      requests.id,
+      requests.action,
+      requests.transaction_id AS transactionId,
+      requests.status,
+      requests.payload_json AS payloadJson,
+      requests.submitted_by AS submittedBy,
+      submitter.name AS submittedByName,
+      requests.reviewed_by AS reviewedBy,
+      reviewer.name AS reviewedByName,
+      requests.review_note AS reviewNote,
+      requests.submitted_at AS submittedAt,
+      requests.reviewed_at AS reviewedAt,
+      requests.updated_at AS updatedAt
+    FROM transaction_approval_requests AS requests
+    JOIN users AS submitter ON submitter.id = requests.submitted_by
+    LEFT JOIN users AS reviewer ON reviewer.id = requests.reviewed_by
+    WHERE requests.id = ?
+  `).get(id);
+
+  return row ? { ...row, proposal: parseApprovalPayload(row.payloadJson) } : null;
+}
+
+function createApprovalRequest({ action, transactionId = null, payload, submittedBy }) {
+  if (transactionId) {
+    const active = db.prepare(`
+      SELECT id
+      FROM transaction_approval_requests
+      WHERE transaction_id = ?
+        AND status IN ('PENDING_REVIEW', 'REVISION_REQUIRED')
+      LIMIT 1
+    `).get(transactionId);
+
+    if (active) {
+      const error = new Error('Masih ada pengajuan transaksi yang menunggu review atau revisi.');
+      error.code = 'ACTIVE_APPROVAL_EXISTS';
+      throw error;
+    }
+  }
+
+  const result = db.prepare(`
+    INSERT INTO transaction_approval_requests
+      (action, transaction_id, status, payload_json, submitted_by)
+    VALUES (?, ?, 'PENDING_REVIEW', ?, ?)
+  `).run(action, transactionId, serializeApprovalPayload(payload), submittedBy);
+
+  return getApprovalRequestRecord(Number(result.lastInsertRowid));
+}
+
+function transactionPayload({ type, input, category, existing = null, attachments = {} }) {
+  return {
+    type,
+    amount: input.amount,
+    transactionDate: input.transactionDate,
+    method: input.method,
+    category: category.name,
+    categoryId: category.id,
+    sourceDetail: type === 'INCOME' ? input.sourceDetail : '',
+    description: input.description,
+    evidenceFileId: attachments.evidenceFileId ?? existing?.evidenceFileId ?? null,
+    evidenceOriginalName: attachments.evidenceOriginalName ?? existing?.evidenceOriginalName ?? null,
+    evidenceMimeType: attachments.evidenceMimeType ?? existing?.evidenceMimeType ?? null,
+    bankMutationFileId: attachments.bankMutationFileId ?? existing?.bankMutationFileId ?? null,
+    bankMutationOriginalName: attachments.bankMutationOriginalName ?? existing?.bankMutationOriginalName ?? null,
+    bankMutationMimeType: attachments.bankMutationMimeType ?? existing?.bankMutationMimeType ?? null
+  };
+}
+
+function approvalRequestResponse(request) {
+  if (!request) return null;
+  const { payloadJson, ...rest } = request;
+  return rest;
 }
 
 function todayIso(timeZone = PRAYER_LOCATION.timezone) {
