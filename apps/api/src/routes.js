@@ -1802,7 +1802,15 @@ apiRouter.put(
         type,
         input,
         category,
-        existing: request.proposal
+        existing: request.action === 'UPDATE' ? existing : null,
+        attachments: {
+          evidenceFileId: request.proposal.evidenceFileId ?? null,
+          evidenceOriginalName: request.proposal.evidenceOriginalName ?? null,
+          evidenceMimeType: request.proposal.evidenceMimeType ?? null,
+          bankMutationFileId: request.proposal.bankMutationFileId ?? null,
+          bankMutationOriginalName: request.proposal.bankMutationOriginalName ?? null,
+          bankMutationMimeType: request.proposal.bankMutationMimeType ?? null
+        }
       });
     }
 
