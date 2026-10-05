@@ -597,3 +597,48 @@ test('inactive transaction categories stay auditable but are excluded from new t
   assert.match(editSheet, /item\.isActive \|\| Number\(item\.id\) === Number\(transaction\.categoryId\)/);
   assert.match(editSheet, /nonaktif, transaksi lama/);
 });
+
+
+test('treasurer approval workflow stages financial changes until Ketua review', async () => {
+  const db = await source('apps/api/src/db.js');
+  const routes = await source('apps/api/src/routes.js');
+  const api = await source('apps/web/src/lib/api.js');
+  const panel = await source('apps/web/src/features/transactions/TransactionApprovalPanel.jsx');
+  const transactions = await source('apps/web/src/pages/Transactions.jsx');
+  const form = await source('apps/web/src/pages/TransactionForm.jsx');
+  const edit = await source('apps/web/src/features/transactions/TransactionEditSheet.jsx');
+
+  assert.match(db, /CREATE TABLE IF NOT EXISTS transaction_approval_requests/);
+  assert.match(db, /PENDING_REVIEW/);
+  assert.match(db, /REVISION_REQUIRED/);
+  assert.match(db, /ON DELETE SET NULL/);
+  assert.match(db, /idx_transaction_approval_active_target/);
+
+  assert.match(routes, /TRANSACTION_APPROVAL_SUBMITTED/);
+  assert.match(routes, /TRANSACTION_APPROVAL_REVISION_REQUIRED/);
+  assert.match(routes, /TRANSACTION_APPROVAL_RESUBMITTED/);
+  assert.match(routes, /TRANSACTION_APPROVAL_APPROVED/);
+  assert.match(routes, /\/transaction-approvals\/:id\/review/);
+  assert.match(routes, /\/transaction-approvals\/:id\/resubmit/);
+  assert.match(routes, /req\.user\.role === 'TREASURER'/);
+  assert.match(routes, /approvalRequired: true/);
+  assert.match(routes, /status = 'APPROVED'/);
+
+  assert.match(api, /transactionApprovals/);
+  assert.match(api, /reviewTransactionApproval/);
+  assert.match(api, /resubmitTransactionApproval/);
+
+  assert.match(panel, /Review Transaksi/);
+  assert.match(panel, /Pengajuan Saya/);
+  assert.match(panel, /Approve & posting/);
+  assert.match(panel, /Minta revisi/);
+  assert.match(panel, /Perbaiki pengajuan/);
+  assert.match(panel, /Catatan Ketua/);
+
+  assert.match(transactions, /TransactionApprovalPanel/);
+  assert.match(transactions, /Penghapusan dikirim ke Ketua/);
+  assert.match(form, /requiresApproval/);
+  assert.match(form, /Ajukan untuk review/);
+  assert.match(edit, /requiresApproval/);
+  assert.match(edit, /Ajukan untuk review/);
+});
