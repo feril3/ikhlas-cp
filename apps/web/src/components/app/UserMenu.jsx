@@ -21,7 +21,7 @@ export function UserMenu({ compact = false, sidebar = false }) {
     .join('')
     .toUpperCase() || 'IK';
 
-  const role = user?.role === 'ADMIN' ? 'Admin' : 'Bendahara';
+  const role = user?.role === 'ADMIN' ? 'Ketua / Admin' : 'Bendahara';
 
   return (
     <DropdownMenu>

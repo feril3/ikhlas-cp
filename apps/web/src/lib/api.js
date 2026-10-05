@@ -76,6 +76,26 @@ export const api = {
   },
   attachmentUrl: (id, kind) => `${API_URL}/transactions/${id}/attachments/${kind}`,
 
+  transactionApprovals: () => request('/transaction-approvals'),
+  approvalAttachmentUrl: (id, kind) => `${API_URL}/transaction-approvals/${id}/attachments/${kind}`,
+  uploadApprovalAttachments: (id, { evidence, mutation }) => {
+    const formData = new FormData();
+    if (evidence) formData.append('evidence', evidence);
+    if (mutation) formData.append('mutation', mutation);
+    return request(`/transaction-approvals/${id}/attachments`, {
+      method: 'POST',
+      body: formData
+    });
+  },
+  reviewTransactionApproval: (id, input) => request(`/transaction-approvals/${id}/review`, {
+    method: 'PUT',
+    body: JSON.stringify(input)
+  }),
+  resubmitTransactionApproval: (id, input = {}) => request(`/transaction-approvals/${id}/resubmit`, {
+    method: 'PUT',
+    body: JSON.stringify(input)
+  }),
+
   transactionCategories: (type) => request(`/transaction-categories${queryString({ type })}`),
   createTransactionCategory: (input) => request('/transaction-categories', {
     method: 'POST',

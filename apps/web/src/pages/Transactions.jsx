@@ -40,6 +40,7 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { TransactionApprovalPanel } from '@/features/transactions/TransactionApprovalPanel.jsx';
 import { TransactionEditSheet } from '@/features/transactions/TransactionEditSheet.jsx';
 import { TransactionTable } from '@/features/transactions/TransactionTable.jsx';
 
@@ -145,9 +146,15 @@ export default function Transactions() {
     setTo('');
   }
 
-  async function handleSaved() {
+  async function handleSaved(result) {
     await loadTransactions();
-    toast.success('Transaksi berhasil diperbarui.');
+    if (result?.approvalRequired) {
+      toast.success('Perubahan dikirim ke Ketua untuk direview.', {
+        description: 'Nilai transaksi yang sudah terposting belum berubah sampai approval selesai.'
+      });
+    } else {
+      toast.success('Transaksi berhasil diperbarui.');
+    }
   }
 
   async function confirmDelete() {
@@ -155,13 +162,19 @@ export default function Transactions() {
 
     setBusyId(deleting.id);
     try {
-      await api.deleteTransaction(deleting.id);
+      const result = await api.deleteTransaction(deleting.id);
       await loadTransactions();
-      toast.success('Transaksi berhasil dihapus.', {
-        description: deleting.evidenceFileId || deleting.bankMutationFileId
-          ? 'Dokumen Google Drive dipertahankan untuk audit.'
-          : undefined
-      });
+      if (result?.approvalRequired) {
+        toast.success('Penghapusan dikirim ke Ketua untuk direview.', {
+          description: 'Transaksi tetap terposting sampai penghapusan disetujui.'
+        });
+      } else {
+        toast.success('Transaksi berhasil dihapus.', {
+          description: deleting.evidenceFileId || deleting.bankMutationFileId
+            ? 'Dokumen Google Drive dipertahankan untuk audit.'
+            : undefined
+        });
+      }
       setDeleting(null);
     } catch (err) {
       setError(err.message);
@@ -204,6 +217,8 @@ export default function Transactions() {
 
       {data && (
         <>
+          <TransactionApprovalPanel user={user} onChanged={loadTransactions} />
+
           <Card className="overflow-hidden">
             <div className="grid divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0 xl:grid-cols-4">
               <Metric
@@ -351,7 +366,7 @@ export default function Transactions() {
                 confirmDelete();
               }}
             >
-              {busyId ? 'Menghapus...' : 'Hapus transaksi'}
+              {busyId ? 'Memproses...' : user?.role === 'TREASURER' ? 'Ajukan penghapusan' : 'Hapus transaksi'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

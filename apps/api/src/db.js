@@ -165,6 +165,24 @@ export function initializeDatabase() {
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
 
+    CREATE TABLE IF NOT EXISTS transaction_approval_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      action TEXT NOT NULL CHECK (action IN ('CREATE', 'UPDATE', 'DELETE')),
+      transaction_id INTEGER,
+      status TEXT NOT NULL DEFAULT 'PENDING_REVIEW'
+        CHECK (status IN ('PENDING_REVIEW', 'REVISION_REQUIRED', 'APPROVED')),
+      payload_json TEXT NOT NULL,
+      submitted_by INTEGER NOT NULL,
+      reviewed_by INTEGER,
+      review_note TEXT,
+      submitted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      reviewed_at TEXT,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE SET NULL,
+      FOREIGN KEY (submitted_by) REFERENCES users(id),
+      FOREIGN KEY (reviewed_by) REFERENCES users(id)
+    );
+
     CREATE UNIQUE INDEX IF NOT EXISTS idx_prayer_unique
       ON prayer_schedules(prayer_date, prayer_name);
     CREATE INDEX IF NOT EXISTS idx_transactions_date
@@ -189,6 +207,14 @@ export function initializeDatabase() {
       ON sessions(expires_at);
     CREATE INDEX IF NOT EXISTS idx_audit_created
       ON audit_logs(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_transaction_approval_status
+      ON transaction_approval_requests(status, updated_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_transaction_approval_submitter
+      ON transaction_approval_requests(submitted_by, updated_at DESC);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_transaction_approval_active_target
+      ON transaction_approval_requests(transaction_id)
+      WHERE transaction_id IS NOT NULL
+        AND status IN ('PENDING_REVIEW', 'REVISION_REQUIRED');
   `);
 
   ensureColumn('transactions', 'category_id', 'INTEGER');

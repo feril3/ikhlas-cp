@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { IconDeviceFloppy, IconHistory } from '@tabler/icons-react';
 import { api } from '@/lib/api.js';
+import { useAuth } from '@/auth/AuthContext.jsx';
 import { formatRupiah } from '@/lib/format.js';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -30,7 +31,15 @@ import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
+function resultText(requiresApproval) {
+  return requiresApproval
+    ? 'Perubahan Bendahara memerlukan approval Ketua/Admin sebelum nilai terposting. Jenis kas masuk/keluar tidak dapat diubah.'
+    : 'Nilai sebelum dan sesudah perubahan dicatat ke audit trail. Jenis kas masuk/keluar tidak dapat diubah.';
+}
+
 export function TransactionEditSheet({ transaction, open, onOpenChange, onSaved }) {
+  const { user } = useAuth();
+  const requiresApproval = user?.role === 'TREASURER';
   const income = transaction?.type === 'INCOME';
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState(null);
@@ -83,7 +92,7 @@ export function TransactionEditSheet({ transaction, open, onOpenChange, onSaved 
 
     setStatus({ type: 'loading', message: 'Menyimpan perubahan...' });
     try {
-      await api.updateTransaction(transaction.id, {
+      const result = await api.updateTransaction(transaction.id, {
         amount: Number(form.amount),
         transactionDate: form.transactionDate,
         method: form.method,
@@ -91,7 +100,7 @@ export function TransactionEditSheet({ transaction, open, onOpenChange, onSaved 
         sourceDetail: income ? form.sourceDetail : '',
         description: form.description
       });
-      await onSaved();
+      await onSaved(result);
       onOpenChange(false);
     } catch (error) {
       setStatus({ type: 'error', message: error.message });
@@ -200,7 +209,8 @@ export function TransactionEditSheet({ transaction, open, onOpenChange, onSaved 
               <div className="flex gap-3 rounded-lg border bg-muted/35 p-3 text-sm text-muted-foreground">
                 <IconHistory aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />
                 <p className="leading-5">
-                  Nilai sebelum dan sesudah perubahan dicatat ke audit trail. Jenis kas masuk/keluar tidak dapat diubah.
+                  {resultText(requiresApproval)}
+
                 </p>
               </div>
 
@@ -223,7 +233,7 @@ export function TransactionEditSheet({ transaction, open, onOpenChange, onSaved 
             disabled={!form?.categoryId || status.type === 'loading'}
           >
             {status.type === 'loading' ? <Spinner /> : <IconDeviceFloppy aria-hidden="true" />}
-            Simpan perubahan
+            {requiresApproval ? 'Ajukan untuk review' : 'Simpan perubahan'}
           </Button>
         </SheetFooter>
       </SheetContent>
