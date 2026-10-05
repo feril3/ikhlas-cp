@@ -1434,6 +1434,329 @@ apiRouter.get('/transactions/:id/attachments/:kind', requireAuth, async (req, re
   }
 });
 
+
+apiRouter.get(
+  '/transaction-approvals',
+  requireAuth,
+  requireRole('ADMIN', 'TREASURER'),
+  (req, res) => {
+    const params = [];
+    const where = req.user.role === 'TREASURER'
+      ? (params.push(req.user.id), 'WHERE requests.submitted_by = ?')
+      : '';
+
+    const rows = db.prepare(`
+      SELECT
+        requests.id,
+        requests.action,
+        requests.transaction_id AS transactionId,
+        requests.status,
+        requests.payload_json AS payloadJson,
+        requests.submitted_by AS submittedBy,
+        submitter.name AS submittedByName,
+        requests.reviewed_by AS reviewedBy,
+        reviewer.name AS reviewedByName,
+        requests.review_note AS reviewNote,
+        requests.submitted_at AS submittedAt,
+        requests.reviewed_at AS reviewedAt,
+        requests.updated_at AS updatedAt
+      FROM transaction_approval_requests AS requests
+      JOIN users AS submitter ON submitter.id = requests.submitted_by
+      LEFT JOIN users AS reviewer ON reviewer.id = requests.reviewed_by
+      ${where}
+      ORDER BY
+        CASE requests.status
+          WHEN 'PENDING_REVIEW' THEN 0
+          WHEN 'REVISION_REQUIRED' THEN 1
+          ELSE 2
+        END,
+        requests.updated_at DESC
+      LIMIT 100
+    `).all(...params);
+
+    return res.json({
+      data: rows.map((row) => approvalRequestResponse({
+        ...row,
+        proposal: parseApprovalPayload(row.payloadJson)
+      }))
+    });
+  }
+);
+
+apiRouter.put(
+  '/transaction-approvals/:id/review',
+  requireAuth,
+  requireRole('ADMIN'),
+  async (req, res) => {
+    const parsed = transactionApprovalReviewSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(422).json({ message: 'Keputusan review tidak valid.' });
+    }
+
+    const request = getApprovalRequestRecord(req.params.id);
+    if (!request) return res.status(404).json({ message: 'Pengajuan tidak ditemukan.' });
+    if (request.status !== 'PENDING_REVIEW') {
+      return res.status(409).json({ message: 'Pengajuan ini tidak lagi menunggu review.' });
+    }
+
+    const { decision, note } = parsed.data;
+    if (decision === 'REVISION_REQUIRED' && note.length < 3) {
+      return res.status(422).json({ message: 'Catatan revisi wajib diisi.' });
+    }
+
+    if (decision === 'REVISION_REQUIRED') {
+      db.prepare(`
+        UPDATE transaction_approval_requests
+        SET
+          status = 'REVISION_REQUIRED',
+          reviewed_by = ?,
+          review_note = ?,
+          reviewed_at = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(req.user.id, note, request.id);
+
+      logAudit(req, {
+        action: 'TRANSACTION_APPROVAL_REVISION_REQUIRED',
+        entityType: 'TRANSACTION_APPROVAL',
+        entityId: request.id,
+        details: {
+          action: request.action,
+          transactionId: request.transactionId,
+          submittedBy: request.submittedBy,
+          note
+        }
+      });
+
+      return res.json({
+        message: 'Pengajuan dikembalikan ke Bendahara untuk direvisi.',
+        approvalRequest: approvalRequestResponse(getApprovalRequestRecord(request.id))
+      });
+    }
+
+    const proposal = request.proposal;
+    let transactionId = request.transactionId;
+    let before = null;
+    let after = null;
+
+    try {
+      db.transaction(() => {
+        if (request.action === 'CREATE') {
+          const created = db.prepare(`
+            INSERT INTO transactions (
+              type,
+              amount,
+              transaction_date,
+              method,
+              category,
+              category_id,
+              source_detail,
+              description,
+              evidence_drive_file_id,
+              evidence_original_name,
+              evidence_mime_type,
+              mutation_drive_file_id,
+              mutation_original_name,
+              mutation_mime_type,
+              created_by
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).run(
+            proposal.type,
+            proposal.amount,
+            proposal.transactionDate,
+            proposal.method,
+            proposal.category,
+            proposal.categoryId,
+            proposal.sourceDetail || '',
+            proposal.description || '',
+            proposal.evidenceFileId || null,
+            proposal.evidenceOriginalName || null,
+            proposal.evidenceMimeType || null,
+            proposal.bankMutationFileId || null,
+            proposal.bankMutationOriginalName || null,
+            proposal.bankMutationMimeType || null,
+            request.submittedBy
+          );
+          transactionId = Number(created.lastInsertRowid);
+        } else if (request.action === 'UPDATE') {
+          before = getTransactionRecord(request.transactionId);
+          if (!before) throw new Error('Transaksi target tidak ditemukan.');
+
+          db.prepare(`
+            UPDATE transactions
+            SET
+              amount = ?,
+              transaction_date = ?,
+              method = ?,
+              category = ?,
+              category_id = ?,
+              source_detail = ?,
+              description = ?,
+              evidence_drive_file_id = ?,
+              evidence_original_name = ?,
+              evidence_mime_type = ?,
+              mutation_drive_file_id = ?,
+              mutation_original_name = ?,
+              mutation_mime_type = ?,
+              updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+          `).run(
+            proposal.amount,
+            proposal.transactionDate,
+            proposal.method,
+            proposal.category,
+            proposal.categoryId,
+            proposal.sourceDetail || '',
+            proposal.description || '',
+            proposal.evidenceFileId || null,
+            proposal.evidenceOriginalName || null,
+            proposal.evidenceMimeType || null,
+            proposal.bankMutationFileId || null,
+            proposal.bankMutationOriginalName || null,
+            proposal.bankMutationMimeType || null,
+            request.transactionId
+          );
+        } else if (request.action === 'DELETE') {
+          before = getTransactionRecord(request.transactionId);
+          if (!before) throw new Error('Transaksi target tidak ditemukan.');
+          db.prepare('DELETE FROM transactions WHERE id = ?').run(request.transactionId);
+        }
+
+        if (request.action !== 'DELETE') {
+          after = getTransactionRecord(transactionId);
+        }
+
+        db.prepare(`
+          UPDATE transaction_approval_requests
+          SET
+            transaction_id = ?,
+            status = 'APPROVED',
+            reviewed_by = ?,
+            review_note = ?,
+            reviewed_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `).run(transactionId, req.user.id, note || null, request.id);
+      })();
+    } catch (error) {
+      console.error('Transaction approval apply failed:', error);
+      return res.status(409).json({ message: error.message || 'Pengajuan gagal diterapkan.' });
+    }
+
+    logAudit(req, {
+      action: 'TRANSACTION_APPROVAL_APPROVED',
+      entityType: 'TRANSACTION_APPROVAL',
+      entityId: request.id,
+      details: {
+        action: request.action,
+        transactionId,
+        submittedBy: request.submittedBy,
+        before,
+        after
+      }
+    });
+
+    if (request.action === 'CREATE' && after) {
+      await sendTransactionNotification(after, getSummary());
+    }
+
+    return res.json({
+      message: request.action === 'DELETE'
+        ? 'Penghapusan transaksi disetujui dan diterapkan.'
+        : 'Pengajuan disetujui dan transaksi sudah diposting.',
+      approvalRequest: approvalRequestResponse(getApprovalRequestRecord(request.id)),
+      transaction: after,
+      summary: getSummary()
+    });
+  }
+);
+
+apiRouter.put(
+  '/transaction-approvals/:id/resubmit',
+  requireAuth,
+  requireRole('TREASURER'),
+  (req, res) => {
+    const request = getApprovalRequestRecord(req.params.id);
+    if (!request) return res.status(404).json({ message: 'Pengajuan tidak ditemukan.' });
+    if (Number(request.submittedBy) !== Number(req.user.id)) {
+      return res.status(403).json({ message: 'Pengajuan ini bukan milik akun Bendahara yang sedang digunakan.' });
+    }
+    if (request.status !== 'REVISION_REQUIRED') {
+      return res.status(409).json({ message: 'Pengajuan ini tidak sedang menunggu revisi.' });
+    }
+
+    let proposal = request.proposal;
+
+    if (request.action !== 'DELETE') {
+      const schema = request.action === 'CREATE' ? transactionSchema : transactionEditSchema;
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(422).json({
+          message: 'Perbaikan transaksi belum valid.',
+          errors: parsed.error.flatten().fieldErrors
+        });
+      }
+
+      const type = request.action === 'CREATE' ? parsed.data.type : request.proposal.type;
+      const input = request.action === 'CREATE' ? parsed.data : { ...parsed.data, type };
+      const existing = request.transactionId ? getTransactionRecord(request.transactionId) : null;
+      const category = db.prepare(`
+        SELECT id, type, name, is_active AS isActive
+        FROM transaction_categories
+        WHERE id = ?
+        LIMIT 1
+      `).get(input.categoryId);
+
+      if (
+        !category ||
+        category.type !== type ||
+        (!category.isActive && Number(category.id) !== Number(existing?.categoryId))
+      ) {
+        return res.status(422).json({ message: 'Kategori transaksi tidak valid atau sudah dinonaktifkan.' });
+      }
+
+      proposal = transactionPayload({
+        type,
+        input,
+        category,
+        existing: request.proposal
+      });
+    }
+
+    db.prepare(`
+      UPDATE transaction_approval_requests
+      SET
+        status = 'PENDING_REVIEW',
+        payload_json = ?,
+        reviewed_by = NULL,
+        review_note = NULL,
+        reviewed_at = NULL,
+        submitted_at = CURRENT_TIMESTAMP,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(serializeApprovalPayload(proposal), request.id);
+
+    const updated = getApprovalRequestRecord(request.id);
+    logAudit(req, {
+      action: 'TRANSACTION_APPROVAL_RESUBMITTED',
+      entityType: 'TRANSACTION_APPROVAL',
+      entityId: request.id,
+      details: {
+        action: request.action,
+        transactionId: request.transactionId,
+        proposal: updated.proposal
+      }
+    });
+
+    return res.json({
+      message: 'Perbaikan dikirim ulang ke Ketua untuk direview.',
+      approvalRequired: true,
+      approvalRequest: approvalRequestResponse(updated)
+    });
+  }
+);
+
 apiRouter.get('/reports/summary', requireAuth, (req, res) => {
   const range = validateDateRange(req);
   if (!range) return res.status(422).json({ message: 'Rentang tanggal tidak valid.' });
