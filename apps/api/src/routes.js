@@ -427,7 +427,8 @@ function transactionPayload({ type, input, category, existing = null, attachment
     evidenceMimeType: attachments.evidenceMimeType ?? existing?.evidenceMimeType ?? null,
     bankMutationFileId: attachments.bankMutationFileId ?? existing?.bankMutationFileId ?? null,
     bankMutationOriginalName: attachments.bankMutationOriginalName ?? existing?.bankMutationOriginalName ?? null,
-    bankMutationMimeType: attachments.bankMutationMimeType ?? existing?.bankMutationMimeType ?? null
+    bankMutationMimeType: attachments.bankMutationMimeType ?? existing?.bankMutationMimeType ?? null,
+    baseUpdatedAt: existing?.updatedAt ?? null
   };
 }
 
@@ -1263,6 +1264,7 @@ apiRouter.post(
 
         const proposal = {
           ...transaction,
+          baseUpdatedAt: transaction.updatedAt,
           evidenceFileId: uploaded.evidence?.id ?? transaction.evidenceFileId,
           evidenceOriginalName: uploaded.evidence?.originalName ?? transaction.evidenceOriginalName,
           evidenceMimeType: uploaded.evidence?.mimeType ?? transaction.evidenceMimeType,
@@ -1640,6 +1642,9 @@ apiRouter.put(
         } else if (request.action === 'UPDATE') {
           before = getTransactionRecord(request.transactionId);
           if (!before) throw new Error('Transaksi target tidak ditemukan.');
+          if (proposal.baseUpdatedAt && before.updatedAt !== proposal.baseUpdatedAt) {
+            throw new Error('Transaksi berubah setelah pengajuan dibuat. Minta Bendahara memperbarui pengajuan.');
+          }
 
           db.prepare(`
             UPDATE transactions
@@ -1678,6 +1683,10 @@ apiRouter.put(
         } else if (request.action === 'DELETE') {
           before = getTransactionRecord(request.transactionId);
           if (!before) throw new Error('Transaksi target tidak ditemukan.');
+          const expectedUpdatedAt = proposal.baseUpdatedAt || proposal.updatedAt;
+          if (expectedUpdatedAt && before.updatedAt !== expectedUpdatedAt) {
+            throw new Error('Transaksi berubah setelah pengajuan penghapusan dibuat. Ajukan ulang penghapusan.');
+          }
           db.prepare('DELETE FROM transactions WHERE id = ?').run(request.transactionId);
         }
 
@@ -1757,7 +1766,11 @@ apiRouter.put(
 
     let proposal = request.proposal;
 
-    if (request.action !== 'DELETE') {
+    if (request.action === 'DELETE') {
+      const current = getTransactionRecord(request.transactionId);
+      if (!current) return res.status(404).json({ message: 'Transaksi target tidak ditemukan.' });
+      proposal = { ...current, baseUpdatedAt: current.updatedAt };
+    } else {
       const schema = request.action === 'CREATE' ? transactionSchema : transactionEditSchema;
       const parsed = schema.safeParse(req.body);
       if (!parsed.success) {
