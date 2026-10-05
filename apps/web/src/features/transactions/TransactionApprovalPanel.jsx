@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { FileUploadField } from '@/features/transactions/FileUploadField.jsx';
 
 const actionLabels = {
   CREATE: 'Transaksi baru',
@@ -197,10 +198,14 @@ function RevisionDialog({ request, open, onOpenChange, onDone }) {
   const proposal = request?.proposal ?? {};
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState(null);
+  const [evidence, setEvidence] = useState(null);
+  const [mutation, setMutation] = useState(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!request || !open) return;
+    setEvidence(null);
+    setMutation(null);
     setForm({
       type: proposal.type,
       amount: String(proposal.amount ?? ''),
@@ -240,6 +245,9 @@ function RevisionDialog({ request, open, onOpenChange, onDone }) {
             description: form.description
           };
 
+      if (evidence || mutation) {
+        await api.uploadApprovalAttachments(request.id, { evidence, mutation });
+      }
       await api.resubmitTransactionApproval(request.id, input);
       toast.success('Perbaikan dikirim ulang ke Ketua.');
       onOpenChange(false);
@@ -307,6 +315,22 @@ function RevisionDialog({ request, open, onOpenChange, onDone }) {
                 <FieldLabel>Keterangan</FieldLabel>
                 <Textarea value={form.description} onChange={(event) => update('description', event.target.value)} rows={3} maxLength={300} />
               </Field>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <FileUploadField
+                  id="approval-revision-evidence"
+                  label="Ganti bukti"
+                  description={proposal.evidenceOriginalName ? `Saat ini: ${proposal.evidenceOriginalName}` : 'Opsional · maks. 5 MB'}
+                  file={evidence}
+                  onChange={setEvidence}
+                />
+                <FileUploadField
+                  id="approval-revision-mutation"
+                  label="Ganti mutasi"
+                  description={proposal.bankMutationOriginalName ? `Saat ini: ${proposal.bankMutationOriginalName}` : 'Opsional · maks. 5 MB'}
+                  file={mutation}
+                  onChange={setMutation}
+                />
+              </div>
             </FieldGroup>
           </form>
         ) : null}
