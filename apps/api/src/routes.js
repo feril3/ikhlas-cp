@@ -1063,6 +1063,46 @@ apiRouter.put(
       });
     }
 
+    if (req.user.role === 'TREASURER') {
+      let request;
+      try {
+        request = createApprovalRequest({
+          action: 'UPDATE',
+          transactionId: existing.id,
+          payload: transactionPayload({
+            type: existing.type,
+            input,
+            category,
+            existing
+          }),
+          submittedBy: req.user.id
+        });
+      } catch (error) {
+        if (error?.code === 'ACTIVE_APPROVAL_EXISTS') {
+          return res.status(409).json({ message: error.message });
+        }
+        throw error;
+      }
+
+      logAudit(req, {
+        action: 'TRANSACTION_APPROVAL_SUBMITTED',
+        entityType: 'TRANSACTION_APPROVAL',
+        entityId: request.id,
+        details: {
+          action: request.action,
+          transactionId: existing.id,
+          before: existing,
+          proposal: request.proposal
+        }
+      });
+
+      return res.status(202).json({
+        message: 'Perubahan transaksi dikirim ke Ketua untuk direview.',
+        approvalRequired: true,
+        approvalRequest: approvalRequestResponse(request)
+      });
+    }
+
     db.prepare(`
       UPDATE transactions
       SET
