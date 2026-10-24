@@ -29,13 +29,39 @@ import {
 
 export const apiRouter = Router();
 
+// Express 4 tidak menangkap Promise yang ditolak; teruskan error dari handler async ke next().
+for (const method of ['get', 'post', 'put', 'patch', 'delete']) {
+  const register = apiRouter[method].bind(apiRouter);
+  apiRouter[method] = (...args) => register(...args.map((handler) => (
+    typeof handler === 'function' && handler.length < 4
+      ? (req, res, next) => {
+        try {
+          const result = handler(req, res, next);
+          if (result && typeof result.then === 'function') result.catch(next);
+        } catch (error) {
+          next(error);
+        }
+      }
+      : handler
+  )));
+}
+
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+
+// Regex saja meloloskan tanggal seperti 2026-13-45 yang membuat Date() melempar RangeError.
+function isIsoDate(value) {
+  const text = String(value ?? '');
+  if (!datePattern.test(text)) return false;
+  const parsed = new Date(`${text}T00:00:00Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === text;
+}
+
 const timePattern = /^\d{2}:\d{2}$/;
 
 const transactionSchema = z.object({
   type: z.enum(['INCOME', 'EXPENSE']),
   amount: z.coerce.number().int().positive().max(9_999_999_999),
-  transactionDate: z.string().regex(datePattern),
+  transactionDate: z.string().refine(isIsoDate, 'Tanggal tidak valid.'),
   method: z.enum(['CASH', 'TRANSFER']),
   categoryId: z.coerce.number().int().positive(),
   sourceDetail: z.string().trim().max(120).optional().default(''),
@@ -84,7 +110,7 @@ const prayerScheduleSchema = z.object({
 
 const activitySchema = z.object({
   title: z.string().trim().min(3).max(140),
-  activityDate: z.string().regex(datePattern),
+  activityDate: z.string().refine(isIsoDate, 'Tanggal tidak valid.'),
   startTime: z.string().regex(timePattern).or(z.literal('')).optional().default(''),
   location: z.string().trim().max(120).optional().default(''),
   speaker: z.string().trim().max(120).optional().default(''),
@@ -102,7 +128,7 @@ const settingsSchema = z.object({
   activeLiveUrl: z.string().trim().url().or(z.literal('')).optional().default(''),
   activeLiveTitle: z.string().trim().max(140).optional().default(''),
   openingBalance: z.coerce.number().int().min(0).max(9_999_999_999),
-  openingBalanceDate: z.string().regex(datePattern).or(z.literal('')).optional().default(''),
+  openingBalanceDate: z.string().refine(isIsoDate, 'Tanggal tidak valid.').or(z.literal('')).optional().default(''),
   openingBalanceNote: z.string().trim().max(240).optional().default('')
 });
 
@@ -126,9 +152,9 @@ const publicMessageSchema = z.object({
   isActive: z.boolean().optional().default(true)
 });
 
-function getSummary() {
-  const openingBalance = getOpeningBalance();
-  const totals = db.prepare(`
+async function getSummary() {
+  const openingBalance = await getOpeningBalance();
+  const totals = await db.prepare(`
     SELECT
       COALESCE(SUM(CASE WHEN type = 'INCOME' THEN amount END), 0) AS total_income,
       COALESCE(SUM(CASE WHEN type = 'EXPENSE' THEN amount END), 0) AS total_expense
@@ -143,16 +169,16 @@ function getSummary() {
   };
 }
 
-function getPeriodSummary(from, to) {
-  const openingBalance = getOpeningBalance();
-  const before = db.prepare(`
+async function getPeriodSummary(from, to) {
+  const openingBalance = await getOpeningBalance();
+  const before = await db.prepare(`
     SELECT
       COALESCE(SUM(CASE WHEN type = 'INCOME' THEN amount ELSE -amount END), 0) AS net
     FROM transactions
     WHERE transaction_date < ?
   `).get(from);
 
-  const period = db.prepare(`
+  const period = await db.prepare(`
     SELECT
       COUNT(*) AS transaction_count,
       COALESCE(SUM(CASE WHEN type = 'INCOME' THEN amount END), 0) AS total_income,
@@ -174,8 +200,8 @@ function getPeriodSummary(from, to) {
   };
 }
 
-function getCashflowSeries(from, to) {
-  const rows = db.prepare(`
+async function getCashflowSeries(from, to) {
+  const rows = await db.prepare(`
     SELECT
       transaction_date AS date,
       COALESCE(SUM(CASE WHEN type = 'INCOME' THEN amount END), 0) AS income,
@@ -207,15 +233,15 @@ function getCashflowSeries(from, to) {
 }
 
 
-function getPrayerSchedule(date) {
+async function getPrayerSchedule(date) {
   let scheduleDate = date;
 
-  if (!scheduleDate || !datePattern.test(scheduleDate)) {
-    scheduleDate = db.prepare('SELECT MAX(prayer_date) AS date FROM prayer_schedules').get()?.date;
+  if (!scheduleDate || !isIsoDate(scheduleDate)) {
+    scheduleDate = (await db.prepare('SELECT MAX(prayer_date) AS date FROM prayer_schedules').get())?.date;
   }
 
   let rows = scheduleDate
-    ? db.prepare(`
+    ? await db.prepare(`
         SELECT
           prayer_name AS prayerName,
           adhan_time AS adhanTime,
@@ -229,14 +255,14 @@ function getPrayerSchedule(date) {
     : [];
 
   if (rows.length === 0) {
-    scheduleDate = db.prepare(`
+    scheduleDate = (await db.prepare(`
       SELECT MAX(prayer_date) AS date
       FROM prayer_schedules
       WHERE prayer_date <= ?
-    `).get(date)?.date;
+    `).get(date))?.date;
 
     rows = scheduleDate
-      ? db.prepare(`
+      ? await db.prepare(`
           SELECT
             prayer_name AS prayerName,
             adhan_time AS adhanTime,
@@ -253,8 +279,8 @@ function getPrayerSchedule(date) {
   return { scheduleDate: scheduleDate ?? null, items: rows };
 }
 
-function getUpcomingActivities(date, limit = 6) {
-  return db.prepare(`
+async function getUpcomingActivities(date, limit = 6) {
+  return (await db.prepare(`
     SELECT
       id,
       title,
@@ -268,17 +294,17 @@ function getUpcomingActivities(date, limit = 6) {
     WHERE activity_date >= ?
     ORDER BY activity_date ASC, start_time ASC
     LIMIT ?
-  `).all(date, limit).map((row) => ({ ...row, isPublished: Boolean(row.isPublished) }));
+  `).all(date, limit)).map((row) => ({ ...row, isPublished: Boolean(row.isPublished) }));
 }
 
 function isFridayDate(date) {
-  if (!datePattern.test(String(date ?? ''))) return false;
+  if (!isIsoDate(String(date ?? ''))) return false;
   return new Date(`${date}T12:00:00+07:00`).getUTCDay() === 5;
 }
 
-function getFridaySchedule(date) {
+async function getFridaySchedule(date) {
   if (!isFridayDate(date)) return null;
-  return db.prepare(`
+  return (await db.prepare(`
     SELECT
       schedule_date AS scheduleDate,
       imam,
@@ -287,7 +313,7 @@ function getFridaySchedule(date) {
       updated_at AS updatedAt
     FROM friday_schedules
     WHERE schedule_date = ?
-  `).get(date) ?? null;
+  `).get(date)) ?? null;
 }
 
 function addCalendarDays(date, days) {
@@ -309,9 +335,9 @@ function upcomingFridayDates(from, count = 8) {
   return Array.from({ length: safeCount }, (_, index) => addCalendarDays(firstFriday, index * 7));
 }
 
-function getUpcomingFridaySchedules(from, count = 8) {
-  return upcomingFridayDates(from, count).map((scheduleDate) => {
-    const existing = getFridaySchedule(scheduleDate);
+async function getUpcomingFridaySchedules(from, count = 8) {
+  return Promise.all(upcomingFridayDates(from, count).map(async scheduleDate => {
+    const existing = await getFridaySchedule(scheduleDate);
     return existing ?? {
       scheduleDate,
       imam: '',
@@ -319,11 +345,11 @@ function getUpcomingFridaySchedules(from, count = 8) {
       bilal: '',
       updatedAt: null
     };
-  });
+  }));
 }
 
-function getTransactionRecord(id) {
-  return db.prepare(`
+async function getTransactionRecord(id, executor = db) {
+  return (await executor.prepare(`
     SELECT
       id,
       type,
@@ -345,7 +371,7 @@ function getTransactionRecord(id) {
       updated_at AS updatedAt
     FROM transactions
     WHERE id = ?
-  `).get(id) ?? null;
+  `).get(id)) ?? null;
 }
 
 
@@ -361,8 +387,8 @@ function parseApprovalPayload(value) {
   }
 }
 
-function getApprovalRequestRecord(id) {
-  const row = db.prepare(`
+async function getApprovalRequestRecord(id) {
+  const row = await db.prepare(`
     SELECT
       requests.id,
       requests.action,
@@ -386,9 +412,9 @@ function getApprovalRequestRecord(id) {
   return row ? { ...row, proposal: parseApprovalPayload(row.payloadJson) } : null;
 }
 
-function createApprovalRequest({ action, transactionId = null, payload, submittedBy }) {
+async function createApprovalRequest({ action, transactionId = null, payload, submittedBy }) {
   if (transactionId) {
-    const active = db.prepare(`
+    const active = await db.prepare(`
       SELECT id
       FROM transaction_approval_requests
       WHERE transaction_id = ?
@@ -403,13 +429,13 @@ function createApprovalRequest({ action, transactionId = null, payload, submitte
     }
   }
 
-  const result = db.prepare(`
+  const result = await db.prepare(`
     INSERT INTO transaction_approval_requests
       (action, transaction_id, status, payload_json, submitted_by)
     VALUES (?, ?, 'PENDING_REVIEW', ?, ?)
   `).run(action, transactionId, serializeApprovalPayload(payload), submittedBy);
 
-  return getApprovalRequestRecord(Number(result.lastInsertRowid));
+  return await getApprovalRequestRecord(Number(result.lastInsertRowid));
 }
 
 function transactionPayload({ type, input, category, existing = null, attachments = {} }) {
@@ -432,13 +458,13 @@ function transactionPayload({ type, input, category, existing = null, attachment
   };
 }
 
-function approvalRequestResponse(request) {
+async function approvalRequestResponse(request) {
   if (!request) return null;
   const { payloadJson, ...rest } = request;
   return {
     ...rest,
     currentTransaction: request.transactionId
-      ? getTransactionRecord(request.transactionId)
+      ? await getTransactionRecord(request.transactionId)
       : null
   };
 }
@@ -465,20 +491,22 @@ function firstDayOfMonth(date) {
 }
 
 function validateDateRange(req) {
-  const to = datePattern.test(String(req.query.to ?? '')) ? String(req.query.to) : todayIso();
-  const from = datePattern.test(String(req.query.from ?? '')) ? String(req.query.from) : firstDayOfMonth(to);
+  const to = isIsoDate(String(req.query.to ?? '')) ? String(req.query.to) : todayIso();
+  const from = isIsoDate(String(req.query.from ?? '')) ? String(req.query.from) : firstDayOfMonth(to);
   if (from > to) return null;
   return { from, to };
 }
 
 function escapeCsv(value) {
-  const string = String(value ?? '');
+  let string = String(value ?? '');
+  // Cegah CSV/formula injection saat file dibuka di Excel atau Google Sheets.
+  if (typeof value === 'string' && /^[=+\-@\t\r]/.test(string)) string = `'${string}`;
   if (/[",\n]/.test(string)) return `"${string.replaceAll('"', '""')}"`;
   return string;
 }
 
-function publicSettings() {
-  const raw = getSettings([
+async function publicSettings() {
+  const raw = await getSettings([
     'mosque_name',
     'mosque_tagline',
     'bank_name',
@@ -501,9 +529,9 @@ function publicSettings() {
   };
 }
 
-function adminSettings() {
-  const publicValues = publicSettings();
-  const raw = getSettings([
+async function adminSettings() {
+  const publicValues = await publicSettings();
+  const raw = await getSettings([
     'opening_balance',
     'opening_balance_date',
     'opening_balance_note'
@@ -517,8 +545,8 @@ function adminSettings() {
   };
 }
 
-function getActivePublicMessages() {
-  return db.prepare(`
+async function getActivePublicMessages() {
+  return await db.prepare(`
     SELECT
       id,
       kind,
@@ -549,9 +577,9 @@ apiRouter.get('/health', (_req, res) => {
   });
 });
 
-apiRouter.get('/auth/status', (req, res) => {
-  const userCount = db.prepare('SELECT COUNT(*) AS count FROM users').get().count;
-  const user = getAuthenticatedUser(req);
+apiRouter.get('/auth/status', async (req, res) => {
+  const userCount = (await db.prepare('SELECT COUNT(*) AS count FROM users').get()).count;
+  const user = await getAuthenticatedUser(req);
   res.json({
     setupRequired: userCount === 0,
     authenticated: Boolean(user),
@@ -559,8 +587,8 @@ apiRouter.get('/auth/status', (req, res) => {
   });
 });
 
-apiRouter.post('/auth/setup', (req, res) => {
-  const userCount = db.prepare('SELECT COUNT(*) AS count FROM users').get().count;
+apiRouter.post('/auth/setup', async (req, res) => {
+  const userCount = (await db.prepare('SELECT COUNT(*) AS count FROM users').get()).count;
   if (userCount > 0) {
     return res.status(409).json({ message: 'Setup awal sudah diselesaikan.' });
   }
@@ -570,10 +598,10 @@ apiRouter.post('/auth/setup', (req, res) => {
     return res.status(422).json({ message: 'Data akun belum valid.', errors: parsed.error.flatten().fieldErrors });
   }
 
-  const role = db.prepare("SELECT id FROM roles WHERE name = 'ADMIN'").get();
+  const role = await db.prepare("SELECT id FROM roles WHERE name = 'ADMIN'").get();
   const input = parsed.data;
 
-  const result = db.prepare(`
+  const result = await db.prepare(`
     INSERT INTO users (role_id, name, email, password_hash)
     VALUES (?, ?, ?, ?)
   `).run(role.id, input.name, input.email.toLowerCase(), hashPassword(input.password));
@@ -586,9 +614,9 @@ apiRouter.post('/auth/setup', (req, res) => {
     isActive: 1
   };
 
-  const session = createSession(user.id);
+  const session = await createSession(user.id);
   setSessionCookie(res, session.token);
-  logAudit(req, {
+  await logAudit(req, {
     userId: user.id,
     action: 'AUTH_SETUP',
     entityType: 'USER',
@@ -599,13 +627,13 @@ apiRouter.post('/auth/setup', (req, res) => {
   return res.status(201).json({ user });
 });
 
-apiRouter.post('/auth/login', (req, res) => {
+apiRouter.post('/auth/login', async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(422).json({ message: 'Email atau password tidak valid.' });
   }
 
-  const account = db.prepare(`
+  const account = await db.prepare(`
     SELECT
       users.id,
       users.name,
@@ -620,7 +648,7 @@ apiRouter.post('/auth/login', (req, res) => {
   `).get(parsed.data.email);
 
   if (!account || !account.isActive || !verifyPassword(parsed.data.password, account.passwordHash)) {
-    logAudit(req, {
+    await logAudit(req, {
       action: 'AUTH_LOGIN_FAILED',
       entityType: 'USER',
       details: { email: parsed.data.email.toLowerCase() }
@@ -628,7 +656,7 @@ apiRouter.post('/auth/login', (req, res) => {
     return res.status(401).json({ message: 'Email atau password salah.' });
   }
 
-  const session = createSession(account.id);
+  const session = await createSession(account.id);
   setSessionCookie(res, session.token);
 
   const user = {
@@ -639,7 +667,7 @@ apiRouter.post('/auth/login', (req, res) => {
     isActive: account.isActive
   };
 
-  logAudit(req, {
+  await logAudit(req, {
     userId: account.id,
     action: 'AUTH_LOGIN',
     entityType: 'USER',
@@ -649,13 +677,13 @@ apiRouter.post('/auth/login', (req, res) => {
   return res.json({ user });
 });
 
-apiRouter.post('/auth/logout', requireAuth, (req, res) => {
-  logAudit(req, {
+apiRouter.post('/auth/logout', requireAuth, async (req, res) => {
+  await logAudit(req, {
     action: 'AUTH_LOGOUT',
     entityType: 'USER',
     entityId: req.user.id
   });
-  destroySession(req);
+  await destroySession(req);
   clearSessionCookie(res);
   res.json({ message: 'Logout berhasil.' });
 });
@@ -665,10 +693,10 @@ apiRouter.get('/auth/me', requireAuth, (req, res) => {
 });
 
 apiRouter.get('/public/display', async (req, res) => {
-  const date = datePattern.test(String(req.query.date ?? '')) ? String(req.query.date) : todayIso();
-  const period = getPeriodSummary(firstDayOfMonth(date), date);
+  const date = isIsoDate(String(req.query.date ?? '')) ? String(req.query.date) : todayIso();
+  const period = await getPeriodSummary(firstDayOfMonth(date), date);
 
-  const recentTransactions = db.prepare(`
+  const recentTransactions = await db.prepare(`
     SELECT
       id,
       type,
@@ -686,9 +714,9 @@ apiRouter.get('/public/display', async (req, res) => {
   ]);
 
   res.json({
-    settings: publicSettings(),
+    settings: await publicSettings(),
     finance: {
-      currentBalance: getSummary().currentBalance,
+      currentBalance: (await getSummary()).currentBalance,
       totalIncome: period.totalIncome,
       totalExpense: period.totalExpense,
       from: period.from,
@@ -696,15 +724,15 @@ apiRouter.get('/public/display', async (req, res) => {
     },
     prayerSchedule,
     nextDayPrayerSchedule,
-    activities: getUpcomingActivities(date, 4).filter((item) => item.isPublished),
-    fridaySchedule: getFridaySchedule(date),
+    activities: (await getUpcomingActivities(date, 4)).filter((item) => item.isPublished),
+    fridaySchedule: await getFridaySchedule(date),
     recentTransactions,
-    messages: getActivePublicMessages()
+    messages: await getActivePublicMessages()
   });
 });
 
 apiRouter.get('/dashboard', requireAuth, async (req, res) => {
-  const recentTransactions = db.prepare(`
+  const recentTransactions = await db.prepare(`
     SELECT
       id,
       type,
@@ -727,18 +755,18 @@ apiRouter.get('/dashboard', requireAuth, async (req, res) => {
     LIMIT 6
   `).all();
 
-  const dashboardDate = datePattern.test(String(req.query.date ?? ''))
+  const dashboardDate = isIsoDate(String(req.query.date ?? ''))
     ? String(req.query.date)
     : todayIso();
   const schedule = await getProviderPrayerSchedule(dashboardDate);
-  const activities = getUpcomingActivities(dashboardDate, 4);
+  const activities = await getUpcomingActivities(dashboardDate, 4);
   const monthFrom = firstDayOfMonth(dashboardDate);
   const chartFrom = addCalendarDays(dashboardDate, -29);
 
   res.json({
-    summary: getSummary(),
-    monthSummary: getPeriodSummary(monthFrom, dashboardDate),
-    cashflow: getCashflowSeries(chartFrom, dashboardDate),
+    summary: await getSummary(),
+    monthSummary: await getPeriodSummary(monthFrom, dashboardDate),
+    cashflow: await getCashflowSeries(chartFrom, dashboardDate),
     recentTransactions,
     prayerSchedule: schedule.items,
     prayerScheduleDate: schedule.scheduleDate,
@@ -747,7 +775,7 @@ apiRouter.get('/dashboard', requireAuth, async (req, res) => {
   });
 });
 
-apiRouter.get('/transactions', requireAuth, (req, res) => {
+apiRouter.get('/transactions', requireAuth, async (req, res) => {
   const clauses = [];
   const params = [];
 
@@ -755,17 +783,17 @@ apiRouter.get('/transactions', requireAuth, (req, res) => {
     clauses.push('type = ?');
     params.push(req.query.type);
   }
-  if (datePattern.test(String(req.query.from ?? ''))) {
+  if (isIsoDate(String(req.query.from ?? ''))) {
     clauses.push('transaction_date >= ?');
     params.push(req.query.from);
   }
-  if (datePattern.test(String(req.query.to ?? ''))) {
+  if (isIsoDate(String(req.query.to ?? ''))) {
     clauses.push('transaction_date <= ?');
     params.push(req.query.to);
   }
 
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
-  const rows = db.prepare(`
+  const rows = await db.prepare(`
     SELECT
       id,
       type,
@@ -790,7 +818,7 @@ apiRouter.get('/transactions', requireAuth, (req, res) => {
     LIMIT 500
   `).all(...params);
 
-  res.json({ data: rows, summary: getSummary() });
+  res.json({ data: rows, summary: await getSummary() });
 });
 
 apiRouter.post(
@@ -808,7 +836,7 @@ apiRouter.post(
     }
 
     const input = parsed.data;
-    const category = db.prepare(`
+    const category = await db.prepare(`
       SELECT id, type, name, is_active AS isActive
       FROM transaction_categories
       WHERE id = ?
@@ -835,7 +863,7 @@ apiRouter.post(
       const uploaded = {};
 
       try {
-        request = createApprovalRequest({
+        request = await createApprovalRequest({
           action: 'CREATE',
           payload: transactionPayload({
             type: input.type,
@@ -877,20 +905,20 @@ apiRouter.post(
           }
         });
 
-        db.prepare(`
+        await db.prepare(`
           UPDATE transaction_approval_requests
           SET payload_json = ?, updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
         `).run(serializeApprovalPayload(proposal), request.id);
 
-        request = getApprovalRequestRecord(request.id);
+        request = await getApprovalRequestRecord(request.id);
       } catch (error) {
         await Promise.allSettled([
           deleteTransactionAttachment(uploaded.evidence?.id),
           deleteTransactionAttachment(uploaded.mutation?.id)
         ]);
         if (request?.id) {
-          db.prepare('DELETE FROM transaction_approval_requests WHERE id = ?').run(request.id);
+          await db.prepare('DELETE FROM transaction_approval_requests WHERE id = ?').run(request.id);
         }
 
         console.error('Transaction approval submission failed:', error);
@@ -901,7 +929,7 @@ apiRouter.post(
         });
       }
 
-      logAudit(req, {
+      await logAudit(req, {
         action: 'TRANSACTION_APPROVAL_SUBMITTED',
         entityType: 'TRANSACTION_APPROVAL',
         entityId: request.id,
@@ -915,7 +943,7 @@ apiRouter.post(
       return res.status(202).json({
         message: 'Pengajuan transaksi dikirim ke Ketua untuk direview.',
         approvalRequired: true,
-        approvalRequest: approvalRequestResponse(request)
+        approvalRequest: await approvalRequestResponse(request)
       });
     }
 
@@ -926,7 +954,7 @@ apiRouter.post(
         (@type, @amount, @transactionDate, @method, @category, @categoryId, @sourceDetail, @description, @createdBy)
     `);
 
-    const created = insert.run({
+    const created = await insert.run({
       ...input,
       category: category.name,
       sourceDetail: input.type === 'INCOME' ? input.sourceDetail : '',
@@ -954,7 +982,7 @@ apiRouter.post(
         });
       }
 
-      db.prepare(`
+      await db.prepare(`
         UPDATE transactions
         SET
           evidence_drive_file_id = ?,
@@ -978,7 +1006,7 @@ apiRouter.post(
         deleteTransactionAttachment(uploaded.evidence?.id),
         deleteTransactionAttachment(uploaded.mutation?.id)
       ]);
-      db.prepare('DELETE FROM transactions WHERE id = ?').run(transactionId);
+      await db.prepare('DELETE FROM transactions WHERE id = ?').run(transactionId);
 
       console.error('Google Drive upload failed:', error);
       return res.status(502).json({
@@ -986,7 +1014,7 @@ apiRouter.post(
       });
     }
 
-    const transaction = db.prepare(`
+    const transaction = await db.prepare(`
       SELECT
         id,
         type,
@@ -1008,8 +1036,8 @@ apiRouter.post(
       WHERE id = ?
     `).get(transactionId);
 
-    const summary = getSummary();
-    logAudit(req, {
+    const summary = await getSummary();
+    await logAudit(req, {
       action: 'TRANSACTION_CREATE',
       entityType: 'TRANSACTION',
       entityId: transaction.id,
@@ -1039,8 +1067,8 @@ apiRouter.put(
   '/transactions/:id',
   requireAuth,
   requireRole('ADMIN', 'TREASURER'),
-  (req, res) => {
-    const existing = getTransactionRecord(req.params.id);
+  async (req, res) => {
+    const existing = await getTransactionRecord(req.params.id);
     if (!existing) return res.status(404).json({ message: 'Transaksi tidak ditemukan.' });
 
     const parsed = transactionEditSchema.safeParse(req.body);
@@ -1052,7 +1080,7 @@ apiRouter.put(
     }
 
     const input = parsed.data;
-    const category = db.prepare(`
+    const category = await db.prepare(`
       SELECT id, type, name, is_active AS isActive
       FROM transaction_categories
       WHERE id = ?
@@ -1072,7 +1100,7 @@ apiRouter.put(
     if (req.user.role === 'TREASURER') {
       let request;
       try {
-        request = createApprovalRequest({
+        request = await createApprovalRequest({
           action: 'UPDATE',
           transactionId: existing.id,
           payload: transactionPayload({
@@ -1090,7 +1118,7 @@ apiRouter.put(
         throw error;
       }
 
-      logAudit(req, {
+      await logAudit(req, {
         action: 'TRANSACTION_APPROVAL_SUBMITTED',
         entityType: 'TRANSACTION_APPROVAL',
         entityId: request.id,
@@ -1105,11 +1133,11 @@ apiRouter.put(
       return res.status(202).json({
         message: 'Perubahan transaksi dikirim ke Ketua untuk direview.',
         approvalRequired: true,
-        approvalRequest: approvalRequestResponse(request)
+        approvalRequest: await approvalRequestResponse(request)
       });
     }
 
-    db.prepare(`
+    await db.prepare(`
       UPDATE transactions
       SET
         amount = ?,
@@ -1132,8 +1160,8 @@ apiRouter.put(
       existing.id
     );
 
-    const updated = getTransactionRecord(existing.id);
-    logAudit(req, {
+    const updated = await getTransactionRecord(existing.id);
+    await logAudit(req, {
       action: 'TRANSACTION_UPDATE',
       entityType: 'TRANSACTION',
       entityId: existing.id,
@@ -1146,7 +1174,7 @@ apiRouter.put(
     return res.json({
       message: 'Transaksi berhasil diperbarui.',
       transaction: updated,
-      summary: getSummary()
+      summary: await getSummary()
     });
   }
 );
@@ -1155,14 +1183,14 @@ apiRouter.delete(
   '/transactions/:id',
   requireAuth,
   requireRole('ADMIN', 'TREASURER'),
-  (req, res) => {
-    const existing = getTransactionRecord(req.params.id);
+  async (req, res) => {
+    const existing = await getTransactionRecord(req.params.id);
     if (!existing) return res.status(404).json({ message: 'Transaksi tidak ditemukan.' });
 
     if (req.user.role === 'TREASURER') {
       let request;
       try {
-        request = createApprovalRequest({
+        request = await createApprovalRequest({
           action: 'DELETE',
           transactionId: existing.id,
           payload: existing,
@@ -1175,7 +1203,7 @@ apiRouter.delete(
         throw error;
       }
 
-      logAudit(req, {
+      await logAudit(req, {
         action: 'TRANSACTION_APPROVAL_SUBMITTED',
         entityType: 'TRANSACTION_APPROVAL',
         entityId: request.id,
@@ -1189,13 +1217,13 @@ apiRouter.delete(
       return res.status(202).json({
         message: 'Penghapusan transaksi dikirim ke Ketua untuk direview.',
         approvalRequired: true,
-        approvalRequest: approvalRequestResponse(request)
+        approvalRequest: await approvalRequestResponse(request)
       });
     }
 
-    db.prepare('DELETE FROM transactions WHERE id = ?').run(existing.id);
+    await db.prepare('DELETE FROM transactions WHERE id = ?').run(existing.id);
 
-    logAudit(req, {
+    await logAudit(req, {
       action: 'TRANSACTION_DELETE',
       entityType: 'TRANSACTION',
       entityId: existing.id,
@@ -1208,7 +1236,7 @@ apiRouter.delete(
 
     return res.json({
       message: 'Transaksi berhasil dihapus. Bukti Google Drive dipertahankan untuk audit.',
-      summary: getSummary()
+      summary: await getSummary()
     });
   }
 );
@@ -1219,7 +1247,7 @@ apiRouter.post(
   requireRole('ADMIN', 'TREASURER'),
   transactionUpload,
   async (req, res) => {
-    const transaction = getTransactionRecord(req.params.id);
+    const transaction = await getTransactionRecord(req.params.id);
 
     if (!transaction) {
       return res.status(404).json({ message: 'Transaksi tidak ditemukan.' });
@@ -1237,7 +1265,7 @@ apiRouter.post(
       const uploaded = {};
 
       try {
-        request = createApprovalRequest({
+        request = await createApprovalRequest({
           action: 'UPDATE',
           transactionId: transaction.id,
           payload: transaction,
@@ -1273,20 +1301,20 @@ apiRouter.post(
           bankMutationMimeType: uploaded.mutation?.mimeType ?? transaction.bankMutationMimeType
         };
 
-        db.prepare(`
+        await db.prepare(`
           UPDATE transaction_approval_requests
           SET payload_json = ?, updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
         `).run(serializeApprovalPayload(proposal), request.id);
 
-        request = getApprovalRequestRecord(request.id);
+        request = await getApprovalRequestRecord(request.id);
       } catch (error) {
         await Promise.allSettled([
           deleteTransactionAttachment(uploaded.evidence?.id),
           deleteTransactionAttachment(uploaded.mutation?.id)
         ]);
         if (request?.id) {
-          db.prepare('DELETE FROM transaction_approval_requests WHERE id = ?').run(request.id);
+          await db.prepare('DELETE FROM transaction_approval_requests WHERE id = ?').run(request.id);
         }
         if (error?.code === 'ACTIVE_APPROVAL_EXISTS') {
           return res.status(409).json({ message: error.message });
@@ -1295,7 +1323,7 @@ apiRouter.post(
         return res.status(502).json({ message: 'Pengajuan perubahan dokumen gagal dibuat.' });
       }
 
-      logAudit(req, {
+      await logAudit(req, {
         action: 'TRANSACTION_APPROVAL_SUBMITTED',
         entityType: 'TRANSACTION_APPROVAL',
         entityId: request.id,
@@ -1309,7 +1337,7 @@ apiRouter.post(
       return res.status(202).json({
         message: 'Perubahan dokumen dikirim ke Ketua untuk direview.',
         approvalRequired: true,
-        approvalRequest: approvalRequestResponse(request)
+        approvalRequest: await approvalRequestResponse(request)
       });
     }
 
@@ -1334,7 +1362,7 @@ apiRouter.post(
         });
       }
 
-      db.prepare(`
+      await db.prepare(`
         UPDATE transactions
         SET
           evidence_drive_file_id = COALESCE(?, evidence_drive_file_id),
@@ -1367,7 +1395,7 @@ apiRouter.post(
       mutation ? deleteTransactionAttachment(transaction.bankMutationFileId) : Promise.resolve()
     ]);
 
-    logAudit(req, {
+    await logAudit(req, {
       action: 'TRANSACTION_ATTACHMENTS_UPDATE',
       entityType: 'TRANSACTION',
       entityId: transaction.id,
@@ -1386,7 +1414,7 @@ apiRouter.post(
 );
 
 apiRouter.get('/transactions/:id/attachments/:kind', requireAuth, async (req, res) => {
-  const transaction = db.prepare(`
+  const transaction = await db.prepare(`
     SELECT
       evidence_drive_file_id AS evidenceFileId,
       evidence_original_name AS evidenceOriginalName,
@@ -1448,7 +1476,7 @@ apiRouter.post(
   requireRole('TREASURER'),
   transactionUpload,
   async (req, res) => {
-    const request = getApprovalRequestRecord(req.params.id);
+    const request = await getApprovalRequestRecord(req.params.id);
     if (!request) return res.status(404).json({ message: 'Pengajuan tidak ditemukan.' });
     if (Number(request.submittedBy) !== Number(req.user.id)) {
       return res.status(403).json({ message: 'Pengajuan ini bukan milik akun Bendahara yang sedang digunakan.' });
@@ -1491,7 +1519,7 @@ apiRouter.post(
     }
 
     const currentTransaction = request.transactionId
-      ? getTransactionRecord(request.transactionId)
+      ? await getTransactionRecord(request.transactionId)
       : null;
     const previous = request.proposal;
     const proposal = {
@@ -1504,7 +1532,7 @@ apiRouter.post(
       bankMutationMimeType: uploaded.mutation?.mimeType ?? previous.bankMutationMimeType ?? null
     };
 
-    db.prepare(`
+    await db.prepare(`
       UPDATE transaction_approval_requests
       SET payload_json = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
@@ -1525,8 +1553,8 @@ apiRouter.post(
         : Promise.resolve()
     ]);
 
-    const updated = getApprovalRequestRecord(request.id);
-    logAudit(req, {
+    const updated = await getApprovalRequestRecord(request.id);
+    await logAudit(req, {
       action: 'TRANSACTION_APPROVAL_DOCUMENTS_UPDATED',
       entityType: 'TRANSACTION_APPROVAL',
       entityId: request.id,
@@ -1538,7 +1566,7 @@ apiRouter.post(
 
     return res.json({
       message: 'Dokumen revisi berhasil diperbarui.',
-      approvalRequest: approvalRequestResponse(updated)
+      approvalRequest: await approvalRequestResponse(updated)
     });
   }
 );
@@ -1548,7 +1576,7 @@ apiRouter.get(
   requireAuth,
   requireRole('ADMIN', 'TREASURER'),
   async (req, res) => {
-    const request = getApprovalRequestRecord(req.params.id);
+    const request = await getApprovalRequestRecord(req.params.id);
     if (!request) return res.status(404).json({ message: 'Pengajuan tidak ditemukan.' });
 
     if (req.user.role === 'TREASURER' && Number(request.submittedBy) !== Number(req.user.id)) {
@@ -1600,13 +1628,13 @@ apiRouter.get(
   '/transaction-approvals',
   requireAuth,
   requireRole('ADMIN', 'TREASURER'),
-  (req, res) => {
+  async (req, res) => {
     const params = [];
     const where = req.user.role === 'TREASURER'
       ? (params.push(req.user.id), 'WHERE requests.submitted_by = ?')
       : '';
 
-    const rows = db.prepare(`
+    const rows = await db.prepare(`
       SELECT
         requests.id,
         requests.action,
@@ -1636,10 +1664,10 @@ apiRouter.get(
     `).all(...params);
 
     return res.json({
-      data: rows.map((row) => approvalRequestResponse({
+      data: await Promise.all(rows.map(async row => await approvalRequestResponse({
         ...row,
         proposal: parseApprovalPayload(row.payloadJson)
-      }))
+      })))
     });
   }
 );
@@ -1654,7 +1682,7 @@ apiRouter.put(
       return res.status(422).json({ message: 'Keputusan review tidak valid.' });
     }
 
-    const request = getApprovalRequestRecord(req.params.id);
+    const request = await getApprovalRequestRecord(req.params.id);
     if (!request) return res.status(404).json({ message: 'Pengajuan tidak ditemukan.' });
     if (request.status !== 'PENDING_REVIEW') {
       return res.status(409).json({ message: 'Pengajuan ini tidak lagi menunggu review.' });
@@ -1666,7 +1694,7 @@ apiRouter.put(
     }
 
     if (decision === 'REVISION_REQUIRED') {
-      db.prepare(`
+      await db.prepare(`
         UPDATE transaction_approval_requests
         SET
           status = 'REVISION_REQUIRED',
@@ -1677,7 +1705,7 @@ apiRouter.put(
         WHERE id = ?
       `).run(req.user.id, note, request.id);
 
-      logAudit(req, {
+      await logAudit(req, {
         action: 'TRANSACTION_APPROVAL_REVISION_REQUIRED',
         entityType: 'TRANSACTION_APPROVAL',
         entityId: request.id,
@@ -1691,19 +1719,22 @@ apiRouter.put(
 
       return res.json({
         message: 'Pengajuan dikembalikan ke Bendahara untuk direvisi.',
-        approvalRequest: approvalRequestResponse(getApprovalRequestRecord(request.id))
+        approvalRequest: await approvalRequestResponse(await getApprovalRequestRecord(request.id))
       });
     }
 
     const proposal = request.proposal;
+    if (request.action !== 'DELETE' && proposal?.type === 'EXPENSE' && !proposal.evidenceFileId) {
+      return res.status(422).json({ message: 'Kas keluar tanpa bukti transaksi tidak dapat disetujui. Minta revisi kepada Bendahara.' });
+    }
     let transactionId = request.transactionId;
     let before = null;
     let after = null;
 
     try {
-      db.transaction(() => {
+      await db.transaction(async (tx) => {
         if (request.action === 'CREATE') {
-          const created = db.prepare(`
+          const created = await tx.prepare(`
             INSERT INTO transactions (
               type,
               amount,
@@ -1741,13 +1772,13 @@ apiRouter.put(
           );
           transactionId = Number(created.lastInsertRowid);
         } else if (request.action === 'UPDATE') {
-          before = getTransactionRecord(request.transactionId);
+          before = await getTransactionRecord(request.transactionId, tx);
           if (!before) throw new Error('Transaksi target tidak ditemukan.');
           if (proposal.baseUpdatedAt && before.updatedAt !== proposal.baseUpdatedAt) {
             throw new Error('Transaksi berubah setelah pengajuan dibuat. Minta Bendahara memperbarui pengajuan.');
           }
 
-          db.prepare(`
+          await tx.prepare(`
             UPDATE transactions
             SET
               amount = ?,
@@ -1782,20 +1813,20 @@ apiRouter.put(
             request.transactionId
           );
         } else if (request.action === 'DELETE') {
-          before = getTransactionRecord(request.transactionId);
+          before = await getTransactionRecord(request.transactionId, tx);
           if (!before) throw new Error('Transaksi target tidak ditemukan.');
           const expectedUpdatedAt = proposal.baseUpdatedAt || proposal.updatedAt;
           if (expectedUpdatedAt && before.updatedAt !== expectedUpdatedAt) {
             throw new Error('Transaksi berubah setelah pengajuan penghapusan dibuat. Ajukan ulang penghapusan.');
           }
-          db.prepare('DELETE FROM transactions WHERE id = ?').run(request.transactionId);
+          await tx.prepare('DELETE FROM transactions WHERE id = ?').run(request.transactionId);
         }
 
         if (request.action !== 'DELETE') {
-          after = getTransactionRecord(transactionId);
+          after = await getTransactionRecord(transactionId, tx);
         }
 
-        db.prepare(`
+        await tx.prepare(`
           UPDATE transaction_approval_requests
           SET
             transaction_id = ?,
@@ -1806,13 +1837,13 @@ apiRouter.put(
             updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
         `).run(request.action === 'DELETE' ? null : transactionId, req.user.id, note || null, request.id);
-      })();
+      });
     } catch (error) {
       console.error('Transaction approval apply failed:', error);
       return res.status(409).json({ message: error.message || 'Pengajuan gagal diterapkan.' });
     }
 
-    logAudit(req, {
+    await logAudit(req, {
       action: 'TRANSACTION_APPROVAL_APPROVED',
       entityType: 'TRANSACTION_APPROVAL',
       entityId: request.id,
@@ -1837,16 +1868,16 @@ apiRouter.put(
     }
 
     if (request.action === 'CREATE' && after) {
-      await sendTransactionNotification(after, getSummary());
+      await sendTransactionNotification(after, await getSummary());
     }
 
     return res.json({
       message: request.action === 'DELETE'
         ? 'Penghapusan transaksi disetujui dan diterapkan.'
         : 'Pengajuan disetujui dan transaksi sudah diposting.',
-      approvalRequest: approvalRequestResponse(getApprovalRequestRecord(request.id)),
+      approvalRequest: await approvalRequestResponse(await getApprovalRequestRecord(request.id)),
       transaction: after,
-      summary: getSummary()
+      summary: await getSummary()
     });
   }
 );
@@ -1855,8 +1886,8 @@ apiRouter.put(
   '/transaction-approvals/:id/resubmit',
   requireAuth,
   requireRole('TREASURER'),
-  (req, res) => {
-    const request = getApprovalRequestRecord(req.params.id);
+  async (req, res) => {
+    const request = await getApprovalRequestRecord(req.params.id);
     if (!request) return res.status(404).json({ message: 'Pengajuan tidak ditemukan.' });
     if (Number(request.submittedBy) !== Number(req.user.id)) {
       return res.status(403).json({ message: 'Pengajuan ini bukan milik akun Bendahara yang sedang digunakan.' });
@@ -1868,7 +1899,7 @@ apiRouter.put(
     let proposal = request.proposal;
 
     if (request.action === 'DELETE') {
-      const current = getTransactionRecord(request.transactionId);
+      const current = await getTransactionRecord(request.transactionId);
       if (!current) return res.status(404).json({ message: 'Transaksi target tidak ditemukan.' });
       proposal = { ...current, baseUpdatedAt: current.updatedAt };
     } else {
@@ -1883,8 +1914,8 @@ apiRouter.put(
 
       const type = request.action === 'CREATE' ? parsed.data.type : request.proposal.type;
       const input = request.action === 'CREATE' ? parsed.data : { ...parsed.data, type };
-      const existing = request.transactionId ? getTransactionRecord(request.transactionId) : null;
-      const category = db.prepare(`
+      const existing = request.transactionId ? await getTransactionRecord(request.transactionId) : null;
+      const category = await db.prepare(`
         SELECT id, type, name, is_active AS isActive
         FROM transaction_categories
         WHERE id = ?
@@ -1913,9 +1944,13 @@ apiRouter.put(
           bankMutationMimeType: request.proposal.bankMutationMimeType ?? null
         }
       });
+
+      if (proposal.type === 'EXPENSE' && !proposal.evidenceFileId) {
+        return res.status(422).json({ message: 'Bukti transaksi wajib dilampirkan untuk kas keluar.' });
+      }
     }
 
-    db.prepare(`
+    await db.prepare(`
       UPDATE transaction_approval_requests
       SET
         status = 'PENDING_REVIEW',
@@ -1928,8 +1963,8 @@ apiRouter.put(
       WHERE id = ?
     `).run(serializeApprovalPayload(proposal), request.id);
 
-    const updated = getApprovalRequestRecord(request.id);
-    logAudit(req, {
+    const updated = await getApprovalRequestRecord(request.id);
+    await logAudit(req, {
       action: 'TRANSACTION_APPROVAL_RESUBMITTED',
       entityType: 'TRANSACTION_APPROVAL',
       entityId: request.id,
@@ -1943,16 +1978,16 @@ apiRouter.put(
     return res.json({
       message: 'Perbaikan dikirim ulang ke Ketua untuk direview.',
       approvalRequired: true,
-      approvalRequest: approvalRequestResponse(updated)
+      approvalRequest: await approvalRequestResponse(updated)
     });
   }
 );
 
-apiRouter.get('/reports/summary', requireAuth, (req, res) => {
+apiRouter.get('/reports/summary', requireAuth, async (req, res) => {
   const range = validateDateRange(req);
   if (!range) return res.status(422).json({ message: 'Rentang tanggal tidak valid.' });
 
-  const categories = db.prepare(`
+  const categories = await db.prepare(`
     SELECT
       type,
       category,
@@ -1965,17 +2000,17 @@ apiRouter.get('/reports/summary', requireAuth, (req, res) => {
   `).all(range.from, range.to);
 
   res.json({
-    summary: getPeriodSummary(range.from, range.to),
+    summary: await getPeriodSummary(range.from, range.to),
     categories,
-    cashflow: getCashflowSeries(range.from, range.to)
+    cashflow: await getCashflowSeries(range.from, range.to)
   });
 });
 
-apiRouter.get('/reports/transactions.csv', requireAuth, (req, res) => {
+apiRouter.get('/reports/transactions.csv', requireAuth, async (req, res) => {
   const range = validateDateRange(req);
   if (!range) return res.status(422).json({ message: 'Rentang tanggal tidak valid.' });
 
-  const rows = db.prepare(`
+  const rows = await db.prepare(`
     SELECT
       transaction_date AS transactionDate,
       type,
@@ -2003,7 +2038,7 @@ apiRouter.get('/reports/transactions.csv', requireAuth, (req, res) => {
     ].map(escapeCsv).join(','))
   ];
 
-  logAudit(req, {
+  await logAudit(req, {
     action: 'REPORT_EXPORT_CSV',
     entityType: 'REPORT',
     details: range
@@ -2014,27 +2049,27 @@ apiRouter.get('/reports/transactions.csv', requireAuth, (req, res) => {
   res.send('\uFEFF' + lines.join('\n'));
 });
 
-apiRouter.get('/friday-schedules', requireAuth, (req, res) => {
-  if (datePattern.test(String(req.query.date ?? ''))) {
+apiRouter.get('/friday-schedules', requireAuth, async (req, res) => {
+  if (isIsoDate(String(req.query.date ?? ''))) {
     const date = String(req.query.date);
     return res.json({
       date,
       isFriday: isFridayDate(date),
-      schedule: getFridaySchedule(date)
+      schedule: await getFridaySchedule(date)
     });
   }
 
-  const from = datePattern.test(String(req.query.from ?? '')) ? String(req.query.from) : todayIso();
+  const from = isIsoDate(String(req.query.from ?? '')) ? String(req.query.from) : todayIso();
   const limit = Math.min(Math.max(Number(req.query.limit) || 8, 1), 16);
 
   return res.json({
     from,
-    data: getUpcomingFridaySchedules(from, limit)
+    data: await getUpcomingFridaySchedules(from, limit)
   });
 });
 
-apiRouter.put('/friday-schedules/:date', requireAuth, requireRole('ADMIN'), (req, res) => {
-  if (!datePattern.test(req.params.date) || !isFridayDate(req.params.date)) {
+apiRouter.put('/friday-schedules/:date', requireAuth, requireRole('ADMIN'), async (req, res) => {
+  if (!isIsoDate(req.params.date) || !isFridayDate(req.params.date)) {
     return res.status(422).json({ message: 'Jadwal Jumat hanya dapat disimpan untuk tanggal hari Jumat.' });
   }
 
@@ -2043,10 +2078,10 @@ apiRouter.put('/friday-schedules/:date', requireAuth, requireRole('ADMIN'), (req
     return res.status(422).json({ message: 'Data petugas Jumat belum valid.', errors: parsed.error.flatten().fieldErrors });
   }
 
-  const before = getFridaySchedule(req.params.date);
+  const before = await getFridaySchedule(req.params.date);
   const input = parsed.data;
 
-  db.prepare(`
+  await db.prepare(`
     INSERT INTO friday_schedules (schedule_date, imam, khatib, bilal, updated_at)
     VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
     ON CONFLICT(schedule_date) DO UPDATE SET
@@ -2056,8 +2091,8 @@ apiRouter.put('/friday-schedules/:date', requireAuth, requireRole('ADMIN'), (req
       updated_at = CURRENT_TIMESTAMP
   `).run(req.params.date, input.imam, input.khatib, input.bilal);
 
-  const after = getFridaySchedule(req.params.date);
-  logAudit(req, {
+  const after = await getFridaySchedule(req.params.date);
+  await logAudit(req, {
     action: before ? 'FRIDAY_SCHEDULE_UPDATE' : 'FRIDAY_SCHEDULE_CREATE',
     entityType: 'FRIDAY_SCHEDULE',
     entityId: req.params.date,
@@ -2068,24 +2103,24 @@ apiRouter.put('/friday-schedules/:date', requireAuth, requireRole('ADMIN'), (req
 });
 
 apiRouter.get('/prayer-schedules', requireAuth, async (req, res) => {
-  const date = datePattern.test(String(req.query.date ?? '')) ? String(req.query.date) : todayIso();
+  const date = isIsoDate(String(req.query.date ?? '')) ? String(req.query.date) : todayIso();
   res.json(await getProviderPrayerSchedule(date));
 });
 
 
-apiRouter.get('/activities', requireAuth, (req, res) => {
-  const date = datePattern.test(String(req.query.from ?? '')) ? String(req.query.from) : todayIso();
-  res.json({ data: getUpcomingActivities(date, 100) });
+apiRouter.get('/activities', requireAuth, async (req, res) => {
+  const date = isIsoDate(String(req.query.from ?? '')) ? String(req.query.from) : todayIso();
+  res.json({ data: await getUpcomingActivities(date, 100) });
 });
 
-apiRouter.post('/activities', requireAuth, requireRole('ADMIN'), (req, res) => {
+apiRouter.post('/activities', requireAuth, requireRole('ADMIN'), async (req, res) => {
   const parsed = activitySchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(422).json({ message: 'Data kegiatan belum valid.', errors: parsed.error.flatten().fieldErrors });
   }
 
   const input = parsed.data;
-  const result = db.prepare(`
+  const result = await db.prepare(`
     INSERT INTO activities
       (title, activity_date, start_time, location, speaker, live_url, is_published)
     VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -2099,7 +2134,7 @@ apiRouter.post('/activities', requireAuth, requireRole('ADMIN'), (req, res) => {
     input.isPublished ? 1 : 0
   );
 
-  logAudit(req, {
+  await logAudit(req, {
     action: 'ACTIVITY_CREATE',
     entityType: 'ACTIVITY',
     entityId: result.lastInsertRowid,
@@ -2109,8 +2144,8 @@ apiRouter.post('/activities', requireAuth, requireRole('ADMIN'), (req, res) => {
   res.status(201).json({ id: Number(result.lastInsertRowid) });
 });
 
-apiRouter.put('/activities/:id', requireAuth, requireRole('ADMIN'), (req, res) => {
-  const existing = db.prepare(`
+apiRouter.put('/activities/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
+  const existing = await db.prepare(`
     SELECT
       id,
       title,
@@ -2132,7 +2167,7 @@ apiRouter.put('/activities/:id', requireAuth, requireRole('ADMIN'), (req, res) =
   }
 
   const input = parsed.data;
-  db.prepare(`
+  await db.prepare(`
     UPDATE activities
     SET title = ?, activity_date = ?, start_time = ?, location = ?, speaker = ?, live_url = ?, is_published = ?
     WHERE id = ?
@@ -2152,7 +2187,7 @@ apiRouter.put('/activities/:id', requireAuth, requireRole('ADMIN'), (req, res) =
     ...input
   };
 
-  logAudit(req, {
+  await logAudit(req, {
     action: 'ACTIVITY_UPDATE',
     entityType: 'ACTIVITY',
     entityId: existing.id,
@@ -2162,12 +2197,12 @@ apiRouter.put('/activities/:id', requireAuth, requireRole('ADMIN'), (req, res) =
   return res.json(after);
 });
 
-apiRouter.delete('/activities/:id', requireAuth, requireRole('ADMIN'), (req, res) => {
-  const activity = db.prepare('SELECT id, title FROM activities WHERE id = ?').get(req.params.id);
+apiRouter.delete('/activities/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
+  const activity = await db.prepare('SELECT id, title FROM activities WHERE id = ?').get(req.params.id);
   if (!activity) return res.status(404).json({ message: 'Kegiatan tidak ditemukan.' });
 
-  db.prepare('DELETE FROM activities WHERE id = ?').run(activity.id);
-  logAudit(req, {
+  await db.prepare('DELETE FROM activities WHERE id = ?').run(activity.id);
+  await logAudit(req, {
     action: 'ACTIVITY_DELETE',
     entityType: 'ACTIVITY',
     entityId: activity.id,
@@ -2177,8 +2212,8 @@ apiRouter.delete('/activities/:id', requireAuth, requireRole('ADMIN'), (req, res
   res.status(204).end();
 });
 
-apiRouter.get('/users', requireAuth, requireRole('ADMIN'), (_req, res) => {
-  const users = db.prepare(`
+apiRouter.get('/users', requireAuth, requireRole('ADMIN'), async (_req, res) => {
+  const users = (await db.prepare(`
     SELECT
       users.id,
       users.name,
@@ -2189,27 +2224,27 @@ apiRouter.get('/users', requireAuth, requireRole('ADMIN'), (_req, res) => {
     FROM users
     JOIN roles ON roles.id = users.role_id
     ORDER BY users.created_at ASC
-  `).all().map((user) => ({ ...user, isActive: Boolean(user.isActive) }));
+  `).all()).map((user) => ({ ...user, isActive: Boolean(user.isActive) }));
 
   res.json({ data: users });
 });
 
-apiRouter.post('/users', requireAuth, requireRole('ADMIN'), (req, res) => {
+apiRouter.post('/users', requireAuth, requireRole('ADMIN'), async (req, res) => {
   const parsed = userSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(422).json({ message: 'Data pengguna belum valid.', errors: parsed.error.flatten().fieldErrors });
   }
 
   const input = parsed.data;
-  const role = db.prepare('SELECT id FROM roles WHERE name = ?').get(input.role);
+  const role = await db.prepare('SELECT id FROM roles WHERE name = ?').get(input.role);
 
   try {
-    const result = db.prepare(`
+    const result = await db.prepare(`
       INSERT INTO users (role_id, name, email, password_hash)
       VALUES (?, ?, ?, ?)
     `).run(role.id, input.name, input.email.toLowerCase(), hashPassword(input.password));
 
-    logAudit(req, {
+    await logAudit(req, {
       action: 'USER_CREATE',
       entityType: 'USER',
       entityId: result.lastInsertRowid,
@@ -2225,14 +2260,14 @@ apiRouter.post('/users', requireAuth, requireRole('ADMIN'), (req, res) => {
   }
 });
 
-apiRouter.put('/users/:id/status', requireAuth, requireRole('ADMIN'), (req, res) => {
+apiRouter.put('/users/:id/status', requireAuth, requireRole('ADMIN'), async (req, res) => {
   const parsed = userStatusSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(422).json({ message: 'Status pengguna tidak valid.' });
   }
 
   const userId = Number(req.params.id);
-  const existing = db.prepare(`
+  const existing = await db.prepare(`
     SELECT id, name, email, is_active AS isActive
     FROM users
     WHERE id = ?
@@ -2243,14 +2278,14 @@ apiRouter.put('/users/:id/status', requireAuth, requireRole('ADMIN'), (req, res)
     return res.status(422).json({ message: 'Akun yang sedang digunakan tidak dapat dinonaktifkan.' });
   }
 
-  db.prepare('UPDATE users SET is_active = ? WHERE id = ?')
+  await db.prepare('UPDATE users SET is_active = ? WHERE id = ?')
     .run(parsed.data.isActive ? 1 : 0, userId);
 
   if (!parsed.data.isActive) {
-    db.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId);
+    await db.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId);
   }
 
-  logAudit(req, {
+  await logAudit(req, {
     action: 'USER_STATUS_UPDATE',
     entityType: 'USER',
     entityId: userId,
@@ -2264,7 +2299,7 @@ apiRouter.put('/users/:id/status', requireAuth, requireRole('ADMIN'), (req, res)
   return res.json({ id: userId, isActive: parsed.data.isActive });
 });
 
-apiRouter.get('/transaction-categories', requireAuth, (req, res) => {
+apiRouter.get('/transaction-categories', requireAuth, async (req, res) => {
   const params = [];
   let where = '';
 
@@ -2273,7 +2308,7 @@ apiRouter.get('/transaction-categories', requireAuth, (req, res) => {
     params.push(req.query.type);
   }
 
-  const rows = db.prepare(`
+  const rows = (await db.prepare(`
     SELECT
       id,
       type,
@@ -2288,7 +2323,7 @@ apiRouter.get('/transaction-categories', requireAuth, (req, res) => {
     FROM transaction_categories
     ${where}
     ORDER BY type ASC, sort_order ASC, name ASC
-  `).all(...params).map((row) => ({ ...row, isActive: Boolean(row.isActive) }));
+  `).all(...params)).map((row) => ({ ...row, isActive: Boolean(row.isActive) }));
 
   res.json({
     data: req.user.role === 'ADMIN'
@@ -2297,7 +2332,7 @@ apiRouter.get('/transaction-categories', requireAuth, (req, res) => {
   });
 });
 
-apiRouter.post('/transaction-categories', requireAuth, requireRole('ADMIN'), (req, res) => {
+apiRouter.post('/transaction-categories', requireAuth, requireRole('ADMIN'), async (req, res) => {
   const parsed = categorySchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(422).json({ message: 'Kategori belum valid.', errors: parsed.error.flatten().fieldErrors });
@@ -2305,12 +2340,12 @@ apiRouter.post('/transaction-categories', requireAuth, requireRole('ADMIN'), (re
 
   try {
     const input = parsed.data;
-    const result = db.prepare(`
+    const result = await db.prepare(`
       INSERT INTO transaction_categories (type, name, is_active, sort_order)
       VALUES (?, ?, ?, ?)
     `).run(input.type, input.name, input.isActive ? 1 : 0, input.sortOrder);
 
-    logAudit(req, {
+    await logAudit(req, {
       action: 'TRANSACTION_CATEGORY_CREATE',
       entityType: 'TRANSACTION_CATEGORY',
       entityId: result.lastInsertRowid,
@@ -2326,13 +2361,13 @@ apiRouter.post('/transaction-categories', requireAuth, requireRole('ADMIN'), (re
   }
 });
 
-apiRouter.put('/transaction-categories/:id', requireAuth, requireRole('ADMIN'), (req, res) => {
+apiRouter.put('/transaction-categories/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
   const parsed = categorySchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(422).json({ message: 'Kategori belum valid.', errors: parsed.error.flatten().fieldErrors });
   }
 
-  const existing = db.prepare(`
+  const existing = await db.prepare(`
     SELECT
       id,
       type,
@@ -2346,13 +2381,13 @@ apiRouter.put('/transaction-categories/:id', requireAuth, requireRole('ADMIN'), 
 
   try {
     const input = parsed.data;
-    db.prepare(`
+    await db.prepare(`
       UPDATE transaction_categories
       SET type = ?, name = ?, is_active = ?, sort_order = ?
       WHERE id = ?
     `).run(input.type, input.name, input.isActive ? 1 : 0, input.sortOrder, existing.id);
 
-    logAudit(req, {
+    await logAudit(req, {
       action: 'TRANSACTION_CATEGORY_UPDATE',
       entityType: 'TRANSACTION_CATEGORY',
       entityId: existing.id,
@@ -2381,8 +2416,8 @@ apiRouter.put('/transaction-categories/:id', requireAuth, requireRole('ADMIN'), 
   }
 });
 
-apiRouter.get('/public-messages', requireAuth, requireRole('ADMIN'), (_req, res) => {
-  const rows = db.prepare(`
+apiRouter.get('/public-messages', requireAuth, requireRole('ADMIN'), async (_req, res) => {
+  const rows = (await db.prepare(`
     SELECT
       id,
       kind,
@@ -2393,24 +2428,24 @@ apiRouter.get('/public-messages', requireAuth, requireRole('ADMIN'), (_req, res)
       sort_order AS sortOrder
     FROM public_messages
     ORDER BY sort_order ASC, id ASC
-  `).all().map((row) => ({ ...row, isActive: Boolean(row.isActive) }));
+  `).all()).map((row) => ({ ...row, isActive: Boolean(row.isActive) }));
 
   res.json({ data: rows });
 });
 
-apiRouter.post('/public-messages', requireAuth, requireRole('ADMIN'), (req, res) => {
+apiRouter.post('/public-messages', requireAuth, requireRole('ADMIN'), async (req, res) => {
   const parsed = publicMessageSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(422).json({ message: 'Konten Public Display belum valid.', errors: parsed.error.flatten().fieldErrors });
   }
 
   const input = parsed.data;
-  const result = db.prepare(`
+  const result = await db.prepare(`
     INSERT INTO public_messages (kind, title, content, source, is_active, sort_order)
     VALUES (?, ?, ?, ?, ?, ?)
   `).run(input.kind, input.title, input.content, input.source, input.isActive ? 1 : 0, input.sortOrder);
 
-  logAudit(req, {
+  await logAudit(req, {
     action: 'PUBLIC_MESSAGE_CREATE',
     entityType: 'PUBLIC_MESSAGE',
     entityId: result.lastInsertRowid,
@@ -2420,23 +2455,23 @@ apiRouter.post('/public-messages', requireAuth, requireRole('ADMIN'), (req, res)
   res.status(201).json({ id: Number(result.lastInsertRowid) });
 });
 
-apiRouter.put('/public-messages/:id', requireAuth, requireRole('ADMIN'), (req, res) => {
+apiRouter.put('/public-messages/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
   const parsed = publicMessageSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(422).json({ message: 'Konten Public Display belum valid.', errors: parsed.error.flatten().fieldErrors });
   }
 
-  const existing = db.prepare('SELECT id FROM public_messages WHERE id = ?').get(req.params.id);
+  const existing = await db.prepare('SELECT id FROM public_messages WHERE id = ?').get(req.params.id);
   if (!existing) return res.status(404).json({ message: 'Konten tidak ditemukan.' });
 
   const input = parsed.data;
-  db.prepare(`
+  await db.prepare(`
     UPDATE public_messages
     SET kind = ?, title = ?, content = ?, source = ?, is_active = ?, sort_order = ?, updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `).run(input.kind, input.title, input.content, input.source, input.isActive ? 1 : 0, input.sortOrder, existing.id);
 
-  logAudit(req, {
+  await logAudit(req, {
     action: 'PUBLIC_MESSAGE_UPDATE',
     entityType: 'PUBLIC_MESSAGE',
     entityId: existing.id,
@@ -2446,12 +2481,12 @@ apiRouter.put('/public-messages/:id', requireAuth, requireRole('ADMIN'), (req, r
   res.json({ id: existing.id });
 });
 
-apiRouter.delete('/public-messages/:id', requireAuth, requireRole('ADMIN'), (req, res) => {
-  const existing = db.prepare('SELECT id FROM public_messages WHERE id = ?').get(req.params.id);
+apiRouter.delete('/public-messages/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
+  const existing = await db.prepare('SELECT id FROM public_messages WHERE id = ?').get(req.params.id);
   if (!existing) return res.status(404).json({ message: 'Konten tidak ditemukan.' });
 
-  db.prepare('DELETE FROM public_messages WHERE id = ?').run(existing.id);
-  logAudit(req, {
+  await db.prepare('DELETE FROM public_messages WHERE id = ?').run(existing.id);
+  await logAudit(req, {
     action: 'PUBLIC_MESSAGE_DELETE',
     entityType: 'PUBLIC_MESSAGE',
     entityId: existing.id
@@ -2460,17 +2495,17 @@ apiRouter.delete('/public-messages/:id', requireAuth, requireRole('ADMIN'), (req
   res.status(204).end();
 });
 
-apiRouter.get('/settings', requireAuth, requireRole('ADMIN'), (_req, res) => {
-  res.json(adminSettings());
+apiRouter.get('/settings', requireAuth, requireRole('ADMIN'), async (_req, res) => {
+  res.json(await adminSettings());
 });
 
-apiRouter.put('/settings', requireAuth, requireRole('ADMIN'), (req, res) => {
+apiRouter.put('/settings', requireAuth, requireRole('ADMIN'), async (req, res) => {
   const parsed = settingsSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(422).json({ message: 'Pengaturan belum valid.', errors: parsed.error.flatten().fieldErrors });
   }
 
-  const before = adminSettings();
+  const before = await adminSettings();
   const map = {
     mosqueName: 'mosque_name',
     mosqueTagline: 'mosque_tagline',
@@ -2485,21 +2520,21 @@ apiRouter.put('/settings', requireAuth, requireRole('ADMIN'), (req, res) => {
     openingBalanceNote: 'opening_balance_note'
   };
 
-  const update = db.prepare(`
+  const upsertSql = `
     INSERT INTO settings (key, value, updated_at)
     VALUES (?, ?, CURRENT_TIMESTAMP)
     ON CONFLICT(key) DO UPDATE SET
       value = excluded.value,
       updated_at = CURRENT_TIMESTAMP
-  `);
+  `;
 
-  db.transaction((input) => {
+  await db.transaction(async (tx) => {
     for (const [field, key] of Object.entries(map)) {
-      update.run(key, input[field] ?? '');
+      await tx.prepare(upsertSql).run(key, parsed.data[field] ?? '');
     }
-  })(parsed.data);
+  });
 
-  logAudit(req, {
+  await logAudit(req, {
     action: 'SETTINGS_UPDATE',
     entityType: 'SETTINGS',
     details: {
@@ -2508,12 +2543,12 @@ apiRouter.put('/settings', requireAuth, requireRole('ADMIN'), (req, res) => {
     }
   });
 
-  res.json(adminSettings());
+  res.json(await adminSettings());
 });
 
-apiRouter.get('/audit-logs', requireAuth, requireRole('ADMIN'), (req, res) => {
+apiRouter.get('/audit-logs', requireAuth, requireRole('ADMIN'), async (req, res) => {
   const limit = Math.min(Math.max(Number(req.query.limit) || 100, 1), 250);
-  const rows = db.prepare(`
+  const rows = (await db.prepare(`
     SELECT
       audit_logs.id,
       audit_logs.action,
@@ -2526,9 +2561,9 @@ apiRouter.get('/audit-logs', requireAuth, requireRole('ADMIN'), (req, res) => {
       users.email AS userEmail
     FROM audit_logs
     LEFT JOIN users ON users.id = audit_logs.user_id
-    ORDER BY audit_logs.created_at DESC
+    ORDER BY audit_logs.created_at DESC, audit_logs.id DESC
     LIMIT ?
-  `).all(limit).map((row) => ({
+  `).all(limit)).map((row) => ({
     ...row,
     details: row.detailsJson ? JSON.parse(row.detailsJson) : null,
     detailsJson: undefined

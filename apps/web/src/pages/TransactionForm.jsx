@@ -40,7 +40,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { FileUploadField } from '@/features/transactions/FileUploadField.jsx';
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const MAX_FILE_SIZE = 4 * 1024 * 1024;
+// Batas satu permintaan unggah di Vercel adalah 4,5 MB (seluruh lampiran digabung).
+const MAX_TOTAL_SIZE = 4.4 * 1024 * 1024;
 
 function TransactionFormSkeleton() {
   return (
@@ -131,7 +133,7 @@ export default function TransactionForm({ type }) {
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      toast.error('Ukuran file terlalu besar.', { description: 'Maksimum 5 MB per dokumen.' });
+      toast.error('Ukuran file terlalu besar.', { description: 'Maksimum 4 MB per dokumen.' });
       return;
     }
 
@@ -153,6 +155,12 @@ export default function TransactionForm({ type }) {
 
     if (!income && !evidence) {
       setStatus({ type: 'error', message: 'Bukti transaksi wajib dilampirkan untuk kas keluar.' });
+      return;
+    }
+
+    const totalSize = (evidence?.size ?? 0) + (form.method === 'TRANSFER' ? mutation?.size ?? 0 : 0);
+    if (totalSize > MAX_TOTAL_SIZE) {
+      setStatus({ type: 'error', message: 'Total ukuran lampiran maksimal 4,4 MB. Kecilkan foto atau unggah salah satu dokumen terlebih dahulu.' });
       return;
     }
 
@@ -340,7 +348,7 @@ export default function TransactionForm({ type }) {
             <FileUploadField
               id="transaction-evidence"
               label="Bukti transaksi"
-              description="JPG, PNG, WEBP, atau PDF · maks. 5 MB"
+              description="JPG, PNG, WEBP, atau PDF · maks. 4 MB"
               file={evidence}
               onChange={(file) => acceptFile(file, setEvidence)}
               required={!income}
@@ -351,7 +359,7 @@ export default function TransactionForm({ type }) {
               <FileUploadField
                 id="bank-mutation"
                 label="Mutasi rekening"
-                description="Lampirkan mutasi bank jika tersedia · maks. 5 MB"
+                description="Lampirkan mutasi bank jika tersedia · maks. 4 MB"
                 file={mutation}
                 onChange={(file) => acceptFile(file, setMutation)}
               />

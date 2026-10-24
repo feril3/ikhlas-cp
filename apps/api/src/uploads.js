@@ -13,7 +13,7 @@ const allowedExtensions = new Set(['.jpg', '.jpeg', '.png', '.webp', '.pdf']);
 export const transactionUpload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 5 * 1024 * 1024,
+    fileSize: 4 * 1024 * 1024,
     files: 2
   },
   fileFilter: (_req, file, callback) => {

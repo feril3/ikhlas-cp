@@ -91,9 +91,9 @@ export function normalizeProviderTimings(timings = {}) {
   })).filter((item) => item.adhanTime);
 }
 
-function readLocalMetadata(date) {
+async function readLocalMetadata(date) {
   let sourceDate = date;
-  let rows = db.prepare(`
+  let rows = await db.prepare(`
     SELECT
       prayer_name AS prayerName,
       adhan_time AS adhanTime,
@@ -105,14 +105,14 @@ function readLocalMetadata(date) {
   `).all(date);
 
   if (rows.length === 0) {
-    sourceDate = db.prepare(`
+    sourceDate = (await db.prepare(`
       SELECT MAX(prayer_date) AS date
       FROM prayer_schedules
       WHERE prayer_date <= ?
-    `).get(date)?.date ?? null;
+    `).get(date))?.date ?? null;
 
     rows = sourceDate
-      ? db.prepare(`
+      ? await db.prepare(`
           SELECT
             prayer_name AS prayerName,
             adhan_time AS adhanTime,
@@ -132,8 +132,8 @@ function readLocalMetadata(date) {
   };
 }
 
-function readCachedSchedule(date) {
-  const row = db.prepare(`
+async function readCachedSchedule(date) {
+  const row = await db.prepare(`
     SELECT
       provider,
       payload_json AS payloadJson,
@@ -160,8 +160,8 @@ function readCachedSchedule(date) {
   }
 }
 
-function writeCachedSchedule(date, providerPayload) {
-  db.prepare(`
+async function writeCachedSchedule(date, providerPayload) {
+  await db.prepare(`
     INSERT INTO prayer_time_cache
       (prayer_date, provider, latitude, longitude, calculation_method, timezone, payload_json, fetched_at)
     VALUES (?, 'aladhan', ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
@@ -227,7 +227,7 @@ async function fetchProviderSchedule(date) {
       throw new Error('Prayer API tidak mengembalikan lima waktu salat utama.');
     }
 
-    writeCachedSchedule(date, {
+    await writeCachedSchedule(date, {
       timings: body.data.timings,
       meta: body.data.meta ?? null,
       date: body.data.date ?? null
@@ -286,10 +286,10 @@ function fallbackSchedule(date, local, error) {
 }
 
 export async function getPrayerSchedule(date, { forceRefresh = false } = {}) {
-  const local = readLocalMetadata(date);
+  const local = await readLocalMetadata(date);
 
   if (!forceRefresh) {
-    const cached = readCachedSchedule(date);
+    const cached = await readCachedSchedule(date);
     if (cached) {
       return {
         scheduleDate: date,
@@ -327,7 +327,7 @@ export async function getPrayerSchedule(date, { forceRefresh = false } = {}) {
       }
     };
   } catch (error) {
-    const cached = readCachedSchedule(date);
+    const cached = await readCachedSchedule(date);
     if (cached) {
       return {
         scheduleDate: date,

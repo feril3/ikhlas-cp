@@ -9,3 +9,4 @@ apps/api/data/*.db-shm
 apps/api/data/*.db-wal
 apps/api/data/backups/
 coverage/
+.vercel/

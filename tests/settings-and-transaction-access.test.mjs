@@ -2,11 +2,12 @@ import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { mkdtemp, rm, readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { test, before, after } from 'node:test';
 
-const root = path.resolve(new URL('..', import.meta.url).pathname);
+const root = fileURLToPath(new URL('..', import.meta.url));
 const port = 34123;
 const baseUrl = `http://127.0.0.1:${port}/api`;
 let tempDir;
@@ -16,7 +17,7 @@ let approvalRequestId;
 let approvedTransactionId;
 
 async function waitForHealth() {
-  const deadline = Date.now() + 10_000;
+  const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
     try {
       const response = await fetch(`${baseUrl}/health`);
@@ -66,6 +67,13 @@ after(async () => {
 test('dynamic API responses opt out of browser caching', async () => {
   const response = await request('/health');
   assert.equal(response.headers.get('cache-control'), 'no-store');
+});
+
+test('public display ignores impossible calendar dates instead of crashing the API', async () => {
+  const response = await request('/public/display?date=2026-13-45');
+  assert.equal(response.status, 200);
+  const health = await request('/health');
+  assert.equal(health.status, 200);
 });
 
 test('browser API requests opt out of browser caching', async () => {

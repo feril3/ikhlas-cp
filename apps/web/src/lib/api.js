@@ -1,4 +1,5 @@
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001/api';
+// Di produksi (Vercel) frontend dan API berada pada domain yang sama.
+const API_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? '/api' : 'http://localhost:3001/api');
 
 async function request(path, options = {}) {
   const headers = new Headers(options.headers ?? {});

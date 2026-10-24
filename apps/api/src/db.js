@@ -1,38 +1,160 @@
-import Database from 'better-sqlite3';
 import path from 'node:path';
 import fs from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
+// Basis data memakai libSQL: Turso (TURSO_DATABASE_URL + TURSO_AUTH_TOKEN) di produksi,
+// atau berkas SQLite lokal (DATABASE_PATH) untuk pengembangan dan pengujian.
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const defaultDbPath = path.resolve(__dirname, '../data/ikhlas.db');
-export const dbPath = process.env.DATABASE_PATH
-  ? path.resolve(process.cwd(), process.env.DATABASE_PATH)
-  : defaultDbPath;
+export const usingTurso = Boolean(process.env.TURSO_DATABASE_URL?.trim());
+export const dbPath = usingTurso
+  ? null
+  : process.env.DATABASE_PATH
+    ? path.resolve(process.cwd(), process.env.DATABASE_PATH)
+    : defaultDbPath;
 
-fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+if (dbPath) fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
-export const db = new Database(dbPath);
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
-db.pragma('busy_timeout = 5000');
+const { createClient } = usingTurso
+  ? await import('@libsql/client/web')
+  : await import('@libsql/client');
 
-function ensureColumn(table, column, definition) {
-  const columns = db.prepare(`PRAGMA table_info(${table})`).all();
+const client = createClient(usingTurso
+  ? { url: process.env.TURSO_DATABASE_URL.trim(), authToken: process.env.TURSO_AUTH_TOKEN?.trim() }
+  : { url: pathToFileURL(dbPath).href });
+
+// Data contoh hanya untuk pengembangan lokal; tidak pernah diisi ke basis data produksi.
+const seedDemoData = process.env.SEED_DEMO_DATA
+  ? process.env.SEED_DEMO_DATA === 'true'
+  : !usingTurso && !process.env.VERCEL;
+
+function isPlainObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Uint8Array);
+}
+
+function toValue(value) {
+  if (value === undefined) return null;
+  if (typeof value === 'boolean') return value ? 1 : 0;
+  return value;
+}
+
+// Parameter bernama (@nama) diubah menjadi posisional agar perilakunya sama di berkas lokal dan Turso.
+function toStatement(sql, params) {
+  if (params.length === 1 && isPlainObject(params[0])) {
+    const named = params[0];
+    const args = [];
+    const positional = sql.replace(/[@:$]([A-Za-z_][A-Za-z0-9_]*)/g, (_, name) => {
+      args.push(toValue(named[name]));
+      return '?';
+    });
+    return { sql: positional, args };
+  }
+  return { sql, args: params.map(toValue) };
+}
+
+function toRows(result) {
+  return result.rows.map((row) => Object.fromEntries(result.columns.map((column, index) => [column, row[index]])));
+}
+
+// Antarmuka mirip better-sqlite3 (prepare().get/all/run), tetapi asinkron.
+function createExecutor(target) {
+  return {
+    prepare(sql) {
+      return {
+        async get(...params) {
+          return toRows(await target.execute(toStatement(sql, params)))[0];
+        },
+        async all(...params) {
+          return toRows(await target.execute(toStatement(sql, params)));
+        },
+        async run(...params) {
+          const result = await target.execute(toStatement(sql, params));
+          return {
+            changes: result.rowsAffected,
+            lastInsertRowid: result.lastInsertRowid === undefined ? undefined : Number(result.lastInsertRowid)
+          };
+        }
+      };
+    },
+    async exec(sql) {
+      await target.executeMultiple(sql);
+    }
+  };
+}
+
+export const db = {
+  ...createExecutor(client),
+  // Transaksi tulis atomik; callback menerima executor transaksi (tx.prepare(...)).
+  async transaction(callback) {
+    const tx = await client.transaction('write');
+    try {
+      const result = await callback(createExecutor(tx));
+      await tx.commit();
+      return result;
+    } catch (error) {
+      try { await tx.rollback(); } catch { /* transaksi sudah tertutup */ }
+      throw error;
+    } finally {
+      tx.close();
+    }
+  },
+  close() {
+    client.close();
+  }
+};
+
+// Salinan seluruh tabel (kecuali sesi login) dalam format JSON untuk backup.
+export async function exportDatabaseSnapshot() {
+  const tables = await db.prepare(`
+    SELECT name FROM sqlite_master
+    WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT IN ('sessions', 'libsql_wasm_func_table')
+    ORDER BY name
+  `).all();
+  const snapshot = { format: 'ikhlas-json-backup', exportedAt: new Date().toISOString(), tables: {} };
+  for (const { name } of tables) {
+    snapshot.tables[name] = await db.prepare(`SELECT * FROM "${name}"`).all();
+  }
+  return snapshot;
+}
+
+const SCHEMA_VERSION = '2026-10-24';
+let readyPromise = null;
+
+// Inisialisasi skema cukup sekali per instance (penting untuk serverless).
+export function ensureDatabase() {
+  if (!readyPromise) {
+    readyPromise = initializeDatabase().catch((error) => {
+      readyPromise = null;
+      throw error;
+    });
+  }
+  return readyPromise;
+}
+
+async function ensureColumn(table, column, definition) {
+  const columns = await db.prepare(`PRAGMA table_info(${table})`).all();
   if (!columns.some((item) => item.name === column)) {
-    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+    await db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
   }
 }
 
-function insertSetting(key, value) {
-  db.prepare(`
+async function insertSetting(key, value) {
+  await db.prepare(`
     INSERT INTO settings (key, value)
     VALUES (?, ?)
     ON CONFLICT(key) DO NOTHING
   `).run(key, String(value));
 }
 
-export function initializeDatabase() {
-  db.exec(`
+export async function initializeDatabase() {
+  try {
+    const current = await db.prepare("SELECT value FROM settings WHERE key = 'schema_version'").get();
+    if (current?.value === SCHEMA_VERSION) return;
+  } catch {
+    // tabel settings belum ada: lanjutkan pembuatan skema
+  }
+
+  await db.exec(`
     CREATE TABLE IF NOT EXISTS roles (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE
@@ -217,57 +339,62 @@ export function initializeDatabase() {
         AND status IN ('PENDING_REVIEW', 'REVISION_REQUIRED');
   `);
 
-  ensureColumn('transactions', 'category_id', 'INTEGER');
-  ensureColumn('transactions', 'source_detail', 'TEXT');
-  ensureColumn('transactions', 'evidence_path', 'TEXT');
-  ensureColumn('transactions', 'bank_mutation_path', 'TEXT');
-  ensureColumn('transactions', 'evidence_drive_file_id', 'TEXT');
-  ensureColumn('transactions', 'evidence_original_name', 'TEXT');
-  ensureColumn('transactions', 'evidence_mime_type', 'TEXT');
-  ensureColumn('transactions', 'mutation_drive_file_id', 'TEXT');
-  ensureColumn('transactions', 'mutation_original_name', 'TEXT');
-  ensureColumn('transactions', 'mutation_mime_type', 'TEXT');
-  ensureColumn('transactions', 'created_by', 'INTEGER');
-  ensureColumn('transactions', 'updated_at', 'TEXT');
-  db.prepare(`
+  await ensureColumn('transactions', 'category_id', 'INTEGER');
+  await ensureColumn('transactions', 'source_detail', 'TEXT');
+  await ensureColumn('transactions', 'evidence_path', 'TEXT');
+  await ensureColumn('transactions', 'bank_mutation_path', 'TEXT');
+  await ensureColumn('transactions', 'evidence_drive_file_id', 'TEXT');
+  await ensureColumn('transactions', 'evidence_original_name', 'TEXT');
+  await ensureColumn('transactions', 'evidence_mime_type', 'TEXT');
+  await ensureColumn('transactions', 'mutation_drive_file_id', 'TEXT');
+  await ensureColumn('transactions', 'mutation_original_name', 'TEXT');
+  await ensureColumn('transactions', 'mutation_mime_type', 'TEXT');
+  await ensureColumn('transactions', 'created_by', 'INTEGER');
+  await ensureColumn('transactions', 'updated_at', 'TEXT');
+  await db.prepare(`
     UPDATE transactions
     SET updated_at = COALESCE(updated_at, created_at, CURRENT_TIMESTAMP)
     WHERE updated_at IS NULL
   `).run();
-  ensureColumn('activities', 'live_url', 'TEXT');
-  ensureColumn('public_messages', 'seed_key', 'TEXT');
-  db.exec(`
+  await ensureColumn('activities', 'live_url', 'TEXT');
+  await ensureColumn('public_messages', 'seed_key', 'TEXT');
+  await db.exec(`
     CREATE UNIQUE INDEX IF NOT EXISTS idx_public_messages_seed_key
       ON public_messages(seed_key)
       WHERE seed_key IS NOT NULL
   `);
-  ensureColumn('activities', 'is_published', 'INTEGER NOT NULL DEFAULT 1');
+  await ensureColumn('activities', 'is_published', 'INTEGER NOT NULL DEFAULT 1');
 
-  seedIfEmpty();
+  await seedIfEmpty();
+  await db.prepare(`
+    INSERT INTO settings (key, value, updated_at)
+    VALUES ('schema_version', ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP
+  `).run(SCHEMA_VERSION);
 }
 
-function seedIfEmpty() {
-  const roleCount = db.prepare('SELECT COUNT(*) AS count FROM roles').get().count;
+async function seedIfEmpty() {
+  const roleCount = (await db.prepare('SELECT COUNT(*) AS count FROM roles').get()).count;
   if (roleCount === 0) {
     const insertRole = db.prepare('INSERT INTO roles (name) VALUES (?)');
-    insertRole.run('ADMIN');
-    insertRole.run('TREASURER');
+    await insertRole.run('ADMIN');
+    await insertRole.run('TREASURER');
   }
 
-  insertSetting('opening_balance', '12500000');
-  insertSetting('opening_balance_date', '');
-  insertSetting('opening_balance_note', 'Saldo awal sebelum pencatatan digital IKHLAS');
-  insertSetting('mosque_name', 'Masjid Al-Ikhlas');
-  insertSetting('mosque_tagline', 'Pusat Informasi Jamaah');
-  insertSetting('bank_name', 'Bank Syariah Indonesia');
-  insertSetting('bank_account_number', '71234567890');
-  insertSetting('bank_account_holder', 'Masjid Al-Ikhlas');
-  insertSetting('default_youtube_url', '');
-  insertSetting('active_live_url', '');
-  insertSetting('active_live_title', '');
-  insertSetting('public_finance_period', 'MONTH');
+  await insertSetting('opening_balance', seedDemoData ? '12500000' : '0');
+  await insertSetting('opening_balance_date', '');
+  await insertSetting('opening_balance_note', 'Saldo awal sebelum pencatatan digital IKHLAS');
+  await insertSetting('mosque_name', 'Masjid Al-Fath');
+  await insertSetting('mosque_tagline', 'Pusat Informasi Jamaah');
+  await insertSetting('bank_name', seedDemoData ? 'Bank Syariah Indonesia' : '');
+  await insertSetting('bank_account_number', seedDemoData ? '71234567890' : '');
+  await insertSetting('bank_account_holder', 'Masjid Al-Fath');
+  await insertSetting('default_youtube_url', '');
+  await insertSetting('active_live_url', '');
+  await insertSetting('active_live_title', '');
+  await insertSetting('public_finance_period', 'MONTH');
 
-  const categoryCount = db.prepare('SELECT COUNT(*) AS count FROM transaction_categories').get().count;
+  const categoryCount = (await db.prepare('SELECT COUNT(*) AS count FROM transaction_categories').get()).count;
   if (categoryCount === 0) {
     const insertCategory = db.prepare(`
       INSERT INTO transaction_categories (type, name, sort_order)
@@ -288,12 +415,10 @@ function seedIfEmpty() {
       ['EXPENSE', 'Lainnya', 90]
     ];
 
-    db.transaction((items) => {
-      for (const item of items) insertCategory.run(...item);
-    })(categories);
+    for (const item of categories) await insertCategory.run(...item);
   }
 
-  db.prepare(`
+  await db.prepare(`
     UPDATE transactions
     SET category_id = (
       SELECT transaction_categories.id
@@ -305,9 +430,9 @@ function seedIfEmpty() {
     WHERE category_id IS NULL
   `).run();
 
-  const publicMessageCount = db.prepare('SELECT COUNT(*) AS count FROM public_messages').get().count;
+  const publicMessageCount = (await db.prepare('SELECT COUNT(*) AS count FROM public_messages').get()).count;
   if (publicMessageCount === 0) {
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO public_messages (kind, title, content, source, sort_order)
       VALUES ('ANNOUNCEMENT', 'Pengingat Jamaah', ?, '', 90)
     `).run('Mari jaga kebersihan, ketertiban, dan kenyamanan masjid bersama.');
@@ -358,12 +483,13 @@ function seedIfEmpty() {
     }
   ];
 
-  db.transaction((items) => {
-    for (const item of items) insertSeedMessage.run(item);
-  })(verifiedRunningTextSeeds);
+  for (const item of verifiedRunningTextSeeds) await insertSeedMessage.run(item);
 
-  const transactionCount = db.prepare('SELECT COUNT(*) AS count FROM transactions').get().count;
-  if (transactionCount === 0) {
+  // Transaksi demo hanya diisi sekali pada database baru. Tanpa penanda ini, menghapus seluruh
+  // transaksi lalu me-restart server akan memunculkan kembali data demo dan mengubah saldo.
+  const demoSeeded = await db.prepare("SELECT 1 FROM settings WHERE key = 'demo_transactions_seeded'").get();
+  const transactionCount = (await db.prepare('SELECT COUNT(*) AS count FROM transactions').get()).count;
+  if (seedDemoData && !demoSeeded && transactionCount === 0) {
     const insert = db.prepare(`
       INSERT INTO transactions
         (type, amount, transaction_date, method, category, description)
@@ -406,13 +532,12 @@ function seedIfEmpty() {
       }
     ];
 
-    db.transaction((items) => {
-      for (const item of items) insert.run(item);
-    })(demo);
+    for (const item of demo) await insert.run(item);
   }
+  await insertSetting('demo_transactions_seeded', '1');
 
-  const prayerCount = db.prepare('SELECT COUNT(*) AS count FROM prayer_schedules').get().count;
-  if (prayerCount === 0) {
+  const prayerCount = (await db.prepare('SELECT COUNT(*) AS count FROM prayer_schedules').get()).count;
+  if (seedDemoData && prayerCount === 0) {
     const insertPrayer = db.prepare(`
       INSERT INTO prayer_schedules
         (prayer_date, prayer_name, adhan_time, iqamah_time, imam, bilal)
@@ -427,27 +552,25 @@ function seedIfEmpty() {
       ['2026-09-21', 'Isya', '19:01', '19:11', 'Ust. Ahmad Fauzi', 'H. Fajar']
     ];
 
-    db.transaction((items) => {
-      for (const item of items) insertPrayer.run(...item);
-    })(prayers);
+    for (const item of prayers) await insertPrayer.run(...item);
   }
 
-  const activityCount = db.prepare('SELECT COUNT(*) AS count FROM activities').get().count;
-  if (activityCount === 0) {
+  const activityCount = (await db.prepare('SELECT COUNT(*) AS count FROM activities').get()).count;
+  if (seedDemoData && activityCount === 0) {
     const insertActivity = db.prepare(`
       INSERT INTO activities
         (title, activity_date, start_time, location, speaker, is_published)
       VALUES (?, ?, ?, ?, ?, 1)
     `);
 
-    insertActivity.run(
+    await insertActivity.run(
       "Kajian Ba'da Maghrib",
       '2026-09-21',
       '18:15',
       'Ruang Utama',
       'Ust. Hakim Pratama'
     );
-    insertActivity.run(
+    await insertActivity.run(
       'Pengajian Rutin Ahad',
       '2026-09-27',
       '07:00',
@@ -457,20 +580,20 @@ function seedIfEmpty() {
   }
 }
 
-export function getOpeningBalance() {
-  return Number(getSetting('opening_balance', '0'));
+export async function getOpeningBalance() {
+  return Number(await getSetting('opening_balance', '0'));
 }
 
-export function getSetting(key, fallback = '') {
-  const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
+export async function getSetting(key, fallback = '') {
+  const row = await db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
   return row?.value ?? fallback;
 }
 
-export function getSettings(keys) {
+export async function getSettings(keys) {
   if (!keys.length) return {};
 
   const placeholders = keys.map(() => '?').join(',');
-  const rows = db.prepare(`
+  const rows = await db.prepare(`
     SELECT key, value
     FROM settings
     WHERE key IN (${placeholders})

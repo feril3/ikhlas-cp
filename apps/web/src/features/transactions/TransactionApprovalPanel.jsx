@@ -319,14 +319,14 @@ function RevisionDialog({ request, open, onOpenChange, onDone }) {
                 <FileUploadField
                   id="approval-revision-evidence"
                   label="Ganti bukti"
-                  description={proposal.evidenceOriginalName ? `Saat ini: ${proposal.evidenceOriginalName}` : 'Opsional · maks. 5 MB'}
+                  description={proposal.evidenceOriginalName ? `Saat ini: ${proposal.evidenceOriginalName}` : 'Opsional · maks. 4 MB'}
                   file={evidence}
                   onChange={setEvidence}
                 />
                 <FileUploadField
                   id="approval-revision-mutation"
                   label="Ganti mutasi"
-                  description={proposal.bankMutationOriginalName ? `Saat ini: ${proposal.bankMutationOriginalName}` : 'Opsional · maks. 5 MB'}
+                  description={proposal.bankMutationOriginalName ? `Saat ini: ${proposal.bankMutationOriginalName}` : 'Opsional · maks. 4 MB'}
                   file={mutation}
                   onChange={setMutation}
                 />

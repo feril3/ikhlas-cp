@@ -51,22 +51,22 @@ Aplikasi sengaja dibagi menjadi dua surface utama:
 - Rate limiting sederhana untuk login/setup.
 - Security response headers.
 - Audit log.
-- Upload file dibatasi JPG, PNG, WEBP, PDF dan maksimal 5 MB.
+- Upload file dibatasi JPG, PNG, WEBP, PDF dan maksimal 4 MB per file (total satu pengajuan 4,4 MB karena batas request Vercel 4,5 MB).
 
 ### Mobile & Reliability
 - Form transaksi mobile-first.
 - Dashboard responsive.
 - Installable PWA shell.
 - Service worker untuk app shell setelah kunjungan pertama.
-- SQLite WAL mode.
-- Backup SQLite lokal manual dan auto backup harian ke Google Drive dengan retention.
+- Database libSQL: Turso di produksi, berkas SQLite lokal untuk pengembangan.
+- Backup database (snapshot JSON) lokal manual dan auto backup harian ke Google Drive dengan retention.
 
 ## Stack
 
 - React + Vite
 - React Router
 - Node.js + Express
-- SQLite (`better-sqlite3`)
+- libSQL / SQLite (`@libsql/client`, Turso untuk produksi)
 - Zod
 - Multer
 - Google Drive API
@@ -92,6 +92,10 @@ Akses:
 Public Display ditargetkan untuk layar landscape 16:9 (1366×768 sampai 4K), bukan halaman web yang perlu di-scroll.
 
 Pada instalasi baru, buka Web. Karena belum ada pengguna, IKHLAS akan meminta membuat **akun Admin pertama**. Tidak ada username/password default yang ditanam di source code.
+
+## Deploy Gratis (Vercel + Turso)
+
+Frontend dan API dideploy sebagai satu project Vercel (Hobby, tanpa kartu kredit): frontend statis dari `apps/web/dist`, API Express sebagai Vercel Function (`api/index.js`), dan database di Turso (libSQL). Backup harian dipicu Vercel Cron. Langkah lengkap ada di `docs/DEPLOY_VERCEL.md`.
 
 ## Google Drive untuk Bukti Transaksi
 
@@ -133,7 +137,7 @@ Backup langsung ke Google Drive:
 npm run db:backup:drive
 ```
 
-Untuk auto backup di VPS/deployment, aktifkan:
+Untuk auto backup di VPS/server lokal, aktifkan:
 
 ```env
 GOOGLE_DRIVE_BACKUP_ENABLED=true
@@ -145,7 +149,7 @@ GOOGLE_DRIVE_BACKUP_RETENTION=30
 
 Default tersebut berarti satu snapshot konsisten setiap hari pukul **02:00 WIB**, dengan **30 backup terakhir** dipertahankan. File disimpan private di folder **IKHLAS - Backup Database** pada Google Drive. Jika server baru hidup setelah jam backup dan snapshot hari itu belum ada, scheduler akan membuat backup yang tertinggal.
 
-Jalankan scheduler hanya pada satu instance API utama agar deployment multi-instance tidak membuat backup ganda. Detail setup dan restore ada di `docs/GOOGLE_DRIVE.md`.
+Jalankan scheduler hanya pada satu instance API utama agar deployment multi-instance tidak membuat backup ganda. Di Vercel scheduler internal tidak dipakai; backup dipicu Vercel Cron ke `/api/cron/daily-backup` (wajib `CRON_SECRET`). Detail setup dan restore ada di `docs/GOOGLE_DRIVE.md`.
 
 ## Struktur Repo
 

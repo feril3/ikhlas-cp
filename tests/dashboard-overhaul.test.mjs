@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 
-const root = path.resolve(new URL('..', import.meta.url).pathname);
+const root = fileURLToPath(new URL('..', import.meta.url));
 async function source(relativePath) {
   return readFile(path.join(root, relativePath), 'utf8');
 }
@@ -64,8 +65,8 @@ test('phase 2 dashboard uses real SQLite cashflow data and Recharts composition'
 
   assert.match(routes, /function getCashflowSeries/);
   assert.match(routes, /GROUP BY transaction_date/);
-  assert.match(routes, /cashflow: getCashflowSeries\(chartFrom, dashboardDate\)/);
-  assert.match(routes, /monthSummary: getPeriodSummary/);
+  assert.match(routes, /cashflow: (await )?getCashflowSeries\(chartFrom, dashboardDate\)/);
+  assert.match(routes, /monthSummary: (await )?getPeriodSummary/);
 
   assert.match(dashboard, /AreaChart/);
   assert.match(dashboard, /ChartContainer/);
@@ -80,7 +81,7 @@ test('phase 2 reports combines Recharts analysis with verifiable numeric tables'
   const routes = await source('apps/api/src/routes.js');
   const reports = await source('apps/web/src/pages/Reports.jsx');
 
-  assert.match(routes, /cashflow: getCashflowSeries\(range\.from, range\.to\)/);
+  assert.match(routes, /cashflow: (await )?getCashflowSeries\(range\.from, range\.to\)/);
   assert.match(reports, /BarChart/);
   assert.match(reports, /Distribusi kategori/);
   assert.match(reports, /Rincian kategori/);

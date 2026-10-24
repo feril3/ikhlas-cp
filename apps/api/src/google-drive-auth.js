@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import http from 'node:http';
-import { google } from 'googleapis';
+import { auth as googleAuth } from '@googleapis/drive';
 
 const clientId = process.env.GOOGLE_DRIVE_CLIENT_ID?.trim();
 const clientSecret = process.env.GOOGLE_DRIVE_CLIENT_SECRET?.trim();
@@ -12,7 +12,7 @@ if (!clientId || !clientSecret) {
   process.exit(1);
 }
 
-const oauth2Client = new google.auth.OAuth2(clientId, clientSecret, redirectUri);
+const oauth2Client = new googleAuth.OAuth2(clientId, clientSecret, redirectUri);
 const scope = 'https://www.googleapis.com/auth/drive.file';
 const authUrl = oauth2Client.generateAuthUrl({
   access_type: 'offline',

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { Readable } from 'node:stream';
-import { google } from 'googleapis';
+import { auth as googleAuth, drive as googleDrive } from '@googleapis/drive';
 
 const DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const FOLDER_MIME = 'application/vnd.google-apps.folder';
@@ -29,10 +29,10 @@ function getDrive() {
   const clientSecret = getRequiredEnv('GOOGLE_DRIVE_CLIENT_SECRET');
   const refreshToken = getRequiredEnv('GOOGLE_DRIVE_REFRESH_TOKEN');
 
-  const auth = new google.auth.OAuth2(clientId, clientSecret);
+  const auth = new googleAuth.OAuth2(clientId, clientSecret);
   auth.setCredentials({ refresh_token: refreshToken });
 
-  driveClient = google.drive({
+  driveClient = googleDrive({
     version: 'v3',
     auth
   });
@@ -278,7 +278,7 @@ export async function uploadDatabaseBackup(filePath, {
       }
     },
     media: {
-      mimeType: 'application/x-sqlite3',
+      mimeType: 'application/json',
       body: fs.createReadStream(filePath)
     },
     fields: 'id,name,mimeType,size,createdTime',

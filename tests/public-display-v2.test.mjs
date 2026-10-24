@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import {
   formatMinuteSecondCountdown,
@@ -9,7 +10,7 @@ import {
   getPrayerDisplayState
 } from '../apps/web/src/lib/prayerDisplay.js';
 
-const root = path.resolve(new URL('..', import.meta.url).pathname);
+const root = fileURLToPath(new URL('..', import.meta.url));
 
 async function source(relativePath) {
   return readFile(path.join(root, relativePath), 'utf8');
@@ -292,7 +293,7 @@ test('public display shows public agenda under prayer focus and Friday officers 
   assert.match(jsx, /Imam/);
   assert.match(jsx, /Khatib/);
   assert.match(jsx, /Bilal/);
-  assert.match(routes, /fridaySchedule: getFridaySchedule\(date\)/);
+  assert.match(routes, /fridaySchedule: (await )?getFridaySchedule\(date\)/);
 });
 
 test('schedule dashboard manages only upcoming Friday officers and hides past Fridays', async () => {

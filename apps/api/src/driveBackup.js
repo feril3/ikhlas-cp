@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { db } from './db.js';
+import { exportDatabaseSnapshot } from './db.js';
 import {
   isGoogleDriveConfigured,
   listDatabaseBackups,
@@ -104,16 +104,17 @@ export async function createDatabaseBackupToDrive({
   const keep = retention ?? config.retention;
   const createdAt = new Date();
   const timestamp = createdAt.toISOString().replaceAll(':', '-').replaceAll('.', '-');
-  const filename = `ikhlas-db-${timestamp}.sqlite3`;
+  const filename = `ikhlas-db-${timestamp}.json`;
   const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'ikhlas-db-backup-'));
   const destination = path.join(tempDir, filename);
 
   try {
-    await db.backup(destination);
+    const snapshot = await exportDatabaseSnapshot();
+    await fs.promises.writeFile(destination, JSON.stringify(snapshot));
 
     const stat = await fs.promises.stat(destination);
     if (!stat.isFile() || stat.size === 0) {
-      throw new Error('Snapshot SQLite gagal dibuat.');
+      throw new Error('Snapshot basis data gagal dibuat.');
     }
 
     const uploaded = await uploadDatabaseBackup(destination, {

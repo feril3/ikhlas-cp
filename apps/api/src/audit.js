@@ -1,14 +1,17 @@
 import { db } from './db.js';
 
-export function logAudit(req, {
-  action,
-  entityType,
-  entityId = null,
-  details = null,
-  userId = req?.user?.id ?? null
-}) {
+export async function logAudit(
+  req,
+  {
+    action,
+    entityType,
+    entityId = null,
+    details = null,
+    userId = req?.user?.id ?? null
+  }
+) {
   try {
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO audit_logs
         (user_id, action, entity_type, entity_id, details_json, ip_address, user_agent)
       VALUES

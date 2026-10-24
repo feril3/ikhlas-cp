@@ -49,14 +49,14 @@ function hashSessionToken(token) {
   return createHash('sha256').update(token).digest('hex');
 }
 
-export function createSession(userId) {
-  db.prepare("DELETE FROM sessions WHERE datetime(expires_at) <= datetime('now')").run();
+export async function createSession(userId) {
+  await db.prepare("DELETE FROM sessions WHERE datetime(expires_at) <= datetime('now')").run();
 
   const token = randomBytes(32).toString('base64url');
   const tokenHash = hashSessionToken(token);
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS).toISOString();
 
-  db.prepare(`
+  await db.prepare(`
     INSERT INTO sessions (token_hash, user_id, expires_at)
     VALUES (?, ?, ?)
   `).run(tokenHash, userId, expiresAt);
@@ -87,17 +87,17 @@ export function getSessionToken(req) {
   return parseCookies(req.headers.cookie ?? '')[COOKIE_NAME] ?? null;
 }
 
-export function destroySession(req) {
+export async function destroySession(req) {
   const token = getSessionToken(req);
   if (!token) return;
-  db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(hashSessionToken(token));
+  await db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(hashSessionToken(token));
 }
 
-export function getAuthenticatedUser(req) {
+export async function getAuthenticatedUser(req) {
   const token = getSessionToken(req);
   if (!token) return null;
 
-  return db.prepare(`
+  return (await db.prepare(`
     SELECT
       users.id,
       users.name,
@@ -111,11 +111,11 @@ export function getAuthenticatedUser(req) {
       AND datetime(sessions.expires_at) > datetime('now')
       AND users.is_active = 1
     LIMIT 1
-  `).get(hashSessionToken(token)) ?? null;
+  `).get(hashSessionToken(token))) ?? null;
 }
 
-export function requireAuth(req, res, next) {
-  const user = getAuthenticatedUser(req);
+export async function requireAuth(req, res, next) {
+  const user = await getAuthenticatedUser(req);
   if (!user) {
     return res.status(401).json({ message: 'Sesi tidak valid atau sudah berakhir.' });
   }

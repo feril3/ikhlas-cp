@@ -1,5 +1,6 @@
 import 'dotenv/config';
-import { initializeDatabase } from './db.js';
+import { db, initializeDatabase } from './db.js';
 
-initializeDatabase();
+await initializeDatabase();
 console.log('Database IKHLAS siap digunakan.');
+db.close();
