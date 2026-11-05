@@ -5,7 +5,7 @@ import {
   IconEyeOff,
   IconLock,
   IconShieldCheck
-} from '@tabler/icons-react';
+} from '@/components/icons.jsx';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { Alert, AlertDescription } from '../components/ui/alert.jsx';
@@ -70,14 +70,14 @@ export default function Login() {
               <IconBuildingMosque className="size-8" stroke={1.6} />
             </div>
             <div>
-              <strong className="block text-sm font-bold tracking-[0.08em]">IKHLAS</strong>
+              <strong className="block text-sm font-bold ">IKHLAS</strong>
               <span className="text-xs text-sidebar-foreground/60">Sistem Informasi Manajemen Masjid</span>
             </div>
           </div>
 
           <div className="max-w-lg">
-            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.16em] text-sidebar-primary">Administrasi masjid</p>
-            <h1 className="text-[clamp(2.35rem,4.2vw,4.5rem)] font-semibold leading-[0.98] tracking-[-0.055em]">
+            <p className="mb-4 text-sm font-medium text-subtle-foreground">Administrasi masjid</p>
+            <h1 className="text-[clamp(2.35rem,4.2vw,4.5rem)] font-semibold leading-[0.98] tracking-tight">
               Keuangan dan kegiatan, tercatat dengan jelas.
             </h1>
             <p className="mt-6 max-w-md text-sm leading-6 text-sidebar-foreground/65">
@@ -94,8 +94,8 @@ export default function Login() {
           <div className="w-full max-w-md">
             <div className="mb-7 flex items-center justify-between lg:hidden">
               <div className="flex items-center gap-2.5">
-                <IconBuildingMosque className="size-7 text-primary" stroke={1.7} />
-                <div><strong className="block text-sm tracking-[0.08em]">IKHLAS</strong><span className="text-[11px] text-muted-foreground">Masjid Al-Fath</span></div>
+                <IconBuildingMosque className="size-7 text-muted-foreground" stroke={1.7} />
+                <div><strong className="block text-sm ">IKHLAS</strong><span className="text-xs text-muted-foreground">Masjid Al-Fath</span></div>
               </div>
               <Button variant="ghost" size="sm" asChild>
                 <Link to="/public-display" target="_blank" rel="noreferrer">Tampilan Publik</Link>
@@ -104,10 +104,10 @@ export default function Login() {
 
             <Card className="rounded-xl shadow-sm">
               <CardHeader className="gap-2 p-6 pb-4 sm:p-7 sm:pb-4">
-                <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-secondary text-primary">
+                <div className="mb-2 flex size-10 items-center justify-center rounded-xl bg-accent text-foreground">
                   <IconShieldCheck className="size-5" stroke={1.8} />
                 </div>
-                <CardTitle className="text-2xl tracking-[-0.035em]">
+                <CardTitle className="text-2xl tracking-tight">
                   {setupRequired ? 'Siapkan akun Admin' : 'Masuk ke IKHLAS'}
                 </CardTitle>
                 <CardDescription className="max-w-sm leading-6">
@@ -151,7 +151,7 @@ export default function Login() {
 
                     <Field>
                       <FieldLabel htmlFor="auth-password">Password</FieldLabel>
-                      <InputGroup className="h-10 rounded-md">
+                      <InputGroup className="h-(--control-height) rounded-md">
                         <InputGroupAddon><IconLock /></InputGroupAddon>
                         <InputGroupInput
                           id="auth-password"
@@ -184,7 +184,7 @@ export default function Login() {
                     </Alert>
                   )}
 
-                  <Button className="h-11 w-full" disabled={status.type === 'loading'}>
+                  <Button className="h-(--control-height-lg) w-full" disabled={status.type === 'loading'}>
                     {status.type === 'loading' && <Spinner />}
                     {status.type === 'loading'
                       ? setupRequired ? 'Membuat akun...' : 'Memeriksa akun...'
@@ -192,7 +192,7 @@ export default function Login() {
                   </Button>
                 </form>
 
-                <div className="mt-6 flex items-start gap-2 border-t pt-5 text-[11px] leading-5 text-muted-foreground">
+                <div className="mt-6 flex items-start gap-2 border-t pt-5 text-xs leading-5 text-muted-foreground">
                   <IconShieldCheck className="mt-0.5 size-4 shrink-0" stroke={1.7} />
                   <span>Sesi disimpan sebagai secure server-side cookie. Credential tidak disimpan di localStorage.</span>
                 </div>

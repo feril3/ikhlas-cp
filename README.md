@@ -25,7 +25,7 @@ Aplikasi sengaja dibagi menjadi dua surface utama:
 - Riwayat transaksi.
 - Laporan berdasarkan periode.
 - Export transaksi ke CSV.
-- Notifikasi Telegram setelah transaksi tersimpan.
+- Menu **Perlu review** dengan badge jumlah pengajuan; notifikasi push PWA ke Ketua/Admin saat ada pengajuan baru dan ke Bendahara saat pengajuan disetujui atau perlu revisi.
 - Audit trail untuk aktivitas penting.
 
 ### Operasional Masjid
@@ -56,8 +56,9 @@ Aplikasi sengaja dibagi menjadi dua surface utama:
 ### Mobile & Reliability
 - Form transaksi mobile-first.
 - Dashboard responsive.
-- Installable PWA shell.
-- Service worker untuk app shell setelah kunjungan pertama.
+- PWA yang bisa dipasang di ponsel (Android, iPhone, desktop) dengan ikon, pintasan, dan navigasi bawah.
+- Foto bukti langsung dari kamera ponsel; foto dikompres otomatis sebelum diunggah.
+- Service worker untuk app shell dan notifikasi push.
 - Database libSQL: Turso di produksi, berkas SQLite lokal untuk pengembangan.
 - Backup database (snapshot JSON) lokal manual dan auto backup harian ke Google Drive dengan retention.
 
@@ -70,9 +71,9 @@ Aplikasi sengaja dibagi menjadi dua surface utama:
 - Zod
 - Multer
 - Google Drive API
-- Telegram Bot API
+- Web Push (VAPID, paket `web-push`)
 - YouTube Embed
-- Lucide React
+- Hugeicons dan design token (Plus Jakarta Sans, warna semantik)
 
 ## Menjalankan Project
 
@@ -112,16 +113,23 @@ npm run drive:auth -w @ikhlas/api
 
 Jika `GOOGLE_DRIVE_FOLDER_ID` kosong, IKHLAS otomatis membuat folder **IKHLAS - Bukti Transaksi** di My Drive akun OAuth. Lihat `docs/GOOGLE_DRIVE.md` untuk langkah lengkap.
 
-## Telegram
+## Notifikasi push (PWA)
 
-Isi pada `.env`:
+Buat sepasang kunci VAPID sekali saja:
 
-```env
-TELEGRAM_BOT_TOKEN=...
-TELEGRAM_CHAT_ID=...
+```bash
+npx web-push generate-vapid-keys
 ```
 
-Jika dua value ini kosong, transaksi tetap tersimpan dan notifikasi Telegram dilewati.
+Isi pada `.env` (lokal) atau Environment Variables Vercel:
+
+```env
+VAPID_PUBLIC_KEY=...
+VAPID_PRIVATE_KEY=...
+VAPID_SUBJECT=mailto:email-pengelola@contoh.id
+```
+
+Tanpa kunci ini aplikasi tetap berjalan; badge jumlah pengajuan di aplikasi tetap tampil, hanya notifikasi ke ponsel yang nonaktif. Setiap pengguna mengaktifkan notifikasi dari Beranda atau menu akun di perangkatnya. Di iPhone, notifikasi hanya bekerja setelah aplikasi dipasang ke Layar Utama (iOS 16.4 ke atas).
 
 ## Backup Database
 

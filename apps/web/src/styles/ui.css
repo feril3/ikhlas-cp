@@ -2,91 +2,118 @@
 
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities);
+@import "./tokens.css";
 
-@theme inline {
-  --font-sans: "IBM Plex Sans Variable", ui-sans-serif, system-ui, sans-serif;
-  --color-background: var(--ui-background);
-  --color-foreground: var(--ui-foreground);
-  --color-card: var(--ui-card);
-  --color-card-foreground: var(--ui-card-foreground);
-  --color-popover: var(--ui-popover);
-  --color-popover-foreground: var(--ui-popover-foreground);
-  --color-primary: var(--ui-primary);
-  --color-primary-foreground: var(--ui-primary-foreground);
-  --color-secondary: var(--ui-secondary);
-  --color-secondary-foreground: var(--ui-secondary-foreground);
-  --color-muted: var(--ui-muted);
-  --color-muted-foreground: var(--ui-muted-foreground);
-  --color-accent: var(--ui-accent);
-  --color-accent-foreground: var(--ui-accent-foreground);
-  --color-destructive: var(--ui-destructive);
-  --color-border: var(--ui-border);
-  --color-input: var(--ui-input);
-  --color-ring: var(--ui-ring);
-  --color-sidebar: var(--ui-sidebar);
-  --color-sidebar-foreground: var(--ui-sidebar-foreground);
-  --color-sidebar-primary: var(--ui-sidebar-primary);
-  --color-sidebar-accent: var(--ui-sidebar-accent);
-  --color-sidebar-accent-foreground: var(--ui-sidebar-accent-foreground);
-  --color-sidebar-border: var(--ui-sidebar-border);
-  --color-chart-1: var(--ui-chart-1);
-  --color-chart-2: var(--ui-chart-2);
-  --color-chart-3: var(--ui-chart-3);
-  --radius-sm: calc(var(--ui-radius) - 4px);
-  --radius-md: calc(var(--ui-radius) - 2px);
-  --radius-lg: var(--ui-radius);
-  --radius-xl: calc(var(--ui-radius) + 4px);
-}
-
-:root {
-  --ui-background: #f4f4f0;
-  --ui-foreground: #17211e;
-  --ui-card: #ffffff;
-  --ui-card-foreground: #17211e;
-  --ui-popover: #ffffff;
-  --ui-popover-foreground: #17211e;
-  --ui-primary: #146b5a;
-  --ui-primary-foreground: #ffffff;
-  --ui-secondary: #e8f0ec;
-  --ui-secondary-foreground: #25483f;
-  --ui-muted: #ecefeb;
-  --ui-muted-foreground: #56625d;
-  --ui-accent: #dcebe5;
-  --ui-accent-foreground: #0d4b3f;
-  --ui-destructive: #b42318;
-  --ui-border: #b9c4be;
-  --ui-input: #87978f;
-  --ui-ring: #1f6d5d;
-  --ui-sidebar: #0b3f35;
-  --ui-sidebar-foreground: #edf6f3;
-  --ui-sidebar-primary: #d2b878;
-  --ui-sidebar-accent: #15594a;
-  --ui-sidebar-accent-foreground: #ffffff;
-  --ui-sidebar-border: rgba(255,255,255,.18);
-  --ui-chart-1: #146b5a;
-  --ui-chart-2: #c05b4e;
-  --ui-chart-3: #b58a42;
-  --ui-success: #0f5a41;
-  --ui-success-soft: #e3f2eb;
-  --ui-success-border: #9bcbb7;
-  --ui-danger-soft: #fbe9e7;
-  --ui-danger-border: #efb5ae;
-  --ui-radius: .625rem;
-}
-
+/* Area aplikasi (bukan Public Display). Public Display memakai stylesheet sendiri. */
 .dashboard-shell {
-  min-height: 100vh;
-  background: var(--ui-background);
-  color: var(--ui-foreground);
-  font-family: "IBM Plex Sans Variable", ui-sans-serif, system-ui, sans-serif;
-  font-feature-settings: "tnum" 1, "ss01" 1;
+  min-height: 100dvh;
+  background: var(--canvas);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
+  font-synthesis-weight: none;
+  -webkit-font-smoothing: antialiased;
 }
 
-:where(.dashboard-shell *) {
-  border-color: var(--ui-border);
+/* Reset minimal (setara preflight Tailwind) hanya untuk aplikasi pengurus; Public Display tidak tersentuh. */
+@layer base {
+  /* Warna garis bawaan; kelas utilitas seperti border-transparent tetap bisa menimpanya. */
+  :where(html:not(.public-display-route) body) * {
+    border-color: var(--border);
+  }
+  :where(html:not(.public-display-route)) :where(h1, h2, h3, h4, h5, h6, p, figure, blockquote, dl, dd) {
+    margin: 0;
+  }
+  :where(html:not(.public-display-route)) :where(h1, h2, h3, h4, h5, h6) {
+    font-size: inherit;
+    font-weight: inherit;
+  }
+  :where(html:not(.public-display-route)) :where(ul, ol, menu) {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  :where(html:not(.public-display-route)) :where(button, input, select, textarea) {
+    margin: 0;
+    color: inherit;
+    letter-spacing: inherit;
+  }
+  :where(html:not(.public-display-route)) :where(button, [type="button"], [type="submit"], [type="reset"]) {
+    appearance: none;
+    background-color: transparent;
+    border: 0;
+    padding: 0;
+  }
+  :where(html:not(.public-display-route)) :where(img, svg, video, canvas) {
+    display: block;
+    max-width: 100%;
+  }
+  :where(html:not(.public-display-route)) :where(img, video) {
+    height: auto;
+  }
+  :where(html:not(.public-display-route)) :where(table) {
+    border-collapse: collapse;
+  }
 }
 
-.dashboard-shell :focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--ui-ring) 75%, transparent);
+/* Satu cincin fokus untuk semua kontrol: 2px, berjarak, kontras 3:1. */
+:where(html:not(.public-display-route) body) :focus-visible {
+  outline: 2px solid var(--ring);
   outline-offset: 2px;
+}
+
+:where(.dashboard-shell) table {
+  font-variant-numeric: tabular-nums;
+}
+
+:where(html:not(.public-display-route) body) :is(a[href], button, label, select, input, [role="button"], [role="tab"], [role="option"]) {
+  touch-action: manipulation;
+}
+
+::selection {
+  background: color-mix(in oklch, var(--primary) 22%, transparent);
+}
+
+/* Area aman perangkat (notch, home indicator) saat aplikasi berjalan sebagai PWA. */
+:root {
+  --touch-size: 44px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --bottom-nav-height: 64px;
+}
+
+/* Target sentuh 44px tanpa mengubah tampilan kontrol kecil. */
+@utility touch-target {
+  :where(&) {
+    position: relative;
+  }
+  @media (pointer: coarse) {
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 50% auto auto 50%;
+      width: max(100%, var(--touch-min-w, var(--touch-size)));
+      height: max(100%, var(--touch-min-h, var(--touch-size)));
+      transform: translate(-50%, -50%);
+    }
+  }
+}
+
+/* iOS memperbesar layar bila input di bawah 16px; pertahankan 16px di perangkat sentuh. */
+@media (pointer: coarse) {
+  :where(html:not(.public-display-route) body) :is(input, select, textarea) {
+    font-size: max(16px, 1em);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not(.public-display-route) body) *,
+  :where(html:not(.public-display-route) body) *::before,
+  :where(html:not(.public-display-route) body) *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -7,9 +7,9 @@ import {
   PlayCircle,
   ReceiptText,
   WalletCards
-} from 'lucide-react';
+} from '../components/icons.jsx';
 import { api } from '../lib/api.js';
-import { formatDate, formatRupiah } from '../lib/format.js';
+import { formatDate, formatRupiahLegacy as formatRupiah } from '../lib/format.js';
 import {
   formatCountdown,
   formatMinuteSecondCountdown,
@@ -167,6 +167,12 @@ function FinanceCarousel({ data, index }) {
 
 export default function PublicDisplay() {
   const [now, setNow] = useState(new Date());
+
+  // Penanda rute agar gaya aplikasi pengurus tidak memengaruhi Public Display.
+  useEffect(() => {
+    document.documentElement.classList.add('public-display-route');
+    return () => document.documentElement.classList.remove('public-display-route');
+  }, []);
   const [data, setData] = useState(null);
   const [financeSlideIndex, setFinanceSlideIndex] = useState(0);
 

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 export function GeneralSettings({ settings, setSettings, onSave, saving }) {
   return (
     <section className="overflow-hidden rounded-xl border bg-card">
-      <div className="border-b bg-muted/25 px-5 py-4">
+      <div className="border-b bg-muted px-5 py-4">
         <h2 className="text-lg font-semibold">Umum</h2>
         <p className="mt-1 text-sm text-muted-foreground">Identitas masjid, rekening donasi, dan media live.</p>
       </div>

@@ -71,14 +71,14 @@ export function AuditSettings({ logs }) {
 
   return (
     <section className="overflow-hidden rounded-xl border bg-card">
-      <div className="border-b bg-muted/25 px-4 py-4 sm:px-5">
+      <div className="border-b bg-muted px-4 py-4 sm:px-5">
         <h2 className="text-lg font-semibold">Audit</h2>
         <p className="mt-1 text-sm text-muted-foreground">Telusuri perubahan sistem dan buka detail sebelum/sesudah ketika tersedia.</p>
       </div>
       <div className="grid gap-3 border-b bg-card p-4 sm:grid-cols-2 xl:grid-cols-4">
         <Input placeholder="Cari pengguna" value={userFilter} onChange={(e) => setUserFilter(e.target.value)} />
         <Select value={entityFilter} onValueChange={setEntityFilter}>
-          <SelectTrigger className="h-10 w-full"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-(--control-height) w-full"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">Semua entitas</SelectItem>
             {entities.map((entity) => <SelectItem key={entity} value={entity}>{entity}</SelectItem>)}

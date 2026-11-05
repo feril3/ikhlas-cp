@@ -117,7 +117,7 @@ export async function exportDatabaseSnapshot() {
   return snapshot;
 }
 
-const SCHEMA_VERSION = '2026-10-24';
+const SCHEMA_VERSION = '2026-11-05';
 let readyPromise = null;
 
 // Inisialisasi skema cukup sekali per instance (penting untuk serverless).
@@ -305,6 +305,18 @@ export async function initializeDatabase() {
       FOREIGN KEY (reviewed_by) REFERENCES users(id)
     );
 
+    CREATE TABLE IF NOT EXISTS push_subscriptions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      endpoint TEXT NOT NULL UNIQUE,
+      p256dh TEXT NOT NULL,
+      auth TEXT NOT NULL,
+      user_agent TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
     CREATE UNIQUE INDEX IF NOT EXISTS idx_prayer_unique
       ON prayer_schedules(prayer_date, prayer_name);
     CREATE INDEX IF NOT EXISTS idx_transactions_date
@@ -329,6 +341,8 @@ export async function initializeDatabase() {
       ON sessions(expires_at);
     CREATE INDEX IF NOT EXISTS idx_audit_created
       ON audit_logs(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user
+      ON push_subscriptions(user_id);
     CREATE INDEX IF NOT EXISTS idx_transaction_approval_status
       ON transaction_approval_requests(status, updated_at DESC);
     CREATE INDEX IF NOT EXISTS idx_transaction_approval_submitter

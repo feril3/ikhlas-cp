@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { IconDeviceFloppy, IconHistory } from '@tabler/icons-react';
+import { IconDeviceFloppy, IconHistory } from '@/components/icons.jsx';
 import { api } from '@/lib/api.js';
 import { useAuth } from '@/auth/AuthContext.jsx';
 import { formatRupiah } from '@/lib/format.js';
@@ -130,7 +130,7 @@ export function TransactionEditSheet({ transaction, open, onOpenChange, onSaved 
                   inputMode="numeric"
                   min="1"
                   max="9999999999"
-                  className="h-11"
+                  className="h-(--control-height-lg)"
                   value={form.amount}
                   onChange={(event) => update('amount', event.target.value)}
                   required
@@ -142,7 +142,7 @@ export function TransactionEditSheet({ transaction, open, onOpenChange, onSaved 
                 <Input
                   id="edit-date"
                   type="date"
-                  className="h-11"
+                  className="h-(--control-height-lg)"
                   value={form.transactionDate}
                   onChange={(event) => update('transactionDate', event.target.value)}
                   required
@@ -159,15 +159,15 @@ export function TransactionEditSheet({ transaction, open, onOpenChange, onSaved 
                   onValueChange={(value) => value && update('method', value)}
                   className="grid w-full grid-cols-2"
                 >
-                  <ToggleGroupItem value="CASH" className="h-11 w-full rounded-r-none">Tunai</ToggleGroupItem>
-                  <ToggleGroupItem value="TRANSFER" className="h-11 w-full rounded-l-none">Transfer</ToggleGroupItem>
+                  <ToggleGroupItem value="CASH" className="h-(--control-height-lg) w-full">Tunai</ToggleGroupItem>
+                  <ToggleGroupItem value="TRANSFER" className="h-(--control-height-lg) w-full">Transfer</ToggleGroupItem>
                 </ToggleGroup>
               </Field>
 
               <Field>
                 <FieldLabel>Kategori</FieldLabel>
                 <Select value={form.categoryId} onValueChange={(value) => update('categoryId', value)}>
-                  <SelectTrigger className="h-11 w-full">
+                  <SelectTrigger className="h-(--control-height-lg) w-full">
                     <SelectValue placeholder="Pilih kategori" />
                   </SelectTrigger>
                   <SelectContent>
@@ -185,7 +185,7 @@ export function TransactionEditSheet({ transaction, open, onOpenChange, onSaved 
                   <FieldLabel htmlFor="edit-source">Detail sumber dana</FieldLabel>
                   <Input
                     id="edit-source"
-                    className="h-11"
+                    className="h-(--control-height-lg)"
                     maxLength="120"
                     value={form.sourceDetail}
                     onChange={(event) => update('sourceDetail', event.target.value)}
@@ -206,8 +206,8 @@ export function TransactionEditSheet({ transaction, open, onOpenChange, onSaved 
                 <FieldDescription>{form.description.length}/300 karakter</FieldDescription>
               </Field>
 
-              <div className="flex gap-3 rounded-lg border bg-muted/35 p-3 text-sm text-muted-foreground">
-                <IconHistory aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />
+              <div className="flex gap-3 rounded-lg border bg-muted p-3 text-sm text-muted-foreground">
+                <IconHistory aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                 <p className="leading-5">
                   {resultText(requiresApproval)}
 
@@ -223,7 +223,7 @@ export function TransactionEditSheet({ transaction, open, onOpenChange, onSaved 
           </form>
         )}
 
-        <SheetFooter className="border-t bg-muted/20 px-5 py-4 sm:px-6">
+        <SheetFooter className="border-t bg-muted px-5 py-4 sm:px-6">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={status.type === 'loading'}>
             Batal
           </Button>

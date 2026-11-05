@@ -6,7 +6,7 @@ import {
   IconCash,
   IconDeviceFloppy,
   IconInfoCircle
-} from '@tabler/icons-react';
+} from '@/components/icons.jsx';
 import { toast } from 'sonner';
 import { api } from '@/lib/api.js';
 import { useAuth } from '@/auth/AuthContext.jsx';
@@ -47,7 +47,7 @@ const MAX_TOTAL_SIZE = 4.4 * 1024 * 1024;
 function TransactionFormSkeleton() {
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
-      <Skeleton className="h-12 w-32" />
+      <Skeleton className="h-(--control-height-lg) w-32" />
       <Skeleton className="h-24 w-full" />
       <Skeleton className="h-[520px] w-full" />
     </div>
@@ -190,10 +190,6 @@ export default function TransactionForm({ type }) {
         toast.success('Pengajuan dikirim ke Ketua untuk direview.', {
           description: 'Transaksi belum masuk saldo, laporan, atau Public Display sebelum disetujui.'
         });
-      } else if (created.notification?.status === 'failed') {
-        toast.warning(income ? 'Kas masuk tersimpan.' : 'Kas keluar tersimpan.', {
-          description: 'Notifikasi Telegram gagal dikirim.'
-        });
       } else {
         toast.success(income ? 'Kas masuk berhasil dicatat.' : 'Kas keluar berhasil dicatat.');
       }
@@ -217,7 +213,7 @@ export default function TransactionForm({ type }) {
       </div>
 
       <PageHeader
-        title={income ? 'Kas Masuk' : 'Kas Keluar'}
+        title={income ? 'Catat kas masuk' : 'Catat kas keluar'}
         description={requiresApproval
           ? 'Catat transaksi dengan kategori dan bukti yang mudah diverifikasi. Pengajuan Bendahara akan direview Ketua sebelum posting.'
           : 'Catat transaksi dengan kategori dan bukti yang mudah diverifikasi pengurus.'}
@@ -240,7 +236,7 @@ export default function TransactionForm({ type }) {
                   inputMode="numeric"
                   autoComplete="off"
                   placeholder="0"
-                  className="h-14 text-xl font-semibold tracking-[-0.02em] sm:text-2xl"
+                  className="h-14 text-xl font-semibold tracking-tight sm:text-2xl"
                   aria-describedby="amount-preview"
                 />
               </InputGroup>
@@ -263,7 +259,7 @@ export default function TransactionForm({ type }) {
                 <Input
                   id="transaction-date"
                   type="date"
-                  className="h-12"
+                  className="h-(--control-height-lg)"
                   value={form.transactionDate}
                   onChange={(event) => update('transactionDate', event.target.value)}
                   required
@@ -280,11 +276,11 @@ export default function TransactionForm({ type }) {
                   spacing={0}
                   className="grid w-full grid-cols-2"
                 >
-                  <ToggleGroupItem value="CASH" className="h-12 w-full rounded-r-none">
+                  <ToggleGroupItem value="CASH" className="h-(--control-height) w-full">
                     <IconCash data-icon="inline-start" aria-hidden="true" />
                     Tunai
                   </ToggleGroupItem>
-                  <ToggleGroupItem value="TRANSFER" className="h-12 w-full rounded-l-none">
+                  <ToggleGroupItem value="TRANSFER" className="h-(--control-height) w-full">
                     <IconBuildingBank data-icon="inline-start" aria-hidden="true" />
                     Transfer
                   </ToggleGroupItem>
@@ -294,7 +290,7 @@ export default function TransactionForm({ type }) {
               <Field>
                 <FieldLabel>{income ? 'Sumber dana' : 'Kategori pengeluaran'}</FieldLabel>
                 <Select value={form.categoryId} onValueChange={(value) => update('categoryId', value)}>
-                  <SelectTrigger className="h-12 w-full">
+                  <SelectTrigger className="h-(--control-height-lg) w-full">
                     <SelectValue placeholder="Pilih kategori" />
                   </SelectTrigger>
                   <SelectContent>
@@ -311,7 +307,7 @@ export default function TransactionForm({ type }) {
                   <FieldLabel htmlFor="source-detail">Detail sumber dana</FieldLabel>
                   <Input
                     id="source-detail"
-                    className="h-12"
+                    className="h-(--control-height-lg)"
                     value={form.sourceDetail}
                     onChange={(event) => update('sourceDetail', event.target.value)}
                     maxLength="120"
@@ -346,27 +342,24 @@ export default function TransactionForm({ type }) {
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             <FileUploadField
-              id="transaction-evidence"
               label="Bukti transaksi"
-              description="JPG, PNG, WEBP, atau PDF · maks. 4 MB"
+              description={income ? 'Foto nota atau bukti transfer, jika ada' : 'Foto nota atau kuitansi · wajib'}
               file={evidence}
               onChange={(file) => acceptFile(file, setEvidence)}
               required={!income}
-              capture="environment"
             />
 
             {form.method === 'TRANSFER' && (
               <FileUploadField
-                id="bank-mutation"
                 label="Mutasi rekening"
-                description="Lampirkan mutasi bank jika tersedia · maks. 4 MB"
+                description="Tangkapan layar mutasi bank, jika ada"
                 file={mutation}
                 onChange={(file) => acceptFile(file, setMutation)}
               />
             )}
 
-            <div className="flex gap-3 rounded-lg bg-muted/45 p-3 text-xs leading-5 text-muted-foreground">
-              <IconInfoCircle aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />
+            <div className="flex gap-3 rounded-lg bg-muted p-3 text-xs leading-5 text-muted-foreground">
+              <IconInfoCircle aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
               <p>
                 Dokumen disimpan privat di Google Drive. Aplikasi hanya menyimpan referensi file untuk mengaitkannya dengan transaksi.
               </p>
@@ -394,11 +387,11 @@ export default function TransactionForm({ type }) {
           </Alert>
         )}
 
-        <div className="sticky bottom-0 z-20 -mx-4 mt-1 flex gap-2 border-t bg-background/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:justify-end sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:backdrop-blur-none">
+        <div className="sticky bottom-0 z-20 -mx-4 mt-1 flex gap-2 border-t bg-background/95 px-4 pt-3 pb-[calc(0.75rem+var(--safe-bottom))] backdrop-blur-md sm:static sm:mx-0 sm:justify-end sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
           <Button
             type="button"
             variant="outline"
-            className="h-12 flex-1 sm:h-10 sm:flex-none"
+            className="h-(--control-height-lg) flex-1 sm:h-(--control-height) sm:flex-none"
             onClick={() => navigate(-1)}
             disabled={status.type === 'loading'}
           >
@@ -406,7 +399,7 @@ export default function TransactionForm({ type }) {
           </Button>
           <Button
             type="submit"
-            className="h-12 flex-1 sm:h-10 sm:flex-none"
+            className="h-(--control-height-lg) flex-1 sm:h-(--control-height) sm:flex-none"
             disabled={status.type === 'loading' || categories.length === 0}
           >
             {status.type === 'loading' ? <Spinner /> : <IconDeviceFloppy data-icon="inline-start" aria-hidden="true" />}

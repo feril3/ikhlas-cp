@@ -41,8 +41,7 @@ API mengirim baseline security headers:
 ## Secrets
 
 Jangan commit:
-- Telegram bot token.
-- Telegram chat ID bila dianggap sensitif.
+- Kunci privat VAPID (VAPID_PRIVATE_KEY) untuk notifikasi push.
 - Database production.
 - Backup database lokal.
 - Snapshot backup Google Drive tetap private dan mengikuti akses akun OAuth.

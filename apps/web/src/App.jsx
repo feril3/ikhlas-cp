@@ -10,6 +10,7 @@ import PublicDisplay from './pages/PublicDisplay.jsx';
 import Login from './pages/Login.jsx';
 import Reports from './pages/Reports.jsx';
 import AdminSettings from './pages/AdminSettings.jsx';
+import Approvals from './pages/Approvals.jsx';
 
 function ProtectedShell() {
   const { loading, user } = useAuth();
@@ -43,6 +44,7 @@ export default function App() {
           <Route path="/transactions/income" element={<TransactionForm type="INCOME" />} />
           <Route path="/transactions/expense" element={<TransactionForm type="EXPENSE" />} />
         </Route>
+        <Route path="/approvals" element={<Approvals />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/schedule" element={<Schedule />} />
 

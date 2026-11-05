@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils"
-import { IconLoader } from "@tabler/icons-react"
+import { IconLoader } from "@/components/icons.jsx"
 
 function Spinner({
   className,

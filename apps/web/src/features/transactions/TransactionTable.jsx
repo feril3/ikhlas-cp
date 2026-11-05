@@ -6,7 +6,7 @@ import {
   IconFileText,
   IconPencil,
   IconTrash
-} from '@tabler/icons-react';
+} from '@/components/icons.jsx';
 import {
   flexRender,
   getCoreRowModel,
@@ -52,7 +52,7 @@ function AttachmentLinks({ transaction }) {
           href={api.attachmentUrl(transaction.id, 'evidence')}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+          className="inline-flex items-center gap-1 text-xs font-medium text-link hover:underline"
         >
           <IconFileText aria-hidden="true" className="size-3.5" /> Bukti
         </a>
@@ -62,7 +62,7 @@ function AttachmentLinks({ transaction }) {
           href={api.attachmentUrl(transaction.id, 'mutation')}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+          className="inline-flex items-center gap-1 text-xs font-medium text-link hover:underline"
         >
           <IconFileText aria-hidden="true" className="size-3.5" /> Mutasi
         </a>
@@ -144,7 +144,7 @@ function MobileTransactionCard({ transaction, canManage, busy, onEdit, onDelete 
           {transaction.sourceDetail && <div className="truncate">{transaction.sourceDetail}</div>}
           {transaction.description && <div className="line-clamp-2">{transaction.description}</div>}
         </div>
-        <strong className={income ? 'shrink-0 text-sm font-semibold text-primary' : 'shrink-0 text-sm font-semibold text-destructive'}>
+        <strong className={income ? 'shrink-0 text-sm font-semibold text-success' : 'shrink-0 text-sm font-semibold text-destructive'}>
           {income ? '+' : '-'}{formatRupiah(transaction.amount)}
         </strong>
       </div>
@@ -200,7 +200,7 @@ export function TransactionTable({ data, canManage, busyId, onEdit, onDelete }) 
       accessorKey: 'amount',
       header: () => <div className="text-right">Nominal</div>,
       cell: ({ row }) => (
-        <div className={row.original.type === 'INCOME' ? 'whitespace-nowrap text-right font-semibold text-primary' : 'whitespace-nowrap text-right font-semibold text-destructive'}>
+        <div className={row.original.type === 'INCOME' ? 'whitespace-nowrap text-right font-semibold text-success' : 'whitespace-nowrap text-right font-semibold text-destructive'}>
           {row.original.type === 'INCOME' ? '+' : '-'}{formatRupiah(row.original.amount)}
         </div>
       )

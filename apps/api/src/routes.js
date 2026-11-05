@@ -13,7 +13,7 @@ import {
   verifyPassword
 } from './auth.js';
 import { logAudit } from './audit.js';
-import { sendTransactionNotification } from './telegram.js';
+import { getPushPublicKey, notifyRole, notifyUser, removeSubscription, saveSubscription } from './push.js';
 import { transactionUpload } from './uploads.js';
 import {
   deleteTransactionAttachment,
@@ -458,6 +458,46 @@ function transactionPayload({ type, input, category, existing = null, attachment
   };
 }
 
+// Notifikasi push PWA untuk alur approval: Ketua/Admin diberi tahu pengajuan baru, Bendahara diberi tahu hasil review.
+const ACTION_TITLES = {
+  CREATE: 'Pengajuan transaksi baru',
+  UPDATE: 'Pengajuan perubahan transaksi',
+  DELETE: 'Pengajuan penghapusan transaksi',
+  DOCUMENT: 'Pengajuan penggantian dokumen',
+  RESUBMIT: 'Pengajuan dikirim ulang'
+};
+
+function rupiahText(amount) {
+  return 'Rp' + new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(Number(amount) || 0);
+}
+
+function approvalSummaryText(request) {
+  const proposal = request?.proposal ?? {};
+  const kind = proposal.type === 'EXPENSE' ? 'Kas keluar' : proposal.type === 'INCOME' ? 'Kas masuk' : 'Transaksi';
+  return [kind, proposal.amount ? rupiahText(proposal.amount) : null, proposal.category ?? null].filter(Boolean).join(' · ');
+}
+
+async function notifyReviewers(request, kind, submitterName) {
+  await notifyRole('ADMIN', {
+    title: ACTION_TITLES[kind] ?? ACTION_TITLES.CREATE,
+    body: `${approvalSummaryText(request)} dari ${submitterName}. Ketuk untuk mereview.`,
+    url: `/approvals?id=${request.id}`,
+    tag: `approval-${request.id}`
+  });
+}
+
+async function notifySubmitter(request, decision, note) {
+  const approved = decision === 'APPROVE';
+  await notifyUser(request.submittedBy, {
+    title: approved ? 'Pengajuan disetujui' : 'Pengajuan perlu revisi',
+    body: approved
+      ? `${approvalSummaryText(request)} sudah diposting.`
+      : `${approvalSummaryText(request)}. Catatan Ketua: ${note}`,
+    url: `/approvals?id=${request.id}`,
+    tag: `approval-${request.id}`
+  });
+}
+
 async function approvalRequestResponse(request) {
   if (!request) return null;
   const { payloadJson, ...rest } = request;
@@ -690,6 +730,55 @@ apiRouter.post('/auth/logout', requireAuth, async (req, res) => {
 
 apiRouter.get('/auth/me', requireAuth, (req, res) => {
   res.json({ user: req.user });
+});
+
+// Jumlah pengajuan untuk badge navigasi: Ketua/Admin melihat yang menunggu review,
+// Bendahara melihat pengajuannya yang perlu revisi atau masih menunggu.
+apiRouter.get('/notifications/summary', requireAuth, async (req, res) => {
+  if (req.user.role === 'ADMIN') {
+    const row = await db.prepare(`
+      SELECT COUNT(*) AS count FROM transaction_approval_requests WHERE status = 'PENDING_REVIEW'
+    `).get();
+    return res.json({ pendingReview: Number(row?.count ?? 0), revisionRequired: 0 });
+  }
+  const rows = await db.prepare(`
+    SELECT status, COUNT(*) AS count
+    FROM transaction_approval_requests
+    WHERE submitted_by = ? AND status IN ('PENDING_REVIEW', 'REVISION_REQUIRED')
+    GROUP BY status
+  `).all(req.user.id);
+  const count = (status) => Number(rows.find((row) => row.status === status)?.count ?? 0);
+  return res.json({ pendingReview: count('PENDING_REVIEW'), revisionRequired: count('REVISION_REQUIRED') });
+});
+
+const pushSubscriptionSchema = z.object({
+  endpoint: z.string().url().max(1000),
+  keys: z.object({
+    p256dh: z.string().min(10).max(200),
+    auth: z.string().min(8).max(100)
+  })
+});
+
+apiRouter.get('/push/public-key', requireAuth, (_req, res) => {
+  res.json({ publicKey: getPushPublicKey() });
+});
+
+apiRouter.post('/push/subscriptions', requireAuth, async (req, res) => {
+  if (!getPushPublicKey()) {
+    return res.status(503).json({ message: 'Notifikasi belum diaktifkan di server.' });
+  }
+  const parsed = pushSubscriptionSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(422).json({ message: 'Data langganan notifikasi tidak valid.' });
+  }
+  await saveSubscription(req.user.id, parsed.data, req.get('user-agent')?.slice(0, 250));
+  return res.status(201).json({ message: 'Notifikasi aktif di perangkat ini.' });
+});
+
+apiRouter.delete('/push/subscriptions', requireAuth, async (req, res) => {
+  const endpoint = String(req.body?.endpoint ?? '');
+  if (endpoint) await removeSubscription(req.user.id, endpoint);
+  return res.status(204).end();
 });
 
 apiRouter.get('/public/display', async (req, res) => {
@@ -940,6 +1029,7 @@ apiRouter.post(
         }
       });
 
+      await notifyReviewers(request, 'CREATE', req.user.name);
       return res.status(202).json({
         message: 'Pengajuan transaksi dikirim ke Ketua untuk direview.',
         approvalRequired: true,
@@ -1052,13 +1142,10 @@ apiRouter.post(
       }
     });
 
-    const notification = await sendTransactionNotification(transaction, summary);
-
     return res.status(201).json({
       message: 'Transaksi berhasil disimpan.',
       transaction,
-      summary,
-      notification
+      summary
     });
   }
 );
@@ -1130,6 +1217,7 @@ apiRouter.put(
         }
       });
 
+      await notifyReviewers(request, 'UPDATE', req.user.name);
       return res.status(202).json({
         message: 'Perubahan transaksi dikirim ke Ketua untuk direview.',
         approvalRequired: true,
@@ -1214,6 +1302,7 @@ apiRouter.delete(
         }
       });
 
+      await notifyReviewers(request, 'DELETE', req.user.name);
       return res.status(202).json({
         message: 'Penghapusan transaksi dikirim ke Ketua untuk direview.',
         approvalRequired: true,
@@ -1334,6 +1423,7 @@ apiRouter.post(
         }
       });
 
+      await notifyReviewers(request, 'DOCUMENT', req.user.name);
       return res.status(202).json({
         message: 'Perubahan dokumen dikirim ke Ketua untuk direview.',
         approvalRequired: true,
@@ -1717,6 +1807,8 @@ apiRouter.put(
         }
       });
 
+      await notifySubmitter(request, 'REVISION_REQUIRED', note);
+
       return res.json({
         message: 'Pengajuan dikembalikan ke Bendahara untuk direvisi.',
         approvalRequest: await approvalRequestResponse(await getApprovalRequestRecord(request.id))
@@ -1867,9 +1959,7 @@ apiRouter.put(
       ]);
     }
 
-    if (request.action === 'CREATE' && after) {
-      await sendTransactionNotification(after, await getSummary());
-    }
+    await notifySubmitter(request, 'APPROVE');
 
     return res.json({
       message: request.action === 'DELETE'
@@ -1975,6 +2065,7 @@ apiRouter.put(
       }
     });
 
+    await notifyReviewers(updated, 'RESUBMIT', req.user.name);
     return res.json({
       message: 'Perbaikan dikirim ulang ke Ketua untuk direview.',
       approvalRequired: true,

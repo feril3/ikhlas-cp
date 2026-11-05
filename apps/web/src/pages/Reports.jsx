@@ -5,7 +5,7 @@ import {
   IconTrendingDown,
   IconTrendingUp,
   IconWallet
-} from '@tabler/icons-react';
+} from '@/components/icons.jsx';
 import { Bar, BarChart, CartesianGrid, Cell, XAxis, YAxis } from 'recharts';
 import { api } from '@/lib/api.js';
 import { formatDate, formatRupiah, toInputDate } from '@/lib/format.js';
@@ -20,12 +20,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const cashflowConfig = {
-  income: { label: 'Kas masuk', color: 'var(--ui-chart-1)' },
-  expense: { label: 'Kas keluar', color: 'var(--ui-chart-2)' }
+  income: { label: 'Kas masuk', color: 'var(--chart-1)' },
+  expense: { label: 'Kas keluar', color: 'var(--chart-2)' }
 };
 
 const categoryConfig = {
-  total: { label: 'Total', color: 'var(--ui-chart-1)' }
+  total: { label: 'Total', color: 'var(--chart-1)' }
 };
 
 function firstDayOfMonth(date) {
@@ -54,10 +54,10 @@ function Metric({ icon: Icon, label, value, tone = 'default', caption }) {
         <Icon className="size-4" stroke={1.8} />
         {label}
       </div>
-      <strong className={`mt-2 block truncate text-xl font-semibold tracking-[-0.025em] sm:text-2xl ${tone === 'income' ? 'text-primary' : tone === 'expense' ? 'text-destructive' : 'text-foreground'}`}>
+      <strong className={`mt-2 block truncate text-xl font-semibold tracking-tight sm:text-2xl ${tone === 'income' ? 'text-success' : tone === 'expense' ? 'text-destructive' : 'text-foreground'}`}>
         {value}
       </strong>
-      {caption && <span className="mt-1 block text-[11px] text-muted-foreground">{caption}</span>}
+      {caption && <span className="mt-1 block text-xs text-muted-foreground">{caption}</span>}
     </div>
   );
 }
@@ -142,7 +142,7 @@ export default function Reports() {
               Sampai tanggal
               <Input type="date" value={range.to} onChange={(event) => setRange((current) => ({ ...current, to: event.target.value }))} />
             </label>
-            <div className="flex flex-wrap items-center gap-1 rounded-lg bg-muted/55 p-1 md:col-span-2 xl:col-span-1">
+            <div className="flex flex-wrap items-center gap-1 rounded-lg bg-muted p-1 md:col-span-2 xl:col-span-1">
               <Button variant="ghost" size="sm" onClick={() => applyPreset('month')}>Bulan ini</Button>
               <Button variant="ghost" size="sm" onClick={() => applyPreset('30d')}>30 hari</Button>
               <Button variant="ghost" size="sm" onClick={() => applyPreset('90d')}>90 hari</Button>
@@ -173,14 +173,14 @@ export default function Reports() {
 
           <div className="grid gap-4 xl:grid-cols-2">
             <Card className="min-w-0">
-              <CardHeader className="border-b bg-muted/25">
+              <CardHeader className="border-b bg-muted">
                 <CardTitle>Arus kas periode</CardTitle>
                 <CardDescription>Kas masuk dan keluar per hari pada rentang yang dipilih.</CardDescription>
               </CardHeader>
               <CardContent>
                 <ChartContainer config={cashflowConfig} className="h-[290px] min-h-[270px]">
                   <BarChart data={data.cashflow} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
-                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--ui-border)" />
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--chart-grid)" />
                     <XAxis
                       dataKey="date"
                       axisLine={false}
@@ -204,7 +204,7 @@ export default function Reports() {
             </Card>
 
             <Card className="min-w-0">
-              <CardHeader className="border-b bg-muted/25">
+              <CardHeader className="border-b bg-muted">
                 <CardTitle>Distribusi kategori</CardTitle>
                 <CardDescription>Delapan kategori dengan nominal terbesar pada periode ini.</CardDescription>
               </CardHeader>
@@ -212,7 +212,7 @@ export default function Reports() {
                 {categoryData.length ? (
                   <ChartContainer config={categoryConfig} className="h-[290px] min-h-[270px]">
                     <BarChart data={categoryData} layout="vertical" margin={{ left: 8, right: 24, top: 8, bottom: 0 }}>
-                      <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="var(--ui-border)" />
+                      <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="var(--chart-grid)" />
                       <XAxis type="number" axisLine={false} tickLine={false} tickMargin={8} tick={{ fontSize: 11 }} tickFormatter={formatAxisAmount} />
                       <YAxis type="category" dataKey="category" axisLine={false} tickLine={false} width={110} tick={{ fontSize: 11 }} />
                       <ChartTooltip
@@ -223,7 +223,7 @@ export default function Reports() {
                       />
                       <Bar dataKey="total" radius={[0, 4, 4, 0]} maxBarSize={22} minPointSize={5} isAnimationActive={false}>
                         {categoryData.map((item) => (
-                          <Cell key={`${item.type}-${item.category}`} fill={item.type === 'INCOME' ? 'var(--ui-chart-1)' : 'var(--ui-chart-2)'} />
+                          <Cell key={`${item.type}-${item.category}`} fill={item.type === 'INCOME' ? 'var(--chart-1)' : 'var(--chart-2)'} />
                         ))}
                       </Bar>
                     </BarChart>
@@ -263,7 +263,7 @@ export default function Reports() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right tabular-nums">{item.transactionCount}</TableCell>
-                      <TableCell className={`text-right font-semibold tabular-nums ${item.type === 'INCOME' ? 'text-primary' : 'text-destructive'}`}>
+                      <TableCell className={`text-right font-semibold tabular-nums ${item.type === 'INCOME' ? 'text-success' : 'text-destructive'}`}>
                         {formatRupiah(item.total)}
                       </TableCell>
                     </TableRow>

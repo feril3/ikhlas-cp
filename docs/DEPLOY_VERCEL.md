@@ -64,7 +64,8 @@ Lakukan sebelum ada data baru di Turso agar tidak bentrok.
    | `GOOGLE_DRIVE_FOLDER_ID` | Tidak | Kosong = folder dibuat otomatis |
    | `GOOGLE_DRIVE_BACKUP_ENABLED` | Tidak | `true` untuk backup harian |
    | `GOOGLE_DRIVE_BACKUP_RETENTION` | Tidak | Default `30` |
-   | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | Tidak | Notifikasi transaksi |
+   | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | Tidak | Notifikasi push PWA. Buat dengan `npx web-push generate-vapid-keys` |
+   | `VAPID_SUBJECT` | Tidak | `mailto:` email pengelola aplikasi |
 
    Jangan isi `VITE_API_URL`, `CORS_ORIGIN`, `DATABASE_PATH`, atau `PORT` di Vercel. Frontend dan API berada di domain yang sama (`/api`).
 

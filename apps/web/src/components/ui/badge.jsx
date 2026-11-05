@@ -2,24 +2,36 @@ import * as React from 'react';
 import { cva } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
+// Badge datar: latar lembut, teks tegas, tanpa cincin, garis tepi, bayangan, atau ikon status.
+// Teks selalu menyebut statusnya, jadi warna bukan satu-satunya penanda (WCAG 1.4.1).
+// Varian outline tetap bergaris tepi karena garis itu ciri variannya.
 const badgeVariants = cva(
-  'inline-flex w-fit items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-semibold leading-5 shadow-[0_1px_0_rgba(23,33,30,0.03)]',
+  'inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-full font-medium whitespace-nowrap tabular-nums [&>svg]:pointer-events-none [&>svg]:size-3',
   {
     variants: {
       variant: {
-        default: 'border-primary bg-primary text-primary-foreground',
-        secondary: 'border-border bg-secondary text-secondary-foreground',
-        outline: 'border-border bg-card text-foreground',
-        destructive: 'border-[var(--ui-danger-border)] bg-[var(--ui-danger-soft)] text-destructive',
-        success: 'border-[var(--ui-success-border)] bg-[var(--ui-success-soft)] text-[var(--ui-success)]'
+        secondary: 'bg-accent text-muted-foreground',
+        muted: 'bg-muted text-subtle-foreground',
+        primary: 'bg-primary text-primary-foreground',
+        default: 'bg-inverse text-inverse-foreground',
+        inverse: 'bg-inverse text-inverse-foreground',
+        outline: 'text-foreground shadow-[inset_0_0_0_1px_var(--border-strong)]',
+        success: 'bg-success-subtle text-success',
+        warning: 'bg-warning-subtle text-warning',
+        destructive: 'bg-destructive-subtle text-destructive',
+        info: 'bg-info-subtle text-info'
+      },
+      size: {
+        sm: 'h-5 px-1.5 text-2xs',
+        default: 'h-6 px-2 text-xs'
       }
     },
-    defaultVariants: { variant: 'secondary' }
+    defaultVariants: { variant: 'secondary', size: 'default' }
   }
 );
 
-function Badge({ className, variant, ...props }) {
-  return <span className={cn(badgeVariants({ variant }), className)} {...props} />;
+function Badge({ className, variant, size, ...props }) {
+  return <span data-slot="badge" className={cn(badgeVariants({ variant, size }), className)} {...props} />;
 }
 
 export { Badge, badgeVariants };

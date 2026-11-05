@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { IconDots, IconPlus, IconTrash } from '@tabler/icons-react';
+import { IconDots, IconPlus, IconTrash } from '@/components/icons.jsx';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';

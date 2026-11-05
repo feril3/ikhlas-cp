@@ -8,7 +8,7 @@ import { formatRupiah } from '@/lib/format';
 export function FinanceSettings({ settings, setSettings, onSave, saving }) {
   return (
     <section className="overflow-hidden rounded-xl border bg-card">
-      <div className="border-b bg-muted/25 px-5 py-4">
+      <div className="border-b bg-muted px-5 py-4">
         <h2 className="text-lg font-semibold">Keuangan</h2>
         <p className="mt-1 text-sm text-muted-foreground">Atur saldo awal yang menjadi dasar perhitungan kas.</p>
       </div>

@@ -9,7 +9,7 @@ const AvatarImage = React.forwardRef(function AvatarImage({ className, ...props 
   return <AvatarPrimitive.Image ref={ref} className={cn('aspect-square size-full', className)} {...props} />;
 });
 const AvatarFallback = React.forwardRef(function AvatarFallback({ className, ...props }, ref) {
-  return <AvatarPrimitive.Fallback ref={ref} className={cn('flex size-full items-center justify-center rounded-full bg-secondary text-xs font-bold text-secondary-foreground', className)} {...props} />;
+  return <AvatarPrimitive.Fallback ref={ref} className={cn('flex size-full items-center justify-center rounded-full bg-accent text-xs font-semibold text-foreground', className)} {...props} />;
 });
 
 export { Avatar, AvatarImage, AvatarFallback };

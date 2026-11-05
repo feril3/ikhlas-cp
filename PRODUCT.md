@@ -11,7 +11,7 @@ web
 - Frontend: ReactJS
 - Backend: NodeJS
 - Database: SQLite
-- Integration: Telegram Bot API
+- Integration: Web Push (PWA) untuk notifikasi approval
 - Streaming: YouTube Embed / YouTube Live
 - Delivery surface: web browser on mobile, desktop, and TV/Public Display
 
@@ -39,7 +39,7 @@ Keberhasilan produk berarti:
 
 ## Positioning
 
-Produk menggabungkan tiga kebutuhan yang biasanya terpisah: pencatatan keuangan internal, monitoring operasional pengurus, dan penyampaian informasi publik kepada jamaah. Data yang sama menjadi sumber untuk dashboard internal, notifikasi Telegram, laporan transaksi, dan ringkasan yang dipublikasikan.
+Produk menggabungkan tiga kebutuhan yang biasanya terpisah: pencatatan keuangan internal, monitoring operasional pengurus, dan penyampaian informasi publik kepada jamaah. Data yang sama menjadi sumber untuk dashboard internal, notifikasi push approval, laporan transaksi, dan ringkasan yang dipublikasikan.
 
 ## Operating Context
 
@@ -47,7 +47,7 @@ Produk menggabungkan tiga kebutuhan yang biasanya terpisah: pencatatan keuangan 
 - Pencatatan operasional harus nyaman dari smartphone, bukan hanya sekadar dapat dibuka di layar kecil.
 - Pengurus menggunakan dashboard untuk monitoring berkala.
 - Bukti transaksi dan mutasi rekening digunakan sebagai dokumentasi pendukung transaksi.
-- Telegram digunakan untuk memberi tahu grup pengurus setelah transaksi berhasil disimpan.
+- Notifikasi push PWA memberi tahu Ketua/Admin saat ada pengajuan baru dan Bendahara saat pengajuannya selesai direview.
 - Jamaah tidak mengakses fungsi administrasi; mereka menerima informasi melalui halaman publik dan TV/Public Display.
 - Public Display berjalan dalam konteks layar besar yang dilihat dari jarak tertentu dan dapat menampilkan jadwal, kegiatan, keuangan, waktu, donasi, serta Live Masjid.
 
@@ -66,7 +66,7 @@ Produk menggabungkan tiga kebutuhan yang biasanya terpisah: pencatatan keuangan 
 - Pengelolaan kajian serta kegiatan rutin atau periodik masjid.
 - Live Masjid dengan YouTube Embed / YouTube Live.
 - Public Display untuk jamaah.
-- Telegram Bot notification setelah transaksi tersimpan.
+- Notifikasi push PWA dan badge "Perlu review" di aplikasi.
 - Laporan transaksi berdasarkan periode.
 
 ### UX constraints

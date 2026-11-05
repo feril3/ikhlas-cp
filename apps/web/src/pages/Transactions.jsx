@@ -5,7 +5,7 @@ import {
   IconArrowUp,
   IconSearch,
   IconTrash
-} from '@tabler/icons-react';
+} from '@/components/icons.jsx';
 import { toast } from 'sonner';
 import { api } from '@/lib/api.js';
 import { formatRupiah } from '@/lib/format.js';
@@ -40,24 +40,24 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { TransactionApprovalPanel } from '@/features/transactions/TransactionApprovalPanel.jsx';
+import { useActionCount } from '@/features/approvals/ApprovalCountsContext.jsx';
 import { TransactionEditSheet } from '@/features/transactions/TransactionEditSheet.jsx';
 import { TransactionTable } from '@/features/transactions/TransactionTable.jsx';
 
 function Metric({ label, value, tone = 'default', caption }) {
   const valueClass = tone === 'income'
-    ? 'text-primary'
+    ? 'text-success'
     : tone === 'expense'
       ? 'text-destructive'
       : 'text-foreground';
 
   return (
-    <div className="min-w-0 px-4 py-4 sm:px-5">
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
-      <strong className={'mt-1.5 block truncate text-xl font-semibold tracking-[-0.025em] sm:text-2xl ' + valueClass}>
+    <div className="min-w-0 bg-card px-4 py-3.5 sm:px-5 sm:py-4">
+      <span className="text-xs text-muted-foreground sm:text-sm">{label}</span>
+      <strong className={'mt-1 block truncate text-md font-bold tracking-tight tabular-nums sm:text-2xl ' + valueClass}>
         {value}
       </strong>
-      {caption && <span className="mt-1 block text-[11px] text-muted-foreground">{caption}</span>}
+      {caption && <span className="mt-0.5 hidden text-xs text-subtle-foreground sm:block">{caption}</span>}
     </div>
   );
 }
@@ -76,6 +76,7 @@ function TransactionsSkeleton() {
 export default function Transactions() {
   const { user } = useAuth();
   const canManageTransactions = ['ADMIN', 'TREASURER'].includes(user?.role);
+  const actionCount = useActionCount();
 
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
@@ -89,6 +90,7 @@ export default function Transactions() {
   const [category, setCategory] = useState('ALL');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
 
   async function loadTransactions() {
     setError('');
@@ -189,23 +191,17 @@ export default function Transactions() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        title="Riwayat Transaksi"
-        description="Pantau, cari, koreksi, dan audit kas masuk maupun kas keluar dari satu tempat."
+        title="Transaksi"
+        description="Cari, ubah, dan telusuri kas masuk maupun kas keluar."
         actions={canManageTransactions ? (
-          <>
-            <Button variant="outline" asChild>
-              <Link to="/transactions/income">
-                <IconArrowDown data-icon="inline-start" aria-hidden="true" />
-                Kas Masuk
-              </Link>
+          <div className="hidden gap-2 lg:flex">
+            <Button variant="secondary" asChild>
+              <Link to="/transactions/income"><IconArrowDown /> Catat kas masuk</Link>
             </Button>
             <Button asChild>
-              <Link to="/transactions/expense">
-                <IconArrowUp data-icon="inline-start" aria-hidden="true" />
-                Kas Keluar
-              </Link>
+              <Link to="/transactions/expense"><IconArrowUp /> Catat kas keluar</Link>
             </Button>
-          </>
+          </div>
         ) : null}
       />
 
@@ -217,10 +213,21 @@ export default function Transactions() {
 
       {data && (
         <>
-          <TransactionApprovalPanel user={user} onChanged={loadTransactions} />
+          {actionCount > 0 && (
+            <Link
+              to="/approvals"
+              className="flex items-center justify-between gap-3 rounded-2xl bg-warning-subtle px-4 py-3 text-sm text-warning transition-opacity duration-(--duration-fast) hover:opacity-90"
+            >
+              <span>
+                <span className="font-semibold">{actionCount} pengajuan</span>{' '}
+                {user?.role === 'ADMIN' ? 'menunggu review Anda.' : 'perlu Anda perbaiki.'}
+              </span>
+              <span className="shrink-0 font-semibold">{user?.role === 'ADMIN' ? 'Review sekarang' : 'Perbaiki'}</span>
+            </Link>
+          )}
 
           <Card className="overflow-hidden">
-            <div className="grid divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-px bg-border xl:grid-cols-4">
               <Metric
                 label="Saldo awal"
                 value={formatRupiah(data.summary.openingBalance)}
@@ -249,7 +256,7 @@ export default function Transactions() {
           <Card>
             <CardContent className="p-4 sm:p-5">
               <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
-                <InputGroup className="h-10">
+                <InputGroup className="h-(--control-height)">
                   <InputGroupAddon>
                     <IconSearch aria-hidden="true" />
                   </InputGroupAddon>
@@ -269,17 +276,24 @@ export default function Transactions() {
                   spacing={0}
                   className="grid w-full grid-cols-3 xl:w-auto"
                 >
-                  <ToggleGroupItem value="ALL" className="w-full rounded-r-none xl:w-auto">Semua</ToggleGroupItem>
-                  <ToggleGroupItem value="INCOME" className="w-full rounded-none xl:w-auto">Kas Masuk</ToggleGroupItem>
-                  <ToggleGroupItem value="EXPENSE" className="w-full rounded-l-none xl:w-auto">Kas Keluar</ToggleGroupItem>
+                  <ToggleGroupItem value="ALL" className="w-full xl:w-auto">Semua</ToggleGroupItem>
+                  <ToggleGroupItem value="INCOME" className="w-full xl:w-auto">Kas masuk</ToggleGroupItem>
+                  <ToggleGroupItem value="EXPENSE" className="w-full xl:w-auto">Kas keluar</ToggleGroupItem>
                 </ToggleGroup>
               </div>
 
-              <div className="mt-4 grid gap-3 border-t pt-4 md:grid-cols-2 xl:grid-cols-[minmax(150px,.8fr)_minmax(180px,1fr)_minmax(150px,.75fr)_minmax(150px,.75fr)_auto] xl:items-end">
+              <div className="mt-3 flex items-center justify-between gap-3 md:hidden">
+                <Button variant="secondary" size="sm" onClick={() => setShowFilters((value) => !value)} aria-expanded={showFilters}>
+                  {showFilters ? 'Sembunyikan filter' : 'Filter metode, kategori, tanggal'}
+                </Button>
+                <span className="text-xs text-muted-foreground">{filtered.length} hasil</span>
+              </div>
+
+              <div className={`mt-4 gap-3 border-t pt-4 md:grid md:grid-cols-2 xl:grid-cols-[minmax(150px,.8fr)_minmax(180px,1fr)_minmax(150px,.75fr)_minmax(150px,.75fr)_auto] xl:items-end ${showFilters ? 'grid' : 'hidden'}`}>
                 <label className="grid gap-1.5 text-xs font-medium text-muted-foreground">
                   Metode
                   <Select value={method} onValueChange={setMethod}>
-                    <SelectTrigger className="h-10 w-full">
+                    <SelectTrigger className="h-(--control-height) w-full">
                       <SelectValue placeholder="Metode" />
                     </SelectTrigger>
                     <SelectContent>
@@ -293,7 +307,7 @@ export default function Transactions() {
                 <label className="grid gap-1.5 text-xs font-medium text-muted-foreground">
                   Kategori
                   <Select value={category} onValueChange={setCategory}>
-                    <SelectTrigger className="h-10 w-full">
+                    <SelectTrigger className="h-(--control-height) w-full">
                       <SelectValue placeholder="Kategori" />
                     </SelectTrigger>
                     <SelectContent>
@@ -305,12 +319,12 @@ export default function Transactions() {
 
                 <label className="grid gap-1.5 text-xs font-medium text-muted-foreground">
                   Dari
-                  <Input type="date" value={from} onChange={(event) => setFrom(event.target.value)} className="h-10" />
+                  <Input type="date" value={from} onChange={(event) => setFrom(event.target.value)} className="h-(--control-height)" />
                 </label>
 
                 <label className="grid gap-1.5 text-xs font-medium text-muted-foreground">
                   Sampai
-                  <Input type="date" value={to} onChange={(event) => setTo(event.target.value)} className="h-10" />
+                  <Input type="date" value={to} onChange={(event) => setTo(event.target.value)} className="h-(--control-height)" />
                 </label>
 
                 <div className="flex min-h-10 items-center justify-between gap-3 md:col-span-2 xl:col-span-1 xl:justify-end">

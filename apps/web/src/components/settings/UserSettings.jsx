@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { IconPlus } from '@tabler/icons-react';
+import { IconPlus } from '@/components/icons.jsx';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -45,7 +45,7 @@ export function UserSettings({ users, currentUser, api, reload }) {
 
   return (
     <section className="overflow-hidden rounded-xl border bg-card">
-      <div className="flex flex-col gap-3 border-b bg-muted/25 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+      <div className="flex flex-col gap-3 border-b bg-muted px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
         <div><h2 className="text-lg font-semibold">Pengguna</h2><p className="mt-1 text-sm text-muted-foreground">Kelola akun Ketua/Admin dan Bendahara serta status aksesnya.</p></div>
         <Button className="w-full sm:w-auto" onClick={() => setOpen(true)}><IconPlus />Tambah pengguna</Button>
       </div>
@@ -76,7 +76,7 @@ export function UserSettings({ users, currentUser, api, reload }) {
             <FieldGroup>
               <Field><FieldLabel>Nama</FieldLabel><Input value={form.name} onChange={(e) => setForm((x) => ({ ...x, name: e.target.value }))} required /></Field>
               <Field><FieldLabel>Email</FieldLabel><Input type="email" value={form.email} onChange={(e) => setForm((x) => ({ ...x, email: e.target.value }))} required /></Field>
-              <Field><FieldLabel>Role</FieldLabel><Select value={form.role} onValueChange={(role) => setForm((x) => ({ ...x, role }))}><SelectTrigger className="h-10 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="TREASURER">Bendahara</SelectItem><SelectItem value="ADMIN">Ketua / Admin</SelectItem></SelectContent></Select></Field>
+              <Field><FieldLabel>Role</FieldLabel><Select value={form.role} onValueChange={(role) => setForm((x) => ({ ...x, role }))}><SelectTrigger className="h-(--control-height) w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="TREASURER">Bendahara</SelectItem><SelectItem value="ADMIN">Ketua / Admin</SelectItem></SelectContent></Select></Field>
               <Field><FieldLabel>Password awal</FieldLabel><Input type="password" minLength={10} value={form.password} onChange={(e) => setForm((x) => ({ ...x, password: e.target.value }))} required /></Field>
             </FieldGroup>
             <DialogFooter><Button type="button" variant="outline" onClick={() => setOpen(false)}>Batal</Button><Button disabled={saving}>{saving ? 'Membuat...' : 'Tambah pengguna'}</Button></DialogFooter>

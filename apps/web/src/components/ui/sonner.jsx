@@ -6,10 +6,11 @@ function Toaster(props) {
       position="top-right"
       toastOptions={{
         classNames: {
-          toast: 'border bg-card text-card-foreground shadow-lg',
-          description: 'text-muted-foreground',
+          toast: 'rounded-2xl border-0 bg-inverse font-sans text-inverse-foreground shadow-pop',
+          description: 'opacity-80',
+          closeButton: 'border-0 bg-inverse text-inverse-foreground',
           actionButton: 'bg-primary text-primary-foreground',
-          cancelButton: 'bg-muted text-muted-foreground'
+          cancelButton: 'bg-transparent text-inverse-foreground'
         }
       }}
       {...props}

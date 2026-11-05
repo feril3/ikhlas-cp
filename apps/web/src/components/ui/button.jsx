@@ -3,24 +3,28 @@ import { Slot } from '@radix-ui/react-slot';
 import { cva } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
+// Tombol pill. Tinggi dari token densitas; target sentuh 44px lewat touch-target.
 const buttonVariants = cva(
-  'inline-flex min-h-9 shrink-0 appearance-none items-center justify-center gap-2 whitespace-nowrap rounded-md border border-transparent text-sm font-semibold transition-colors disabled:pointer-events-none disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring/30 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0',
+  "touch-target relative inline-flex shrink-0 appearance-none items-center justify-center gap-1.5 whitespace-nowrap rounded-full border-0 text-sm font-semibold select-none transition-[color,background-color,box-shadow,transform,opacity] duration-(--duration-fast) ease-(--ease-standard) active:scale-[0.98] motion-reduce:active:scale-100 disabled:pointer-events-none disabled:opacity-50 aria-busy:cursor-progress [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
-        default: 'bg-primary px-4 text-primary-foreground hover:bg-primary/92',
-        secondary: 'border border-transparent bg-secondary px-4 text-secondary-foreground hover:border-border hover:bg-secondary/80',
-        outline: 'border-input bg-card px-4 text-foreground hover:border-ring/70 hover:bg-muted',
-        ghost: 'bg-transparent px-3 text-foreground hover:bg-accent hover:text-accent-foreground',
-        destructive: 'bg-destructive px-4 text-white hover:bg-destructive/90',
-        link: 'bg-transparent px-1 text-primary underline-offset-4 hover:underline'
+        default: 'bg-primary text-primary-foreground hover:bg-primary-hover active:bg-primary-active',
+        secondary: 'bg-secondary text-secondary-foreground shadow-[inset_0_0_0_1px_var(--border-strong)] hover:bg-accent aria-expanded:bg-accent',
+        outline: 'bg-secondary text-secondary-foreground shadow-[inset_0_0_0_1px_var(--border-strong)] hover:bg-accent aria-expanded:bg-accent',
+        ghost: 'bg-transparent text-foreground hover:bg-accent aria-expanded:bg-accent',
+        destructive: 'bg-destructive text-destructive-foreground hover:opacity-90',
+        'destructive-ghost': 'bg-transparent text-destructive hover:bg-destructive-subtle',
+        inverse: 'bg-inverse text-inverse-foreground hover:opacity-90',
+        link: 'h-auto rounded-sm bg-transparent px-0 text-link underline-offset-4 hover:underline active:scale-100'
       },
       size: {
-        default: 'h-10',
-        sm: 'h-8 min-h-8 px-3 text-xs',
-        lg: 'h-11 min-h-11 px-5',
-        icon: 'size-9 min-h-9 p-0',
-        'icon-sm': 'size-8 min-h-8 p-0'
+        sm: 'h-(--control-height-sm) px-3 text-xs',
+        default: 'h-(--control-height) px-4',
+        lg: 'h-(--control-height-lg) px-5 text-base',
+        'icon-sm': 'size-(--control-height-sm)',
+        icon: 'size-(--control-height)',
+        'icon-lg': "size-(--control-height-lg) [&_svg:not([class*='size-'])]:size-5"
       }
     },
     defaultVariants: {

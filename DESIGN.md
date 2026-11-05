@@ -81,6 +81,9 @@ components:
     padding: "16px"
 ---
 
+> **Pembaruan November 2026.** Antarmuka aplikasi pengurus kini memakai design token di `apps/web/src/styles/tokens.css` (warna semantik, Plus Jakarta Sans, radius, elevasi, densitas) dan ikon Hugeicons. Nilai warna dan font di bagian bawah dokumen ini adalah versi sebelum redesign dan hanya masih berlaku untuk Public Display. Pemeriksaan otomatis: `node apps/web/scripts/check-token-usage.mjs src`.
+
+
 # Design System: Sistem Informasi Manajemen Masjid
 
 ## Overview
@@ -288,7 +291,7 @@ Field nominal adalah signature operational component.
 
 ### Feedback & Notifications
 - Setelah transaksi disimpan, berikan confirmation state yang menjelaskan transaksi berhasil dicatat.
-- Jangan menjadikan notifikasi Telegram sebagai satu-satunya feedback bahwa submit berhasil.
+- Jangan menjadikan notifikasi push sebagai satu-satunya feedback bahwa submit berhasil; selalu tampilkan toast di aplikasi.
 - Error network atau validasi harus mempertahankan input pengguna sejauh memungkinkan.
 - Loading state tidak boleh mengubah layout secara liar.
 

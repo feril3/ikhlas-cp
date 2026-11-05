@@ -28,7 +28,7 @@ Transaksi tersimpan menjadi sumber untuk:
 1. perhitungan saldo;
 2. dashboard pengurus;
 3. riwayat dan laporan;
-4. notifikasi Telegram (milestone berikutnya);
+4. notifikasi push PWA untuk alur approval;
 5. ringkasan Public Display yang aman untuk dipublikasikan.
 
 ## Money Representation

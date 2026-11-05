@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { IconPlus } from '@tabler/icons-react';
+import { IconPlus } from '@/components/icons.jsx';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -49,7 +49,7 @@ export function CategorySettings({ categories, api, reload }) {
 
   return (
     <section className="overflow-hidden rounded-xl border bg-card">
-      <div className="flex flex-col gap-3 border-b bg-muted/25 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+      <div className="flex flex-col gap-3 border-b bg-muted px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
         <div><h2 className="text-lg font-semibold">Kategori</h2><p className="mt-1 text-sm text-muted-foreground">Nonaktifkan kategori yang tidak dipakai lagi. Transaksi lama tetap tersimpan dan tetap dapat diaudit.</p></div>
         <Button className="w-full sm:w-auto" onClick={() => setOpen(true)}><IconPlus />Tambah kategori</Button>
       </div>
@@ -85,7 +85,7 @@ export function CategorySettings({ categories, api, reload }) {
           <DialogHeader><DialogTitle>Tambah kategori</DialogTitle><DialogDescription>Kategori aktif otomatis muncul pada form transaksi.</DialogDescription></DialogHeader>
           <form className="grid gap-5" onSubmit={create}>
             <FieldGroup>
-              <Field><FieldLabel>Jenis</FieldLabel><Select value={form.type} onValueChange={(type) => setForm((x) => ({ ...x, type }))}><SelectTrigger className="h-10 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="INCOME">Kas Masuk</SelectItem><SelectItem value="EXPENSE">Kas Keluar</SelectItem></SelectContent></Select></Field>
+              <Field><FieldLabel>Jenis</FieldLabel><Select value={form.type} onValueChange={(type) => setForm((x) => ({ ...x, type }))}><SelectTrigger className="h-(--control-height) w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="INCOME">Kas Masuk</SelectItem><SelectItem value="EXPENSE">Kas Keluar</SelectItem></SelectContent></Select></Field>
               <Field><FieldLabel>Nama kategori</FieldLabel><Input value={form.name} onChange={(e) => setForm((x) => ({ ...x, name: e.target.value }))} required /></Field>
               <Field><FieldLabel>Urutan</FieldLabel><Input type="number" min="0" max="999" value={form.sortOrder} onChange={(e) => setForm((x) => ({ ...x, sortOrder: e.target.value }))} /></Field>
             </FieldGroup>

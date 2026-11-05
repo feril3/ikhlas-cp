@@ -1,4 +1,4 @@
-import { IconLogout, IconUserCircle } from '@tabler/icons-react';
+import { IconLogout } from '@/components/icons.jsx';
 import { useAuth } from '@/auth/AuthContext.jsx';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -11,17 +11,27 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import { AppPreferences } from '@/features/pwa/AppPreferences.jsx';
 
-export function UserMenu({ compact = false, sidebar = false }) {
-  const { user, logout } = useAuth();
-  const initials = user?.name
+// Inisial dari kata yang diawali huruf, jadi "Bendahara (akun uji)" menjadi "BA", bukan "B(".
+export function initialsOf(name) {
+  return name
     ?.split(/\s+/)
+    .map((part) => part.replace(/[^\p{L}]/gu, ''))
+    .filter(Boolean)
     .slice(0, 2)
     .map((part) => part[0])
     .join('')
     .toUpperCase() || 'IK';
+}
 
-  const role = user?.role === 'ADMIN' ? 'Ketua / Admin' : 'Bendahara';
+export function roleLabel(role) {
+  return role === 'ADMIN' ? 'Ketua/Admin' : 'Bendahara';
+}
+
+export function UserMenu({ compact = false, sidebar = false }) {
+  const { user, logout } = useAuth();
+  const initials = initialsOf(user?.name);
 
   return (
     <DropdownMenu>
@@ -29,35 +39,34 @@ export function UserMenu({ compact = false, sidebar = false }) {
         <Button
           variant="ghost"
           className={
-            sidebar
-              ? compact
-                ? 'size-10 min-h-10 bg-transparent p-0 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                : 'h-auto min-h-10 w-full justify-start gap-3 bg-transparent px-2.5 py-2 text-left text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-              : compact
-                ? 'size-10 min-h-10 p-0'
-                : 'h-auto min-h-10 justify-start gap-3 px-2.5 py-2 text-left'
+            compact
+              ? 'size-(--control-height-lg) p-0'
+              : sidebar
+                ? 'h-auto w-full justify-start gap-2.5 rounded-2xl px-2 py-2 text-left hover:bg-sidebar-accent'
+                : 'h-auto justify-start gap-2.5 px-2 py-1.5 text-left'
           }
           aria-label={compact ? `Menu akun ${user?.name ?? ''}` : undefined}
         >
           <Avatar className="size-8">
-            <AvatarFallback className={sidebar ? 'bg-sidebar-accent text-sidebar-accent-foreground' : undefined}>{initials}</AvatarFallback>
+            <AvatarFallback className="bg-background text-xs font-semibold text-foreground shadow-card">{initials}</AvatarFallback>
           </Avatar>
           {!compact && (
             <span className="min-w-0 flex-1">
-              <strong className="block truncate text-xs font-semibold">{user?.name}</strong>
-              <span className={sidebar ? 'block truncate text-[11px] font-normal text-sidebar-foreground/58' : 'block truncate text-[11px] font-normal text-muted-foreground'}>{role}</span>
+              <span className="block truncate text-sm font-semibold text-foreground">{user?.name}</span>
+              <span className="block truncate text-xs font-normal text-subtle-foreground">{roleLabel(user?.role)}</span>
             </span>
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align={sidebar ? "start" : "end"} side={sidebar ? "right" : "bottom"} sideOffset={8} className="w-56">
+      <DropdownMenuContent align={sidebar ? 'start' : 'end'} side={sidebar ? 'top' : 'bottom'} sideOffset={8} className="w-64">
         <DropdownMenuLabel>
-          <span className="block text-xs font-semibold text-foreground">{user?.name}</span>
-          <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">{role}</span>
+          <span className="block text-sm font-semibold text-foreground">{user?.name}</span>
+          <span className="mt-0.5 block text-xs font-normal text-subtle-foreground">{roleLabel(user?.role)}</span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <AppPreferences variant="menu" />
+        <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem disabled><IconUserCircle /> Profil akun</DropdownMenuItem>
           <DropdownMenuItem onSelect={logout} className="text-destructive focus:text-destructive">
             <IconLogout /> Keluar
           </DropdownMenuItem>

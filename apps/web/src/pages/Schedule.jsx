@@ -8,7 +8,7 @@ import {
   IconTrash,
   IconUser,
   IconVideo
-} from '@tabler/icons-react';
+} from '@/components/icons.jsx';
 import { toast } from 'sonner';
 import { api } from '../lib/api.js';
 import { toInputDate } from '../lib/format.js';
@@ -123,7 +123,7 @@ function FridayEditor({ open, onOpenChange, row, onSaved }) {
               <FieldLabel>Imam</FieldLabel>
               <Input value={form.imam} onChange={(e) => updateImam(e.target.value)} placeholder="Nama imam" required />
             </Field>
-            <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/25 p-3">
+            <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted p-3">
               <div>
                 <strong className="block text-sm font-medium">Imam juga menjadi Khatib</strong>
                 <span className="text-xs text-muted-foreground">Aktifkan jika satu orang bertugas sebagai imam sekaligus khatib.</span>
@@ -288,7 +288,7 @@ export default function Schedule() {
       {loadingError && <div className="rounded-lg border border-destructive/25 bg-destructive/5 p-4 text-sm text-destructive">{loadingError}</div>}
 
       <section className="overflow-hidden rounded-xl border bg-card">
-        <div className="flex items-start justify-between gap-4 border-b bg-muted/25 px-4 py-4 sm:px-5">
+        <div className="flex items-start justify-between gap-4 border-b bg-muted px-4 py-4 sm:px-5">
           <div><h2 className="text-lg font-semibold">Petugas Jumat mendatang</h2><p className="mt-1 text-sm text-muted-foreground">Tanggal Jumat yang sudah lewat otomatis tidak ditampilkan lagi.</p></div>
           <IconUser className="mt-1 size-5 text-muted-foreground" />
         </div>
@@ -327,7 +327,7 @@ export default function Schedule() {
       </section>
 
       <section className="overflow-hidden rounded-xl border bg-card">
-        <div className="flex items-start justify-between gap-4 border-b bg-muted/25 px-4 py-4 sm:px-5">
+        <div className="flex items-start justify-between gap-4 border-b bg-muted px-4 py-4 sm:px-5">
           <div><h2 className="text-lg font-semibold">Agenda mendatang</h2><p className="mt-1 text-sm text-muted-foreground">Kegiatan publik, pemateri, waktu, dan status tayang.</p></div>
           <IconCalendarEvent className="mt-1 size-5 text-muted-foreground" />
         </div>

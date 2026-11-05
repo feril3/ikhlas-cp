@@ -1,16 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
+  IconArrowDown,
+  IconArrowUp,
   IconCheck,
-  IconClockHour4,
   IconEdit,
   IconFileText,
   IconRefresh,
   IconTrash,
   IconX
-} from '@tabler/icons-react';
+} from '@/components/icons.jsx';
 import { toast } from 'sonner';
 import { api } from '@/lib/api.js';
-import { formatRupiah } from '@/lib/format.js';
+import { formatDate, formatDateTime, formatRupiah } from '@/lib/format.js';
+import { useApprovalCounts } from '@/features/approvals/ApprovalCountsContext.jsx';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -31,9 +34,11 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { FileUploadField } from '@/features/transactions/FileUploadField.jsx';
+import { cn } from '@/lib/utils';
 
 const actionLabels = {
   CREATE: 'Transaksi baru',
@@ -41,54 +46,72 @@ const actionLabels = {
   DELETE: 'Penghapusan transaksi'
 };
 
-function statusBadge(status) {
-  if (status === 'PENDING_REVIEW') return <Badge variant="secondary">Menunggu review</Badge>;
-  if (status === 'REVISION_REQUIRED') return <Badge variant="destructive">Perlu revisi</Badge>;
-  return <Badge variant="success">Disetujui</Badge>;
+const STATUS = {
+  PENDING_REVIEW: { label: 'Menunggu review', variant: 'warning' },
+  REVISION_REQUIRED: { label: 'Perlu revisi', variant: 'destructive' },
+  APPROVED: { label: 'Disetujui', variant: 'success' }
+};
+
+function StatusBadge({ status }) {
+  const item = STATUS[status] ?? STATUS.APPROVED;
+  return <Badge variant={item.variant}>{item.label}</Badge>;
 }
 
-function submittedTime(value) {
-  if (!value) return '—';
-  const date = new Date(value.replace(' ', 'T') + 'Z');
-  return Number.isNaN(date.getTime())
-    ? value
-    : date.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
+function isImage(name, mime) {
+  return (mime ?? '').startsWith('image/') || /\.(jpe?g|png|webp)$/i.test(name ?? '');
+}
+
+// Pratinjau dokumen pengajuan. Foto tampil langsung; PDF dibuka di tab baru.
+function Attachments({ request, large = false }) {
+  const proposal = request.proposal ?? {};
+  const docs = [
+    proposal.evidenceFileId && { kind: 'evidence', label: 'Buka bukti', name: proposal.evidenceOriginalName, mime: proposal.evidenceMimeType },
+    proposal.bankMutationFileId && { kind: 'mutation', label: 'Buka mutasi', name: proposal.bankMutationOriginalName, mime: proposal.bankMutationMimeType }
+  ].filter(Boolean);
+  if (docs.length === 0) return null;
+
+  return (
+    <div className={cn('flex gap-2', large ? 'flex-col' : 'flex-row')}>
+      {docs.map((doc) => {
+        const url = api.approvalAttachmentUrl(request.id, doc.kind);
+        return isImage(doc.name, doc.mime) ? (
+          <a key={doc.kind} href={url} target="_blank" rel="noreferrer" className="group relative block overflow-hidden rounded-xl bg-muted" aria-label={`${doc.label} (membuka tab baru)`}>
+            <img src={url} alt={doc.label} loading="lazy" className={cn('object-cover', large ? 'max-h-80 w-full' : 'size-14')} />
+            {large && <span className="absolute bottom-2 left-2 rounded-full bg-inverse px-2.5 py-1 text-xs font-medium text-inverse-foreground">{doc.label}</span>}
+          </a>
+        ) : (
+          <a key={doc.kind} href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm font-semibold text-link hover:underline">
+            <IconFileText /> {doc.label}
+          </a>
+        );
+      })}
+    </div>
+  );
 }
 
 function ProposalSummary({ request }) {
   const proposal = request.proposal ?? {};
+  const rows = [
+    ['Tanggal', proposal.transactionDate ? formatDate(proposal.transactionDate, { day: 'numeric', month: 'long' }) : '—'],
+    ['Kategori', proposal.category ?? '—'],
+    ['Metode', proposal.method === 'TRANSFER' ? 'Transfer' : 'Tunai'],
+    ['Keterangan', proposal.description || '—']
+  ];
   return (
-    <div className="grid gap-2 rounded-lg border bg-muted/20 p-3 text-sm sm:grid-cols-2">
-      <div><span className="block text-xs text-muted-foreground">Jenis</span><strong>{proposal.type === 'EXPENSE' ? 'Kas Keluar' : 'Kas Masuk'}</strong></div>
-      <div><span className="block text-xs text-muted-foreground">Nominal</span><strong>{formatRupiah(proposal.amount ?? 0)}</strong></div>
-      <div><span className="block text-xs text-muted-foreground">Tanggal</span><strong>{proposal.transactionDate ?? '—'}</strong></div>
-      <div><span className="block text-xs text-muted-foreground">Kategori</span><strong>{proposal.category ?? '—'}</strong></div>
-      <div><span className="block text-xs text-muted-foreground">Metode</span><strong>{proposal.method === 'TRANSFER' ? 'Transfer' : 'Tunai'}</strong></div>
-      <div><span className="block text-xs text-muted-foreground">Keterangan</span><strong>{proposal.description || '—'}</strong></div>
-      {(proposal.evidenceFileId || proposal.bankMutationFileId) && (
-        <div className="flex flex-wrap gap-3 pt-1 sm:col-span-2">
-          {proposal.evidenceFileId && (
-            <a
-              href={api.approvalAttachmentUrl(request.id, 'evidence')}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-            >
-              <IconFileText className="size-4" /> Buka bukti
-            </a>
-          )}
-          {proposal.bankMutationFileId && (
-            <a
-              href={api.approvalAttachmentUrl(request.id, 'mutation')}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-            >
-              <IconFileText className="size-4" /> Buka mutasi
-            </a>
-          )}
-        </div>
-      )}
+    <div className="grid gap-3">
+      <div>
+        <span className="text-xs text-muted-foreground">{proposal.type === 'EXPENSE' ? 'Kas keluar' : 'Kas masuk'}</span>
+        <p className="text-3xl font-bold tracking-tight tabular-nums">{formatRupiah(proposal.amount ?? 0)}</p>
+      </div>
+      <dl className="grid grid-cols-[96px_1fr] gap-x-3 gap-y-2 text-sm">
+        {rows.map(([label, value]) => (
+          <div key={label} className="contents">
+            <dt className="text-muted-foreground">{label}</dt>
+            <dd className="min-w-0 break-words font-medium">{value}</dd>
+          </div>
+        ))}
+      </dl>
+      <Attachments request={request} large />
     </div>
   );
 }
@@ -105,14 +128,17 @@ function TransactionComparison({ request }) {
   ].filter(([, current, proposed]) => String(current) !== String(proposed));
 
   return (
-    <div className="space-y-3">
+    <div className="grid gap-4">
       {rows.length > 0 && (
-        <div className="space-y-2">
+        <div className="overflow-hidden rounded-xl bg-muted">
+          <div className="grid grid-cols-[88px_1fr_1fr] gap-2 px-3 py-2 text-xs text-muted-foreground">
+            <span>Data</span><span>Saat ini</span><span>Usulan</span>
+          </div>
           {rows.map(([label, current, proposed]) => (
-            <div key={label} className="grid gap-2 rounded-lg border p-3 text-sm sm:grid-cols-[100px_1fr_1fr]">
-              <strong>{label}</strong>
-              <div><span className="block text-xs text-muted-foreground">Saat ini</span>{current}</div>
-              <div><span className="block text-xs text-muted-foreground">Usulan</span>{proposed}</div>
+            <div key={label} className="grid grid-cols-[88px_1fr_1fr] gap-2 border-t border-border px-3 py-2.5 text-sm">
+              <span className="text-muted-foreground">{label}</span>
+              <span className="min-w-0 break-words text-subtle-foreground line-through">{current}</span>
+              <span className="min-w-0 break-words font-semibold">{proposed}</span>
             </div>
           ))}
         </div>
@@ -124,7 +150,7 @@ function TransactionComparison({ request }) {
 
 function ReviewDialog({ request, open, onOpenChange, onDone }) {
   const [note, setNote] = useState('');
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(null);
 
   useEffect(() => {
     if (open) setNote('');
@@ -133,11 +159,11 @@ function ReviewDialog({ request, open, onOpenChange, onDone }) {
   async function review(decision) {
     if (!request) return;
     if (decision === 'REVISION_REQUIRED' && note.trim().length < 3) {
-      toast.error('Catatan revisi wajib diisi.');
+      toast.error('Tulis catatan revisi dulu.', { description: 'Catatan membantu Bendahara tahu apa yang perlu diperbaiki.' });
       return;
     }
 
-    setBusy(true);
+    setBusy(decision);
     try {
       await api.reviewTransactionApproval(request.id, { decision, note });
       toast.success(
@@ -150,7 +176,7 @@ function ReviewDialog({ request, open, onOpenChange, onDone }) {
     } catch (error) {
       toast.error('Review gagal diproses.', { description: error.message });
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   }
 
@@ -158,9 +184,9 @@ function ReviewDialog({ request, open, onOpenChange, onDone }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Review pengajuan transaksi</DialogTitle>
+          <DialogTitle>Review pengajuan</DialogTitle>
           <DialogDescription>
-            {request ? `${actionLabels[request.action]} dari ${request.submittedByName}` : ''}
+            {request ? `${actionLabels[request.action]} dari ${request.submittedByName} · ${formatDateTime(request.submittedAt)}` : ''}
           </DialogDescription>
         </DialogHeader>
 
@@ -171,22 +197,23 @@ function ReviewDialog({ request, open, onOpenChange, onDone }) {
         )}
 
         <Field>
-          <FieldLabel>Catatan Ketua</FieldLabel>
+          <FieldLabel htmlFor="review-note">Catatan Ketua</FieldLabel>
           <Textarea
+            id="review-note"
             value={note}
             onChange={(event) => setNote(event.target.value)}
-            placeholder="Opsional untuk approval, wajib jika meminta revisi."
-            rows={4}
+            placeholder="Wajib diisi jika meminta revisi"
+            rows={3}
             maxLength={500}
           />
         </Field>
 
-        <DialogFooter>
-          <Button type="button" variant="outline" disabled={busy} onClick={() => review('REVISION_REQUIRED')}>
-            <IconX /> Minta revisi
+        <DialogFooter className="grid grid-cols-2 gap-2 sm:flex">
+          <Button type="button" variant="secondary" size="lg" disabled={Boolean(busy)} onClick={() => review('REVISION_REQUIRED')}>
+            <IconX /> {busy === 'REVISION_REQUIRED' ? 'Mengirim…' : 'Minta revisi'}
           </Button>
-          <Button type="button" disabled={busy} onClick={() => review('APPROVE')}>
-            <IconCheck /> Approve & posting
+          <Button type="button" size="lg" disabled={Boolean(busy)} onClick={() => review('APPROVE')}>
+            <IconCheck /> {busy === 'APPROVE' ? 'Memproses…' : 'Approve & posting'}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -264,8 +291,14 @@ function RevisionDialog({ request, open, onOpenChange, onDone }) {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{request?.action === 'DELETE' ? 'Ajukan ulang penghapusan' : 'Perbaiki pengajuan'}</DialogTitle>
-          <DialogDescription>{request?.reviewNote || 'Perbaiki data lalu kirim ulang untuk review.'}</DialogDescription>
+          <DialogDescription>Perbaiki sesuai catatan Ketua, lalu kirim ulang untuk direview.</DialogDescription>
         </DialogHeader>
+
+        {request?.reviewNote && (
+          <p className="rounded-xl bg-destructive-subtle px-3 py-2.5 text-sm text-destructive">
+            <span className="font-semibold">Catatan Ketua:</span> {request.reviewNote}
+          </p>
+        )}
 
         {request?.action === 'DELETE' ? (
           <ProposalSummary request={request} />
@@ -273,18 +306,18 @@ function RevisionDialog({ request, open, onOpenChange, onDone }) {
           <form id="approval-revision-form" className="grid gap-4" onSubmit={submit}>
             <FieldGroup>
               <Field>
-                <FieldLabel>Nominal</FieldLabel>
-                <Input type="number" min="1" value={form.amount} onChange={(event) => update('amount', event.target.value)} required />
+                <FieldLabel htmlFor="revision-amount">Nominal</FieldLabel>
+                <Input id="revision-amount" type="number" inputMode="numeric" min="1" value={form.amount} onChange={(event) => update('amount', event.target.value)} required />
               </Field>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field>
-                  <FieldLabel>Tanggal</FieldLabel>
-                  <Input type="date" value={form.transactionDate} onChange={(event) => update('transactionDate', event.target.value)} required />
+                  <FieldLabel htmlFor="revision-date">Tanggal</FieldLabel>
+                  <Input id="revision-date" type="date" value={form.transactionDate} onChange={(event) => update('transactionDate', event.target.value)} required />
                 </Field>
                 <Field>
                   <FieldLabel>Kategori</FieldLabel>
                   <Select value={form.categoryId} onValueChange={(value) => update('categoryId', value)}>
-                    <SelectTrigger className="h-10 w-full"><SelectValue placeholder="Pilih kategori" /></SelectTrigger>
+                    <SelectTrigger className="w-full"><SelectValue placeholder="Pilih kategori" /></SelectTrigger>
                     <SelectContent>
                       {categories.map((category) => <SelectItem key={category.id} value={String(category.id)}>{category.name}</SelectItem>)}
                     </SelectContent>
@@ -297,53 +330,40 @@ function RevisionDialog({ request, open, onOpenChange, onDone }) {
                   type="single"
                   value={form.method}
                   onValueChange={(value) => value && update('method', value)}
-                  variant="outline"
-                  spacing={0}
                   className="grid w-full grid-cols-2"
                 >
-                  <ToggleGroupItem value="CASH" className="rounded-r-none">Tunai</ToggleGroupItem>
-                  <ToggleGroupItem value="TRANSFER" className="rounded-l-none">Transfer</ToggleGroupItem>
+                  <ToggleGroupItem value="CASH">Tunai</ToggleGroupItem>
+                  <ToggleGroupItem value="TRANSFER">Transfer</ToggleGroupItem>
                 </ToggleGroup>
               </Field>
               {form.type === 'INCOME' && (
                 <Field>
-                  <FieldLabel>Detail sumber dana</FieldLabel>
-                  <Input value={form.sourceDetail} onChange={(event) => update('sourceDetail', event.target.value)} maxLength={120} />
+                  <FieldLabel htmlFor="revision-source">Detail sumber dana</FieldLabel>
+                  <Input id="revision-source" value={form.sourceDetail} onChange={(event) => update('sourceDetail', event.target.value)} maxLength={120} />
                 </Field>
               )}
               <Field>
-                <FieldLabel>Keterangan</FieldLabel>
-                <Textarea value={form.description} onChange={(event) => update('description', event.target.value)} rows={3} maxLength={300} />
+                <FieldLabel htmlFor="revision-description">Keterangan</FieldLabel>
+                <Textarea id="revision-description" value={form.description} onChange={(event) => update('description', event.target.value)} rows={3} maxLength={300} />
               </Field>
               <div className="grid gap-3 sm:grid-cols-2">
-                <FileUploadField
-                  id="approval-revision-evidence"
-                  label="Ganti bukti"
-                  description={proposal.evidenceOriginalName ? `Saat ini: ${proposal.evidenceOriginalName}` : 'Opsional · maks. 4 MB'}
-                  file={evidence}
-                  onChange={setEvidence}
-                />
-                <FileUploadField
-                  id="approval-revision-mutation"
-                  label="Ganti mutasi"
-                  description={proposal.bankMutationOriginalName ? `Saat ini: ${proposal.bankMutationOriginalName}` : 'Opsional · maks. 4 MB'}
-                  file={mutation}
-                  onChange={setMutation}
-                />
+                <FileUploadField label="Ganti bukti" description="Opsional · maks. 4 MB" current={proposal.evidenceOriginalName} file={evidence} onChange={setEvidence} />
+                <FileUploadField label="Ganti mutasi" description="Opsional · maks. 4 MB" current={proposal.bankMutationOriginalName} file={mutation} onChange={setMutation} />
               </div>
             </FieldGroup>
           </form>
         ) : null}
 
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>Batal</Button>
+        <DialogFooter className="grid grid-cols-2 gap-2 sm:flex">
+          <Button type="button" variant="secondary" size="lg" onClick={() => onOpenChange(false)} disabled={busy}>Batal</Button>
           <Button
             type={request?.action === 'DELETE' ? 'button' : 'submit'}
             form={request?.action === 'DELETE' ? undefined : 'approval-revision-form'}
+            size="lg"
             disabled={busy}
             onClick={request?.action === 'DELETE' ? submit : undefined}
           >
-            <IconRefresh /> Kirim ulang
+            <IconRefresh /> {busy ? 'Mengirim…' : 'Kirim ulang'}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -351,102 +371,137 @@ function RevisionDialog({ request, open, onOpenChange, onDone }) {
   );
 }
 
+function RequestCard({ request, role, onOpen }) {
+  const proposal = request.proposal ?? {};
+  const actionable = (role === 'ADMIN' && request.status === 'PENDING_REVIEW') || (role === 'TREASURER' && request.status === 'REVISION_REQUIRED');
+  const income = proposal.type === 'INCOME';
+  const Icon = request.action === 'DELETE' ? IconTrash : income ? IconArrowDown : IconArrowUp;
+
+  return (
+    <li>
+      <div className="flex w-full items-start gap-3 rounded-2xl bg-card p-4 shadow-card">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent text-foreground"><Icon className="size-5" /></span>
+        <span className="min-w-0 flex-1">
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="text-sm font-semibold">{actionLabels[request.action]}</span>
+            <StatusBadge status={request.status} />
+          </span>
+          <span className="mt-1 block text-xl font-bold tracking-tight tabular-nums">{formatRupiah(proposal.amount ?? 0)}</span>
+          <span className="mt-0.5 block truncate text-sm text-muted-foreground">
+            {[proposal.category, income ? 'Kas masuk' : 'Kas keluar'].filter(Boolean).join(' · ')}
+          </span>
+          <span className="mt-0.5 block text-xs text-subtle-foreground">{request.submittedByName} · {formatDateTime(request.submittedAt)}</span>
+          {request.reviewNote && request.status === 'REVISION_REQUIRED' && (
+            <span className="mt-2 block rounded-xl bg-destructive-subtle px-3 py-2 text-sm text-destructive">Catatan Ketua: {request.reviewNote}</span>
+          )}
+        </span>
+        <span className="flex shrink-0 flex-col items-end gap-2">
+          <Attachments request={request} />
+          {actionable && (
+            <Button size="sm" onClick={() => onOpen(request)}>
+              {role === 'ADMIN' ? <><IconCheck /> Review</> : <><IconEdit /> Perbaiki</>}
+            </Button>
+          )}
+        </span>
+      </div>
+    </li>
+  );
+}
+
+// Daftar pengajuan: Ketua/Admin melihat semua pengajuan Bendahara, Bendahara melihat pengajuannya sendiri.
 export function TransactionApprovalPanel({ user, onChanged }) {
-  const [requests, setRequests] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const role = user?.role;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { refresh: refreshCounts } = useApprovalCounts();
+  const [requests, setRequests] = useState(null);
+  const [filter, setFilter] = useState(role === 'ADMIN' ? 'PENDING_REVIEW' : 'ACTIVE');
   const [reviewing, setReviewing] = useState(null);
   const [revising, setRevising] = useState(null);
 
   async function load() {
-    setLoading(true);
     try {
       const result = await api.transactionApprovals();
       setRequests(result.data);
     } catch (error) {
-      toast.error('Daftar approval gagal dimuat.', { description: error.message });
-    } finally {
-      setLoading(false);
+      setRequests((current) => current ?? []);
+      toast.error('Daftar pengajuan gagal dimuat.', { description: error.message });
     }
   }
 
   useEffect(() => { load(); }, []);
 
-  const visible = useMemo(() => {
-    const active = requests.filter((item) => item.status !== 'APPROVED');
-    const approved = requests.filter((item) => item.status === 'APPROVED').slice(0, 4);
-    return [...active, ...approved];
+  // Dibuka dari notifikasi: /approvals?id=12 langsung membuka pengajuan tersebut.
+  useEffect(() => {
+    const id = Number(searchParams.get('id'));
+    if (!id || !requests) return;
+    const target = requests.find((item) => item.id === id);
+    if (target) open(target);
+    searchParams.delete('id');
+    setSearchParams(searchParams, { replace: true });
   }, [requests]);
 
-  async function refreshed() {
-    await Promise.all([load(), onChanged?.()]);
+  const counts = useMemo(() => {
+    const list = requests ?? [];
+    return {
+      PENDING_REVIEW: list.filter((item) => item.status === 'PENDING_REVIEW').length,
+      REVISION_REQUIRED: list.filter((item) => item.status === 'REVISION_REQUIRED').length,
+      APPROVED: list.filter((item) => item.status === 'APPROVED').length
+    };
+  }, [requests]);
+
+  const visible = useMemo(() => {
+    const list = requests ?? [];
+    if (filter === 'ACTIVE') return list.filter((item) => item.status !== 'APPROVED');
+    return list.filter((item) => item.status === filter).slice(0, filter === 'APPROVED' ? 20 : undefined);
+  }, [filter, requests]);
+
+  function open(request) {
+    if (role === 'ADMIN' && request.status === 'PENDING_REVIEW') setReviewing(request);
+    if (role === 'TREASURER' && request.status === 'REVISION_REQUIRED') setRevising(request);
   }
 
+  async function refreshed() {
+    await Promise.all([load(), onChanged?.(), refreshCounts()]);
+  }
+
+  const filters = role === 'ADMIN'
+    ? [['PENDING_REVIEW', 'Menunggu'], ['REVISION_REQUIRED', 'Perlu revisi'], ['APPROVED', 'Disetujui']]
+    : [['ACTIVE', 'Aktif'], ['REVISION_REQUIRED', 'Perlu revisi'], ['APPROVED', 'Disetujui']];
+  const emptyCopy = {
+    PENDING_REVIEW: 'Tidak ada pengajuan yang perlu direview. Pengajuan baru dari Bendahara akan muncul di sini.',
+    REVISION_REQUIRED: role === 'ADMIN' ? 'Tidak ada pengajuan yang sedang direvisi Bendahara.' : 'Tidak ada pengajuan yang perlu Anda perbaiki.',
+    APPROVED: 'Belum ada pengajuan yang disetujui.',
+    ACTIVE: 'Belum ada pengajuan aktif. Catat transaksi dari tombol + di bawah.'
+  };
+
   return (
-    <>
-      <Card className="overflow-hidden">
-        <div className="flex flex-col gap-2 border-b bg-muted/25 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-          <div>
-            <h2 className="text-base font-semibold">{user?.role === 'ADMIN' ? 'Review Transaksi' : 'Pengajuan Saya'}</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {user?.role === 'ADMIN'
-                ? 'Review pengajuan Bendahara sebelum perubahan masuk ke saldo, laporan, dan Public Display.'
-                : 'Perubahan Bendahara baru diposting setelah disetujui Ketua/Admin.'}
-            </p>
-          </div>
-          <Button variant="ghost" size="sm" onClick={load} disabled={loading}><IconRefresh /> Refresh</Button>
-        </div>
+    <section aria-label={role === 'ADMIN' ? 'Review Transaksi' : 'Pengajuan Saya'} className="flex flex-col gap-4">
+      <div className="flex items-center justify-between gap-3">
+        <ToggleGroup type="single" value={filter} onValueChange={(value) => value && setFilter(value)} className="max-w-full overflow-x-auto">
+          {filters.map(([value, label]) => {
+            const count = value === 'ACTIVE' ? counts.PENDING_REVIEW + counts.REVISION_REQUIRED : counts[value];
+            return (
+              <ToggleGroupItem key={value} value={value}>
+                {label}{value !== 'APPROVED' && count > 0 ? <span className="tabular-nums opacity-70">{count}</span> : null}
+              </ToggleGroupItem>
+            );
+          })}
+        </ToggleGroup>
+        <Button variant="ghost" size="icon" onClick={load} aria-label="Muat ulang daftar"><IconRefresh /></Button>
+      </div>
 
-        <div className="divide-y">
-          {visible.map((request) => (
-            <div key={request.id} className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <strong className="text-sm">{actionLabels[request.action]}</strong>
-                  {statusBadge(request.status)}
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {request.submittedByName} · {submittedTime(request.submittedAt)}
-                  {request.proposal?.amount ? ' · ' + formatRupiah(request.proposal.amount) : ''}
-                  {request.proposal?.category ? ' · ' + request.proposal.category : ''}
-                </p>
-                {request.reviewNote && (
-                  <p className="mt-2 rounded-md bg-destructive/5 px-2.5 py-2 text-xs text-destructive">
-                    Catatan Ketua: {request.reviewNote}
-                  </p>
-                )}
-              </div>
+      {requests === null ? (
+        <div className="grid gap-3"><Skeleton className="h-28 rounded-2xl" /><Skeleton className="h-28 rounded-2xl" /></div>
+      ) : visible.length === 0 ? (
+        <Card className="px-5 py-10 text-center text-sm text-muted-foreground">{emptyCopy[filter]}</Card>
+      ) : (
+        <ul className="grid gap-3 xl:grid-cols-2">
+          {visible.map((request) => <RequestCard key={request.id} request={request} role={role} onOpen={open} />)}
+        </ul>
+      )}
 
-              <div className="flex shrink-0 gap-2">
-                {user?.role === 'ADMIN' && request.status === 'PENDING_REVIEW' && (
-                  <Button size="sm" onClick={() => setReviewing(request)}>
-                    <IconCheck /> Review
-                  </Button>
-                )}
-                {user?.role === 'TREASURER' && request.status === 'REVISION_REQUIRED' && (
-                  <Button size="sm" onClick={() => setRevising(request)}>
-                    <IconEdit /> Perbaiki
-                  </Button>
-                )}
-                {request.status === 'PENDING_REVIEW' && (
-                  <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
-                    <IconClockHour4 className="size-4" /> Menunggu
-                  </span>
-                )}
-                {request.action === 'DELETE' && request.status === 'APPROVED' && <IconTrash className="size-4 text-muted-foreground" />}
-              </div>
-            </div>
-          ))}
-
-          {!loading && visible.length === 0 && (
-            <div className="px-5 py-8 text-center text-sm text-muted-foreground">
-              {user?.role === 'ADMIN' ? 'Tidak ada pengajuan transaksi yang perlu direview.' : 'Belum ada pengajuan transaksi.'}
-            </div>
-          )}
-        </div>
-      </Card>
-
-      <ReviewDialog request={reviewing} open={Boolean(reviewing)} onOpenChange={(open) => !open && setReviewing(null)} onDone={refreshed} />
-      <RevisionDialog request={revising} open={Boolean(revising)} onOpenChange={(open) => !open && setRevising(null)} onDone={refreshed} />
-    </>
+      <ReviewDialog request={reviewing} open={Boolean(reviewing)} onOpenChange={(value) => !value && setReviewing(null)} onDone={refreshed} />
+      <RevisionDialog request={revising} open={Boolean(revising)} onOpenChange={(value) => !value && setRevising(null)} onDone={refreshed} />
+    </section>
   );
 }

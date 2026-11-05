@@ -1,19 +1,26 @@
 {
+  "id": "/",
   "name": "IKHLAS - Manajemen Masjid",
   "short_name": "IKHLAS",
-  "description": "Sistem informasi manajemen masjid dengan monitoring keuangan dan Public Display.",
-  "start_url": "/",
+  "description": "Catat kas masjid dari ponsel, review pengajuan, dan pantau saldo secara transparan.",
+  "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#F7F5EF",
-  "theme_color": "#146B5A",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#ECEEF0",
+  "theme_color": "#094438",
   "lang": "id",
+  "dir": "ltr",
+  "categories": ["finance", "productivity"],
   "icons": [
-    {
-      "src": "/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Catat kas keluar", "short_name": "Kas keluar", "url": "/transactions/expense", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Catat kas masuk", "short_name": "Kas masuk", "url": "/transactions/income", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Perlu review", "short_name": "Review", "url": "/approvals", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
   ]
 }

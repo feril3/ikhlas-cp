@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Slot } from '@radix-ui/react-slot';
-import { IconChevronRight } from '@tabler/icons-react';
+import { IconChevronRight } from '@/components/icons.jsx';
 import { cn } from '@/lib/utils';
 
 function Breadcrumb({ ...props }) {

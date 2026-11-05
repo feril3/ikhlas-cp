@@ -5,14 +5,16 @@ import {
   IconArrowUp,
   IconArrowUpRight,
   IconCalendarEvent,
-  IconClock,
-  IconWallet
-} from '@tabler/icons-react';
+  IconClipboardCheck,
+  IconClock
+} from '@/components/icons.jsx';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { api } from '@/lib/api.js';
 import { formatDate, formatRupiah, toInputDate } from '@/lib/format.js';
 import { useAuth } from '@/auth/AuthContext.jsx';
 import { PageHeader } from '@/components/app/PageHeader.jsx';
+import { useApprovalCounts } from '@/features/approvals/ApprovalCountsContext.jsx';
+import { PwaSetupCard } from '@/features/pwa/AppPreferences.jsx';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,8 +24,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const chartConfig = {
-  income: { label: 'Kas masuk', color: 'var(--ui-chart-1)' },
-  expense: { label: 'Kas keluar', color: 'var(--ui-chart-2)' }
+  income: { label: 'Kas masuk', color: 'var(--chart-1)' },
+  expense: { label: 'Kas keluar', color: 'var(--chart-2)' }
 };
 
 function formatAxisAmount(value) {
@@ -37,37 +39,57 @@ function formatAxisAmount(value) {
 
 function CashflowDot({ cx, cy, payload, dataKey, color }) {
   if (!payload || Number(payload[dataKey] ?? 0) <= 0) return null;
-  return <circle cx={cx} cy={cy} r="3" fill={color} stroke="var(--ui-card)" strokeWidth="1.5" />;
+  return <circle cx={cx} cy={cy} r="3" fill={color} stroke="var(--card)" strokeWidth="1.5" />;
 }
 
-function Metric({ label, value, tone = 'default', caption, featured = false }) {
-  const valueClass = tone === 'income'
-    ? 'text-primary'
-    : tone === 'expense'
-      ? 'text-destructive'
-      : 'text-foreground';
-
+function Metric({ label, value, caption, tone }) {
   return (
-    <div className={`min-w-0 px-4 py-4 sm:px-5 ${featured ? 'bg-secondary/65' : ''}`}>
-      <div className="text-xs font-medium text-muted-foreground">{label}</div>
-      <strong className={`mt-1.5 block truncate text-[clamp(1.25rem,2.5vw,1.8rem)] font-semibold tracking-[-0.035em] ${valueClass}`}>
+    <div className="flex min-w-0 items-baseline justify-between gap-3 px-5 py-3.5 sm:block sm:py-5">
+      <div className="min-w-0">
+        <div className="text-sm text-muted-foreground">{label}</div>
+        {caption && <div className="hidden text-xs text-subtle-foreground sm:block">{caption}</div>}
+      </div>
+      <div className={`shrink-0 text-lg font-bold tracking-tight tabular-nums sm:mt-2 sm:text-2xl ${tone === 'income' ? 'text-success' : tone === 'expense' ? 'text-destructive' : 'text-foreground'}`}>
         {value}
-      </strong>
-      {caption && <span className="mt-1 block text-[11px] text-muted-foreground">{caption}</span>}
+      </div>
     </div>
+  );
+}
+
+// Tugas yang menunggu: pengajuan untuk Ketua/Admin, revisi untuk Bendahara.
+function PendingTask({ role }) {
+  const { pendingReview, revisionRequired } = useApprovalCounts();
+  const count = role === 'ADMIN' ? pendingReview : revisionRequired;
+  if (!count) return null;
+  return (
+    <Card className="flex items-center gap-4 p-4 sm:p-5">
+      <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+        <IconClipboardCheck className="size-5" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-md font-semibold tracking-tight">
+          {role === 'ADMIN' ? `${count} pengajuan menunggu review Anda` : `${count} pengajuan perlu Anda perbaiki`}
+        </p>
+        <p className="text-sm text-muted-foreground">
+          {role === 'ADMIN' ? 'Transaksi Bendahara baru masuk saldo setelah Anda setujui.' : 'Baca catatan Ketua, perbaiki, lalu kirim ulang.'}
+        </p>
+      </div>
+      <Button asChild className="shrink-0">
+        <Link to="/approvals">{role === 'ADMIN' ? 'Review' : 'Perbaiki'}</Link>
+      </Button>
+    </Card>
   );
 }
 
 function DashboardSkeleton() {
   return (
-    <div className="flex flex-col gap-5">
-      <Skeleton className="h-24 w-full" />
-      <Skeleton className="h-28 w-full" />
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <Skeleton className="h-[360px] w-full" />
-        <Skeleton className="h-[360px] w-full" />
+    <div className="flex flex-col gap-4">
+      <Skeleton className="h-20 w-full rounded-2xl" />
+      <Skeleton className="h-36 w-full rounded-2xl" />
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <Skeleton className="h-[360px] w-full rounded-2xl" />
+        <Skeleton className="h-[360px] w-full rounded-2xl" />
       </div>
-      <Skeleton className="h-[320px] w-full" />
     </div>
   );
 }
@@ -113,78 +135,87 @@ export default function Dashboard() {
   const activities = data?.activities?.slice(0, 3) ?? [];
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
       <PageHeader
         meta={dateLabel}
         title={`Assalamu'alaikum, ${user?.name?.split(' ')[0] ?? 'Pengurus'}`}
-        description="Pantau kondisi kas, transaksi terbaru, jadwal salat, dan agenda masjid dari satu layar."
         actions={canCreateTransactions ? (
-          <>
-            <Button variant="outline" asChild>
-              <Link to="/transactions/income"><IconArrowDown data-icon="inline-start" /> Kas Masuk</Link>
+          <div className="hidden gap-2 lg:flex">
+            <Button variant="secondary" asChild>
+              <Link to="/transactions/income"><IconArrowDown /> Catat kas masuk</Link>
             </Button>
             <Button asChild>
-              <Link to="/transactions/expense"><IconArrowUp data-icon="inline-start" /> Kas Keluar</Link>
+              <Link to="/transactions/expense"><IconArrowUp /> Catat kas keluar</Link>
             </Button>
-          </>
+          </div>
         ) : null}
       />
 
+      <PendingTask role={user?.role} />
+      <PwaSetupCard />
+
       {error ? (
         <Alert variant="destructive">
-          <AlertTitle>Dashboard gagal dimuat</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertTitle>Beranda gagal dimuat</AlertTitle>
+          <AlertDescription>{error} Muat ulang halaman, atau coba lagi beberapa saat lagi.</AlertDescription>
         </Alert>
       ) : (
         <>
-          <Card className="overflow-hidden">
-            <div className="grid divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0 xl:grid-cols-[1.15fr_repeat(3,1fr)]">
-              <Metric label="Saldo saat ini" value={formatRupiah(data.summary.currentBalance)} caption="Saldo berjalan seluruh periode" featured />
-              <Metric label="Kas masuk bulan ini" value={`+${formatRupiah(data.monthSummary.totalIncome)}`} tone="income" caption={`${data.monthSummary.transactionCount} transaksi periode berjalan`} />
-              <Metric label="Kas keluar bulan ini" value={`-${formatRupiah(data.monthSummary.totalExpense)}`} tone="expense" caption={`Per ${formatDate(data.monthSummary.to)}`} />
-              <Metric label="Saldo awal" value={formatRupiah(data.summary.openingBalance)} caption="Basis perhitungan kas" />
-            </div>
-          </Card>
+          <section aria-label="Ringkasan kas" className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,2fr)]">
+            <Card className="flex flex-col justify-between gap-4 p-5">
+              <div>
+                <div className="text-sm text-muted-foreground">Saldo saat ini</div>
+                <div className="mt-1 break-words text-4xl font-bold tracking-tight tabular-nums">{formatRupiah(data.summary.currentBalance)}</div>
+              </div>
+              <div className="text-xs text-subtle-foreground">Saldo awal {formatRupiah(data.summary.openingBalance)} ditambah kas masuk, dikurangi kas keluar yang disetujui.</div>
+            </Card>
+            <Card className="grid divide-y divide-border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+              <Metric label="Kas masuk bulan ini" value={`+${formatRupiah(data.monthSummary.totalIncome)}`} tone="income" caption={`${data.monthSummary.transactionCount} transaksi`} />
+              <Metric label="Kas keluar bulan ini" value={`-${formatRupiah(data.monthSummary.totalExpense)}`} tone="expense" caption={`Sampai ${formatDate(data.monthSummary.to, { day: 'numeric', month: 'long' })}`} />
+              <Metric label="Saldo awal" value={formatRupiah(data.summary.openingBalance)} caption="Dasar perhitungan kas" />
+            </Card>
+          </section>
 
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
             <Card className="min-w-0">
-              <CardHeader className="flex-row items-start justify-between gap-3 border-b bg-muted/25">
+              <CardHeader className="flex flex-row items-start justify-between gap-3">
                 <div>
                   <CardTitle>Arus kas 30 hari terakhir</CardTitle>
-                  <CardDescription>Pergerakan kas masuk dan kas keluar harian.</CardDescription>
+                  <CardDescription>Kas masuk dan kas keluar per hari.</CardDescription>
                 </div>
                 <Button variant="ghost" size="sm" asChild>
-                  <Link to="/reports">Laporan <IconArrowUpRight data-icon="inline-end" /></Link>
+                  <Link to="/reports">Laporan <IconArrowUpRight /></Link>
                 </Button>
               </CardHeader>
-              <CardContent>
-                <ChartContainer config={chartConfig} className="h-[280px] min-h-[260px]">
+              <CardContent className="px-2 sm:px-5">
+                <ChartContainer config={chartConfig} className="h-[260px] min-h-[240px]">
                   <AreaChart data={data.cashflow} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
                     <defs>
                       <linearGradient id="incomeFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="var(--color-income)" stopOpacity={0.22} />
-                        <stop offset="95%" stopColor="var(--color-income)" stopOpacity={0.015} />
+                        <stop offset="5%" stopColor="var(--color-income)" stopOpacity={0.18} />
+                        <stop offset="95%" stopColor="var(--color-income)" stopOpacity={0.01} />
                       </linearGradient>
                       <linearGradient id="expenseFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="var(--color-expense)" stopOpacity={0.16} />
+                        <stop offset="5%" stopColor="var(--color-expense)" stopOpacity={0.14} />
                         <stop offset="95%" stopColor="var(--color-expense)" stopOpacity={0.01} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--ui-border)" />
+                    <CartesianGrid vertical={false} stroke="var(--chart-grid)" />
                     <XAxis
                       dataKey="date"
                       axisLine={false}
                       tickLine={false}
                       tickMargin={10}
                       minTickGap={28}
+                      tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
                       tickFormatter={(value) => new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(`${value}T00:00:00`))}
                     />
                     <YAxis
-                      width={54}
+                      width={48}
                       axisLine={false}
                       tickLine={false}
                       tickMargin={8}
-                      tick={{ fontSize: 11 }}
+                      tick={{ fontSize: 11, fill: 'var(--subtle-foreground)' }}
                       tickFormatter={formatAxisAmount}
                     />
                     <ChartTooltip
@@ -193,106 +224,125 @@ export default function Dashboard() {
                         formatter={(value) => formatRupiah(value)}
                       />}
                     />
-                    <Area type="monotone" dataKey="income" stroke="var(--color-income)" strokeWidth={2.5} fill="url(#incomeFill)" dot={(props) => <CashflowDot {...props} dataKey="income" color="var(--color-income)" />} activeDot={{ r: 4 }} isAnimationActive={false} />
-                    <Area type="monotone" dataKey="expense" stroke="var(--color-expense)" strokeWidth={2.5} fill="url(#expenseFill)" dot={(props) => <CashflowDot {...props} dataKey="expense" color="var(--color-expense)" />} activeDot={{ r: 4 }} isAnimationActive={false} />
+                    <Area type="monotone" dataKey="income" stroke="var(--color-income)" strokeWidth={2} fill="url(#incomeFill)" dot={(props) => <CashflowDot {...props} dataKey="income" color="var(--color-income)" />} activeDot={{ r: 4 }} isAnimationActive={false} />
+                    <Area type="monotone" dataKey="expense" stroke="var(--color-expense)" strokeWidth={2} fill="url(#expenseFill)" dot={(props) => <CashflowDot {...props} dataKey="expense" color="var(--color-expense)" />} activeDot={{ r: 4 }} isAnimationActive={false} />
                   </AreaChart>
                 </ChartContainer>
               </CardContent>
             </Card>
 
-            <div className="flex flex-col gap-4">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
               <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center gap-2"><IconClock className="size-4 text-primary" /> Jadwal salat hari ini</CardTitle>
+                <CardHeader className="pb-1">
+                  <CardTitle className="flex items-center gap-2"><IconClock className="text-muted-foreground" /> Jadwal salat hari ini</CardTitle>
                   <CardDescription>{data.prayerHijriDate?.formatted ?? data.prayerScheduleDate}</CardDescription>
                 </CardHeader>
-                <CardContent className="flex flex-col gap-0">
-                  {data.prayerSchedule.map((item) => (
-                    <div
-                      key={item.prayerName}
-                      className={`flex items-center gap-3 border-b py-2.5 last:border-0 ${nextPrayer?.prayerName === item.prayerName ? 'text-primary' : ''}`}
-                    >
-                      <span className="min-w-0 flex-1 text-sm font-medium">{item.prayerName}</span>
-                      {nextPrayer?.prayerName === item.prayerName && <Badge variant="success">Berikutnya</Badge>}
-                      <time className="font-mono text-sm font-semibold tabular-nums">{item.adhanTime}</time>
-                    </div>
-                  ))}
-                  {!data.prayerSchedule.length && <span className="py-5 text-sm text-muted-foreground">Jadwal belum tersedia.</span>}
+                <CardContent>
+                  <ul className="divide-y divide-border">
+                    {data.prayerSchedule.map((item) => {
+                      const next = nextPrayer?.prayerName === item.prayerName;
+                      return (
+                        <li key={item.prayerName} className="flex items-center gap-3 py-2.5">
+                          <span className={`min-w-0 flex-1 text-sm ${next ? 'font-semibold' : ''}`}>{item.prayerName}</span>
+                          {next && <Badge variant="success">Berikutnya</Badge>}
+                          <time className={`text-sm tabular-nums ${next ? 'font-semibold' : 'text-muted-foreground'}`}>{item.adhanTime}</time>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  {!data.prayerSchedule.length && <p className="py-5 text-sm text-muted-foreground">Jadwal salat belum tersedia. Coba muat ulang nanti.</p>}
                 </CardContent>
               </Card>
 
               <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center gap-2"><IconCalendarEvent className="size-4 text-primary" /> Agenda terdekat</CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-0">
-                  {activities.map((item) => (
-                    <article className="flex gap-3 border-b py-2.5 last:border-0" key={item.id}>
-                      <div className="flex size-10 shrink-0 flex-col items-center justify-center rounded-md bg-secondary text-secondary-foreground">
-                        <strong className="text-sm leading-none">{item.activityDate.slice(-2)}</strong>
-                        <span className="mt-1 text-[9px] font-semibold">{new Intl.DateTimeFormat('id-ID', { month: 'short' }).format(new Date(`${item.activityDate}T00:00:00`)).toUpperCase()}</span>
-                      </div>
-                      <div className="min-w-0">
-                        <strong className="block truncate text-sm font-medium">{item.title}</strong>
-                        <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-                          {item.startTime || 'Waktu fleksibel'}{item.speaker ? ` · ${item.speaker}` : ''}
-                        </span>
-                      </div>
-                    </article>
-                  ))}
-                  {!activities.length && <span className="py-5 text-sm text-muted-foreground">Belum ada agenda mendatang.</span>}
-                  <Button variant="link" size="sm" className="mt-2 justify-start" asChild>
-                    <Link to="/schedule">Kelola agenda <IconArrowUpRight data-icon="inline-end" /></Link>
+                <CardHeader className="flex flex-row items-center justify-between gap-2 pb-1">
+                  <CardTitle className="flex items-center gap-2"><IconCalendarEvent className="text-muted-foreground" /> Agenda terdekat</CardTitle>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link to="/schedule">Kelola</Link>
                   </Button>
+                </CardHeader>
+                <CardContent>
+                  <ul className="divide-y divide-border">
+                    {activities.map((item) => (
+                      <li className="flex gap-3 py-2.5" key={item.id}>
+                        <div className="flex size-11 shrink-0 flex-col items-center justify-center rounded-xl bg-accent">
+                          <span className="text-md font-bold leading-none tabular-nums">{item.activityDate.slice(-2)}</span>
+                          <span className="mt-0.5 text-2xs text-muted-foreground">{new Intl.DateTimeFormat('id-ID', { month: 'short' }).format(new Date(`${item.activityDate}T00:00:00`))}</span>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">{item.title}</p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {item.startTime || 'Waktu fleksibel'}{item.speaker ? ` · ${item.speaker}` : ''}
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  {!activities.length && <p className="py-4 text-sm text-muted-foreground">Belum ada agenda mendatang.</p>}
                 </CardContent>
               </Card>
             </div>
           </div>
 
           <Card>
-            <CardHeader className="flex-row items-start justify-between gap-3">
+            <CardHeader className="flex flex-row items-start justify-between gap-3">
               <div>
                 <CardTitle>Transaksi terbaru</CardTitle>
                 <CardDescription>Enam pencatatan kas terakhir.</CardDescription>
               </div>
               <Button variant="ghost" size="sm" asChild>
-                <Link to="/transactions">Lihat semua <IconArrowUpRight data-icon="inline-end" /></Link>
+                <Link to="/transactions">Lihat semua <IconArrowUpRight /></Link>
               </Button>
             </CardHeader>
-            <CardContent className="px-2 sm:px-5">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tanggal</TableHead>
-                    <TableHead>Kategori</TableHead>
-                    <TableHead className="hidden md:table-cell">Metode</TableHead>
-                    <TableHead>Jenis</TableHead>
-                    <TableHead className="text-right">Nominal</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.recentTransactions.map((transaction) => (
-                    <TableRow key={transaction.id}>
-                      <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{formatDate(transaction.transactionDate)}</TableCell>
-                      <TableCell>
-                        <strong className="block text-sm font-medium">{transaction.category}</strong>
-                        {transaction.sourceDetail && <span className="block max-w-[220px] truncate text-[11px] text-muted-foreground">{transaction.sourceDetail}</span>}
-                      </TableCell>
-                      <TableCell className="hidden text-xs text-muted-foreground md:table-cell">{transaction.method === 'TRANSFER' ? 'Transfer' : 'Tunai'}</TableCell>
-                      <TableCell>
-                        <Badge variant={transaction.type === 'INCOME' ? 'success' : 'destructive'}>
-                          {transaction.type === 'INCOME' ? 'Masuk' : 'Keluar'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className={`whitespace-nowrap text-right text-sm font-semibold tabular-nums ${transaction.type === 'INCOME' ? 'text-primary' : 'text-destructive'}`}>
-                        {transaction.type === 'INCOME' ? '+' : '-'}{formatRupiah(transaction.amount)}
-                      </TableCell>
+            <CardContent>
+              <ul className="divide-y divide-border md:hidden">
+                {data.recentTransactions.map((transaction) => (
+                  <li key={transaction.id} className="flex items-center gap-3 py-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{transaction.category}</p>
+                      <p className="text-xs text-muted-foreground">{formatDate(transaction.transactionDate)} · {transaction.method === 'TRANSFER' ? 'Transfer' : 'Tunai'}</p>
+                    </div>
+                    <span className={`shrink-0 text-sm font-semibold tabular-nums ${transaction.type === 'INCOME' ? 'text-success' : 'text-destructive'}`}>
+                      {transaction.type === 'INCOME' ? '+' : '-'}{formatRupiah(transaction.amount)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Tanggal</TableHead>
+                      <TableHead>Kategori</TableHead>
+                      <TableHead>Metode</TableHead>
+                      <TableHead>Jenis</TableHead>
+                      <TableHead className="text-right">Nominal</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {data.recentTransactions.map((transaction) => (
+                      <TableRow key={transaction.id}>
+                        <TableCell className="whitespace-nowrap text-muted-foreground">{formatDate(transaction.transactionDate)}</TableCell>
+                        <TableCell>
+                          <span className="block font-medium">{transaction.category}</span>
+                          {transaction.sourceDetail && <span className="block max-w-[220px] truncate text-xs text-muted-foreground">{transaction.sourceDetail}</span>}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{transaction.method === 'TRANSFER' ? 'Transfer' : 'Tunai'}</TableCell>
+                        <TableCell>
+                          <Badge variant={transaction.type === 'INCOME' ? 'success' : 'destructive'}>
+                            {transaction.type === 'INCOME' ? 'Masuk' : 'Keluar'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className={`whitespace-nowrap text-right font-semibold tabular-nums ${transaction.type === 'INCOME' ? 'text-success' : 'text-destructive'}`}>
+                          {transaction.type === 'INCOME' ? '+' : '-'}{formatRupiah(transaction.amount)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
               {!data.recentTransactions.length && (
-                <div className="py-10 text-center text-sm text-muted-foreground">Belum ada transaksi.</div>
+                <p className="py-10 text-center text-sm text-muted-foreground">Belum ada transaksi. Catat kas masuk atau kas keluar pertama dari tombol di atas.</p>
               )}
             </CardContent>
           </Card>

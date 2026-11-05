@@ -48,8 +48,8 @@ before(async () => {
       GOOGLE_DRIVE_CLIENT_ID: '',
       GOOGLE_DRIVE_CLIENT_SECRET: '',
       GOOGLE_DRIVE_REFRESH_TOKEN: '',
-      TELEGRAM_BOT_TOKEN: '',
-      TELEGRAM_CHAT_ID: ''
+      VAPID_PUBLIC_KEY: '',
+      VAPID_PRIVATE_KEY: ''
     },
     stdio: ['ignore', 'ignore', 'pipe']
   });
@@ -84,7 +84,7 @@ test('browser API requests opt out of browser caching', async () => {
 test('service worker does not cache API responses', async () => {
   const source = await readFile(path.join(root, 'apps/web/public/sw.js'), 'utf8');
   assert.match(source, /url\.pathname\.startsWith\('\/api\/'\)/);
-  assert.match(source, /CACHE_NAME = ['"]ikhlas-shell-v2['"]/);
+  assert.match(source, /CACHE_NAME = ['"]ikhlas-shell-v3['"]/);
 });
 
 test('Admin can create an income transaction', async () => {
@@ -326,4 +326,53 @@ test('Treasurer delete request keeps transaction posted until Ketua/Admin approv
 
   const after = await request('/transactions', { headers: { cookie: treasurerCookie } });
   assert.equal((await after.json()).data.some((item) => item.id === approvedTransactionId), false);
+});
+
+test('Notification summary counts pending reviews for Ketua/Admin and own requests for Bendahara', async () => {
+  const adminLogin = await request('/auth/login', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'admin@test.local', password: 'TestPassword123!' })
+  });
+  const adminCookie = adminLogin.headers.get('set-cookie')?.split(';', 1)[0];
+
+  const form = new FormData();
+  form.set('type', 'INCOME');
+  form.set('amount', '50000');
+  form.set('transactionDate', '2026-11-06');
+  form.set('method', 'CASH');
+  const categories = await (await request('/transaction-categories?type=INCOME', { headers: { cookie: treasurerCookie } })).json();
+  form.set('categoryId', String(categories.data.find((item) => item.isActive).id));
+  const submitted = await request('/transactions', { method: 'POST', headers: { cookie: treasurerCookie }, body: form });
+  assert.equal(submitted.status, 202);
+
+  const admin = await (await request('/notifications/summary', { headers: { cookie: adminCookie } })).json();
+  assert.equal(admin.pendingReview >= 1, true);
+  assert.equal(admin.revisionRequired, 0);
+
+  const treasurer = await (await request('/notifications/summary', { headers: { cookie: treasurerCookie } })).json();
+  assert.equal(treasurer.pendingReview >= 1, true);
+
+  const anonymous = await request('/notifications/summary');
+  assert.equal(anonymous.status, 401);
+});
+
+test('Push subscription endpoints stay safe when VAPID keys are not configured', async () => {
+  const key = await (await request('/push/public-key', { headers: { cookie: treasurerCookie } })).json();
+  assert.equal(key.publicKey, null);
+
+  const subscribe = await request('/push/subscriptions', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', cookie: treasurerCookie },
+    body: JSON.stringify({ endpoint: 'https://push.example.test/abc', keys: { p256dh: 'x'.repeat(20), auth: 'y'.repeat(12) } })
+  });
+  assert.equal(subscribe.status, 503);
+  assert.match((await subscribe.json()).message, /Notifikasi belum diaktifkan/);
+
+  const unsubscribe = await request('/push/subscriptions', {
+    method: 'DELETE',
+    headers: { 'content-type': 'application/json', cookie: treasurerCookie },
+    body: JSON.stringify({ endpoint: 'https://push.example.test/abc' })
+  });
+  assert.equal(unsubscribe.status, 204);
 });

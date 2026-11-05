@@ -1,73 +1,30 @@
-import { Fragment } from 'react';
-import { IconDeviceTv } from '@tabler/icons-react';
+import { IconDeviceTv } from '@/components/icons.jsx';
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '@/auth/AuthContext.jsx';
 import { UserMenu } from '@/components/app/UserMenu.jsx';
+import { AppBrand } from '@/components/app/AppBrand.jsx';
+import { pageTitle } from '@/components/app/navigation.js';
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator
-} from '@/components/ui/breadcrumb';
 
-const routeMeta = {
-  '/': ['Overview', 'Dashboard'],
-  '/transactions': ['Keuangan', 'Transaksi'],
-  '/transactions/income': ['Keuangan', 'Kas Masuk'],
-  '/transactions/expense': ['Keuangan', 'Kas Keluar'],
-  '/reports': ['Keuangan', 'Laporan'],
-  '/schedule': ['Operasional', 'Jadwal Jumat & Agenda'],
-  '/settings': ['Administrasi', 'Pengaturan']
-};
-
-function sectionDestination(section) {
-  if (section === 'Keuangan') return '/transactions';
-  if (section === 'Operasional') return '/schedule';
-  if (section === 'Administrasi') return '/settings';
-  return '/';
-}
-
+// Bilah atas: di desktop berisi judul dan tautan Tampilan publik; di ponsel berisi merek, judul, dan akun.
 export function AppHeader() {
   const location = useLocation();
-  const trail = routeMeta[location.pathname] ?? ['IKHLAS'];
+  const { user } = useAuth();
+  const title = pageTitle(location.pathname, user?.role);
 
   return (
-    <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90">
-      <div className="flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
-        <SidebarTrigger mobile className="lg:hidden" />
+    <header className="sticky top-0 z-30 rounded-t-[inherit] bg-background/90 pt-[var(--safe-top)] backdrop-blur-md">
+      <div className="flex h-14 items-center gap-2 px-4 lg:px-6">
         <SidebarTrigger className="hidden lg:inline-flex" />
-
-        <Breadcrumb className="min-w-0 flex-1">
-          <BreadcrumbList className="flex-nowrap text-xs sm:text-sm">
-            {trail.map((item, index) => (
-              <Fragment key={item}>
-                {index > 0 && <BreadcrumbSeparator />}
-                <BreadcrumbItem className={index === 0 ? 'hidden sm:inline-flex' : 'min-w-0'}>
-                  {index === trail.length - 1
-                    ? <BreadcrumbPage className="truncate">{item}</BreadcrumbPage>
-                    : (
-                      <BreadcrumbLink asChild>
-                        <Link to={sectionDestination(item)}>{item}</Link>
-                      </BreadcrumbLink>
-                    )
-                  }
-                </BreadcrumbItem>
-              </Fragment>
-            ))}
-          </BreadcrumbList>
-        </Breadcrumb>
-
-        <Button variant="outline" size="sm" asChild className="hidden md:inline-flex">
+        <AppBrand className="min-w-0 flex-1 lg:hidden" />
+        <p className="hidden min-w-0 flex-1 truncate text-sm font-medium text-muted-foreground lg:block">{title}</p>
+        <Button variant="secondary" size="sm" asChild className="hidden lg:inline-flex">
           <Link to="/public-display" target="_blank" rel="noreferrer">
-            <IconDeviceTv data-icon="inline-start" aria-hidden="true" />
-            Tampilan Publik
+            <IconDeviceTv /> Tampilan publik
           </Link>
         </Button>
-
-        <UserMenu />
+        <span className="lg:hidden"><UserMenu compact /></span>
       </div>
     </header>
   );

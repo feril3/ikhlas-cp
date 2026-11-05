@@ -177,5 +177,16 @@ export const api = {
   }),
   deletePublicMessage: (id) => request(`/public-messages/${id}`, { method: 'DELETE' }),
 
-  auditLogs: (limit = 100) => request(`/audit-logs${queryString({ limit })}`)
+  auditLogs: (limit = 100) => request(`/audit-logs${queryString({ limit })}`),
+
+  notificationSummary: () => request('/notifications/summary'),
+  pushPublicKey: () => request('/push/public-key'),
+  savePushSubscription: (subscription) => request('/push/subscriptions', {
+    method: 'POST',
+    body: JSON.stringify(subscription)
+  }),
+  deletePushSubscription: (endpoint) => request('/push/subscriptions', {
+    method: 'DELETE',
+    body: JSON.stringify({ endpoint })
+  })
 };
