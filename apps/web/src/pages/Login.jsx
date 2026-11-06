@@ -137,15 +137,17 @@ export default function Login() {
                     )}
 
                     <Field>
-                      <FieldLabel htmlFor="auth-email">Email</FieldLabel>
+                      <FieldLabel htmlFor="auth-email">{setupRequired ? 'Email' : 'Email atau nama pengguna'}</FieldLabel>
                       <Input
                         id="auth-email"
-                        type="email"
-                        autoComplete="email"
+                        type={setupRequired ? 'email' : 'text'}
+                        autoComplete={setupRequired ? 'email' : 'username'}
+                        autoCapitalize="none"
+                        spellCheck={false}
                         value={form.email}
                         onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
                         required
-                        placeholder="nama@contoh.id"
+                        placeholder={setupRequired ? 'nama@contoh.id' : 'nama@contoh.id atau nama pengguna'}
                       />
                     </Field>
 

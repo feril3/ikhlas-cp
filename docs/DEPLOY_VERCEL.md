@@ -7,7 +7,7 @@ Dokumen ini menjelaskan cara menjalankan IKHLAS tanpa VPS dan tanpa kartu kredit
 | Frontend (React/Vite) | Vercel static hosting | Hasil build `apps/web/dist` |
 | API (Express) | Vercel Function `api/index.js` | Region `hnd1` (Tokyo), `maxDuration` 60 detik |
 | Database | Turso (libSQL) | Region AWS `ap-northeast-1` (Tokyo), dekat dengan function |
-| Bukti transaksi | Google Drive | Tidak berubah, lihat `docs/GOOGLE_DRIVE.md` |
+| Bukti transaksi | Google Drive; fallback tabel `attachment_blobs` di Turso | Tanpa kredensial Drive, bukti disimpan di Turso. Lihat `docs/GOOGLE_DRIVE.md` |
 | Backup harian | Vercel Cron → Google Drive | `0 19 * * *` UTC = 02:00 WIB |
 
 Semua konfigurasi build ada di `vercel.json`, sehingga project Vercel cukup diimpor dari root repo.

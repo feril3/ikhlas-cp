@@ -173,7 +173,7 @@ export default function Transactions() {
       } else {
         toast.success('Transaksi berhasil dihapus.', {
           description: deleting.evidenceFileId || deleting.bankMutationFileId
-            ? 'Dokumen Google Drive dipertahankan untuk audit.'
+            ? 'Dokumen bukti tetap disimpan untuk audit.'
             : undefined
         });
       }
@@ -366,7 +366,7 @@ export default function Transactions() {
                 ? deleting.category + ' sebesar ' + formatRupiah(deleting.amount) + ' akan dihapus dari kas.'
                 : 'Transaksi akan dihapus.'}
               {(deleting?.evidenceFileId || deleting?.bankMutationFileId)
-                ? ' Dokumen yang sudah tersimpan di Google Drive tetap dipertahankan untuk audit.'
+                ? ' Dokumen bukti tetap disimpan untuk audit.'
                 : ''}
             </AlertDialogDescription>
           </AlertDialogHeader>

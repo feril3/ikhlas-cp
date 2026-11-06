@@ -17,10 +17,10 @@ import { getPushPublicKey, notifyRole, notifyUser, removeSubscription, saveSubsc
 import { transactionUpload } from './uploads.js';
 import {
   deleteTransactionAttachment,
+  getAttachmentStorageInfo,
   getTransactionAttachment,
-  isGoogleDriveConfigured,
   uploadTransactionAttachment
-} from './driveStorage.js';
+} from './attachmentStorage.js';
 import {
   PRAYER_LOCATION,
   addDays,
@@ -87,8 +87,9 @@ const setupSchema = z.object({
   password: z.string().min(10).max(128)
 });
 
+// Masuk dengan email atau nama pengguna (mis. akun demo "admin-ikhlas").
 const loginSchema = z.object({
-  email: z.string().trim().email().max(160),
+  email: z.string().trim().min(3).max(160),
   password: z.string().min(1).max(128)
 });
 
@@ -604,10 +605,7 @@ apiRouter.get('/health', (_req, res) => {
   res.json({
     status: 'ok',
     service: 'ikhlas-api',
-    storage: {
-      provider: 'google-drive',
-      configured: isGoogleDriveConfigured()
-    },
+    storage: getAttachmentStorageInfo(),
     prayerTimes: {
       provider: 'aladhan',
       calculationMethod: PRAYER_LOCATION.calculationMethod,
@@ -670,7 +668,7 @@ apiRouter.post('/auth/setup', async (req, res) => {
 apiRouter.post('/auth/login', async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(422).json({ message: 'Email atau password tidak valid.' });
+    return res.status(422).json({ message: 'Isi email atau nama pengguna dan kata sandi.' });
   }
 
   const account = await db.prepare(`
@@ -693,7 +691,7 @@ apiRouter.post('/auth/login', async (req, res) => {
       entityType: 'USER',
       details: { email: parsed.data.email.toLowerCase() }
     });
-    return res.status(401).json({ message: 'Email atau password salah.' });
+    return res.status(401).json({ message: 'Email/nama pengguna atau kata sandi salah.' });
   }
 
   const session = await createSession(account.id);
@@ -1100,7 +1098,7 @@ apiRouter.post(
 
       console.error('Google Drive upload failed:', error);
       return res.status(502).json({
-        message: 'Transaksi tidak disimpan karena upload bukti ke Google Drive gagal. Periksa konfigurasi Drive dan coba lagi.'
+        message: 'Transaksi tidak disimpan karena bukti gagal diunggah. Coba lagi.'
       });
     }
 
@@ -1477,7 +1475,7 @@ apiRouter.post(
         deleteTransactionAttachment(uploaded.mutation?.id)
       ]);
       console.error('Google Drive attachment replacement failed:', error);
-      return res.status(502).json({ message: 'Upload dokumen ke Google Drive gagal.' });
+      return res.status(502).json({ message: 'Dokumen gagal diunggah. Coba lagi.' });
     }
 
     await Promise.allSettled([
@@ -1496,7 +1494,7 @@ apiRouter.post(
     });
 
     return res.json({
-      message: 'Dokumen transaksi berhasil diperbarui di Google Drive.',
+      message: 'Dokumen transaksi berhasil diperbarui.',
       evidenceFileId: uploaded.evidence?.id ?? transaction.evidenceFileId,
       bankMutationFileId: uploaded.mutation?.id ?? transaction.bankMutationFileId
     });
@@ -1546,7 +1544,7 @@ apiRouter.get('/transactions/:id/attachments/:kind', requireAuth, async (req, re
     file.stream.on('error', (error) => {
       console.error('Google Drive stream failed:', error);
       if (!res.headersSent) {
-        res.status(502).json({ message: 'File dari Google Drive gagal dibaca.' });
+        res.status(502).json({ message: 'Dokumen gagal dibaca.' });
       } else {
         res.destroy(error);
       }
@@ -1555,7 +1553,7 @@ apiRouter.get('/transactions/:id/attachments/:kind', requireAuth, async (req, re
     file.stream.pipe(res);
   } catch (error) {
     console.error('Google Drive download failed:', error);
-    return res.status(502).json({ message: 'Dokumen dari Google Drive gagal diambil.' });
+    return res.status(502).json({ message: 'Dokumen gagal diambil.' });
   }
 });
 
@@ -1605,7 +1603,7 @@ apiRouter.post(
         deleteTransactionAttachment(uploaded.mutation?.id)
       ]);
       console.error('Approval revision attachment upload failed:', error);
-      return res.status(502).json({ message: 'Upload dokumen revisi ke Google Drive gagal.' });
+      return res.status(502).json({ message: 'Dokumen revisi gagal diunggah. Coba lagi.' });
     }
 
     const currentTransaction = request.transactionId

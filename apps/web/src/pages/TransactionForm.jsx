@@ -361,7 +361,7 @@ export default function TransactionForm({ type }) {
             <div className="flex gap-3 rounded-lg bg-muted p-3 text-xs leading-5 text-muted-foreground">
               <IconInfoCircle aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
               <p>
-                Dokumen disimpan privat di Google Drive. Aplikasi hanya menyimpan referensi file untuk mengaitkannya dengan transaksi.
+                Dokumen disimpan privat dan hanya dapat dibuka pengurus yang sudah masuk.
               </p>
             </div>
           </CardContent>

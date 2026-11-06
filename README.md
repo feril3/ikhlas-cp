@@ -21,7 +21,7 @@ Aplikasi sengaja dibagi menjadi dua surface utama:
 - Pembeda Cash/Kotak Amal dan Transfer.
 - Bukti transaksi dan mutasi rekening.
 - Bukti kas keluar wajib pada UI.
-- File bukti disimpan privat di Google Drive. SQLite hanya menyimpan file ID dan metadata referensi.
+- File bukti disimpan privat di Google Drive. Selama kredensial Drive belum diisi (atau Drive gagal dihubungi), file disimpan di tabel `attachment_blobs` pada basis data (Turso) dan tetap hanya bisa dibuka pengguna yang login.
 - Riwayat transaksi.
 - Laporan berdasarkan periode.
 - Export transaksi ke CSV.
@@ -99,6 +99,18 @@ Pada instalasi baru, buka Web. Karena belum ada pengguna, IKHLAS akan meminta me
 Frontend dan API dideploy sebagai satu project Vercel (Hobby, tanpa kartu kredit): frontend statis dari `apps/web/dist`, API Express sebagai Vercel Function (`api/index.js`), dan database di Turso (libSQL). Backup harian dipicu Vercel Cron. Langkah lengkap ada di `docs/DEPLOY_VERCEL.md`.
 
 ## Google Drive untuk Bukti Transaksi
+
+> **Fallback basis data.** Jika `GOOGLE_DRIVE_*` belum diisi, bukti tersimpan di tabel `attachment_blobs` (ID berawalan `db:`). File lama tetap terbaca setelah Drive dikonfigurasi; file baru otomatis ke Drive. Tabel ini tidak ikut snapshot backup JSON.
+
+## Akun demo / seed akun
+
+Buat atau perbarui akun tanpa menyimpan kata sandi di repositori (login boleh email atau nama pengguna):
+
+```bash
+SEED_ACCOUNTS='[{"login":"admin-demo","password":"minimal10karakter","role":"ADMIN","name":"Admin Demo"}]' npm run db:seed-accounts -w apps/api
+```
+
+Untuk Turso, jalankan dengan `TURSO_DATABASE_URL` dan `TURSO_AUTH_TOKEN` di environment.
 
 Bukti transaksi dan mutasi rekening tidak disimpan sebagai blob di SQLite dan tidak disimpan permanen di filesystem server. File diteruskan ke Google Drive menggunakan OAuth 2.0. SQLite hanya menyimpan `fileId`, nama asli, dan MIME type sebagai referensi.
 

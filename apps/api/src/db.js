@@ -107,7 +107,7 @@ export const db = {
 export async function exportDatabaseSnapshot() {
   const tables = await db.prepare(`
     SELECT name FROM sqlite_master
-    WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT IN ('sessions', 'libsql_wasm_func_table')
+    WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT IN ('sessions', 'libsql_wasm_func_table', 'attachment_blobs')
     ORDER BY name
   `).all();
   const snapshot = { format: 'ikhlas-json-backup', exportedAt: new Date().toISOString(), tables: {} };
@@ -117,7 +117,7 @@ export async function exportDatabaseSnapshot() {
   return snapshot;
 }
 
-const SCHEMA_VERSION = '2026-11-05';
+const SCHEMA_VERSION = '2026-11-07';
 let readyPromise = null;
 
 // Inisialisasi skema cukup sekali per instance (penting untuk serverless).
@@ -303,6 +303,17 @@ export async function initializeDatabase() {
       FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE SET NULL,
       FOREIGN KEY (submitted_by) REFERENCES users(id),
       FOREIGN KEY (reviewed_by) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS attachment_blobs (
+      id TEXT PRIMARY KEY,
+      transaction_id INTEGER,
+      kind TEXT NOT NULL CHECK (kind IN ('evidence', 'mutation')),
+      original_name TEXT NOT NULL,
+      mime_type TEXT NOT NULL,
+      size INTEGER NOT NULL,
+      data BLOB NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
     CREATE TABLE IF NOT EXISTS push_subscriptions (

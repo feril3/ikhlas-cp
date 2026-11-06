@@ -45,7 +45,7 @@ evidence=<file opsional untuk kas masuk, wajib untuk kas keluar>
 mutation=<file opsional>
 ```
 
-File diteruskan ke Google Drive. Database hanya menyimpan Google Drive file ID dan metadata referensi.
+File diteruskan ke Google Drive. Jika Drive belum dikonfigurasi atau gagal, file disimpan di tabel `attachment_blobs` (ID berawalan `db:`). Unduhan selalu lewat API dengan sesi login.
 
 ## Transaction Categories
 
