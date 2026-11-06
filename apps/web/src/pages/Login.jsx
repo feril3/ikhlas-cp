@@ -64,28 +64,28 @@ export default function Login() {
   return (
     <div className="dashboard-shell min-h-svh bg-background text-foreground">
       <div className="grid min-h-svh lg:grid-cols-[minmax(0,0.9fr)_minmax(520px,1.1fr)]">
-        <aside className="hidden flex-col justify-between bg-sidebar px-10 py-9 text-sidebar-foreground lg:flex xl:px-14 xl:py-12">
+        <aside className="hidden flex-col justify-between bg-canvas px-10 py-9 text-foreground lg:flex xl:px-14 xl:py-12">
           <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center text-sidebar-primary">
-              <IconBuildingMosque className="size-8" stroke={1.6} />
-            </div>
+            <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+              <IconBuildingMosque className="size-5" />
+            </span>
             <div>
-              <strong className="block text-sm font-bold ">IKHLAS</strong>
-              <span className="text-xs text-sidebar-foreground/60">Sistem Informasi Manajemen Masjid</span>
+              <strong className="block text-sm font-semibold text-foreground">IKHLAS</strong>
+              <span className="text-xs text-subtle-foreground">Sistem Informasi Manajemen Masjid</span>
             </div>
           </div>
 
           <div className="max-w-lg">
             <p className="mb-4 text-sm font-medium text-subtle-foreground">Administrasi masjid</p>
-            <h1 className="text-[clamp(2.35rem,4.2vw,4.5rem)] font-semibold leading-[0.98] tracking-tight">
+            <h1 className="text-5xl font-semibold tracking-tight text-foreground">
               Keuangan dan kegiatan, tercatat dengan jelas.
             </h1>
-            <p className="mt-6 max-w-md text-sm leading-6 text-sidebar-foreground/65">
-              IKHLAS membantu pengurus mengelola kas, agenda, Public Display, dan audit aktivitas dalam satu sistem operasional.
+            <p className="mt-5 max-w-md text-md text-muted-foreground">
+              Bendahara mencatat kas dari ponsel, Ketua mereview sebelum masuk saldo, dan jamaah melihat ringkasannya di layar masjid.
             </p>
           </div>
 
-          <div className="border-t border-sidebar-border pt-5 text-xs leading-5 text-sidebar-foreground/55">
+          <div className="border-t pt-5 text-xs text-subtle-foreground">
             Masjid Al-Fath · Akses internal pengurus dan bendahara
           </div>
         </aside>
@@ -98,7 +98,7 @@ export default function Login() {
                 <div><strong className="block text-sm ">IKHLAS</strong><span className="text-xs text-muted-foreground">Masjid Al-Fath</span></div>
               </div>
               <Button variant="ghost" size="sm" asChild>
-                <Link to="/public-display" target="_blank" rel="noreferrer">Tampilan Publik</Link>
+                <Link to="/public-display" target="_blank" rel="noreferrer">Tampilan publik</Link>
               </Button>
             </div>
 
@@ -112,8 +112,8 @@ export default function Login() {
                 </CardTitle>
                 <CardDescription className="max-w-sm leading-6">
                   {setupRequired
-                    ? 'Instalasi ini belum memiliki pengguna. Akun pertama akan menjadi Admin/Pengurus.'
-                    : 'Gunakan akun Admin/Pengurus atau Bendahara yang sudah terdaftar.'}
+                    ? 'Instalasi ini belum memiliki pengguna. Akun pertama akan menjadi Ketua/Admin.'
+                    : 'Gunakan akun Ketua/Admin atau Bendahara yang sudah terdaftar.'}
                 </CardDescription>
               </CardHeader>
 
@@ -150,7 +150,7 @@ export default function Login() {
                     </Field>
 
                     <Field>
-                      <FieldLabel htmlFor="auth-password">Password</FieldLabel>
+                      <FieldLabel htmlFor="auth-password">Kata sandi</FieldLabel>
                       <InputGroup className="h-(--control-height) rounded-md">
                         <InputGroupAddon><IconLock /></InputGroupAddon>
                         <InputGroupInput
@@ -162,19 +162,19 @@ export default function Login() {
                           required
                           minLength={setupRequired ? 10 : 1}
                           maxLength={128}
-                          placeholder={setupRequired ? 'Minimal 10 karakter' : 'Masukkan password'}
+                          placeholder={setupRequired ? 'Minimal 10 karakter' : 'Masukkan kata sandi'}
                         />
                         <InputGroupAddon align="inline-end">
                           <InputGroupButton
                             size="icon-xs"
-                            aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+                            aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
                             onClick={() => setShowPassword((value) => !value)}
                           >
                             {showPassword ? <IconEyeOff /> : <IconEye />}
                           </InputGroupButton>
                         </InputGroupAddon>
                       </InputGroup>
-                      {setupRequired && <FieldDescription>Password awal minimal 10 karakter.</FieldDescription>}
+                      {setupRequired && <FieldDescription>Kata sandi awal minimal 10 karakter.</FieldDescription>}
                     </Field>
                   </FieldGroup>
 
@@ -194,14 +194,14 @@ export default function Login() {
 
                 <div className="mt-6 flex items-start gap-2 border-t pt-5 text-xs leading-5 text-muted-foreground">
                   <IconShieldCheck className="mt-0.5 size-4 shrink-0" stroke={1.7} />
-                  <span>Sesi disimpan sebagai secure server-side cookie. Credential tidak disimpan di localStorage.</span>
+                  <span>Sesi masuk disimpan aman di server dan berakhir otomatis setelah 12 jam. Kata sandi tidak disimpan di perangkat.</span>
                 </div>
               </CardContent>
             </Card>
 
             <div className="mt-5 hidden justify-center lg:flex">
               <Button variant="ghost" size="sm" asChild>
-                <Link to="/public-display" target="_blank" rel="noreferrer">Buka Tampilan Publik</Link>
+                <Link to="/public-display" target="_blank" rel="noreferrer">Buka Tampilan publik</Link>
               </Button>
             </div>
           </div>
